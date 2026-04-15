@@ -268,6 +268,32 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  .modal-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .modal-tab {
+    flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    background: var(--surface2); font-family: var(--font); font-size: 14px; font-weight: 600;
+    color: var(--text2); cursor: pointer; transition: all 0.15s;
+  }
+  .modal-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .gh-loading { text-align: center; color: var(--text3); font-size: 14px; padding: 20px 0; }
+  .gh-err { color: var(--accent2); font-size: 13px; padding: 12px; background: var(--accent2-light); border-radius: var(--radius-sm); margin-bottom: 10px; }
+
+  .gh-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .gh-item:active { background: var(--surface2); }
+  .gh-item.loaded { border-color: var(--accent); background: var(--accent-light); }
+  .gh-item-icon { font-size: 20px; }
+  .gh-item-info { flex: 1; min-width: 0; }
+  .gh-item-name { font-weight: 700; font-size: 14px; }
+  .gh-item-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .gh-item-btn { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .gh-item.loaded .gh-item-btn { color: var(--text3); }
+
   input[type="file"] { display: none; }
 
   .badge-new { background: var(--yellow-light); color: #9A6F00; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -403,12 +429,32 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Добавить карточки</div>
-    <button class="modal-btn primary" onclick="triggerFileImport()">
-      <span class="icon">📂</span> Загрузить .json файл
-    </button>
-    <button class="modal-btn" onclick="openSampleModal()">
-      <span class="icon">👀</span> Посмотреть пример файла
-    </button>
+
+    <!-- Tabs -->
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchImportTab('file', this)">📂 Файл</button>
+      <button class="modal-tab" onclick="switchImportTab('github', this)">🐙 GitHub</button>
+    </div>
+
+    <!-- File tab -->
+    <div id="import-tab-file">
+      <button class="modal-btn primary" onclick="triggerFileImport()">
+        <span class="icon">📂</span> Загрузить .json файл
+      </button>
+      <button class="modal-btn" onclick="openSampleModal()">
+        <span class="icon">👀</span> Посмотреть пример файла
+      </button>
+    </div>
+
+    <!-- GitHub tab -->
+    <div id="import-tab-github" style="display:none">
+      <div id="gh-list-wrap">
+        <div class="gh-loading" id="gh-loading">Загружаю список файлов…</div>
+        <div id="gh-list"></div>
+        <div id="gh-error" style="display:none" class="gh-err"></div>
+      </div>
+    </div>
+
     <button class="modal-cancel" onclick="closeImportModal()">Отмена</button>
   </div>
 </div>
@@ -437,6 +483,12 @@
 <input type="file" id="file-input" accept=".json" onchange="handleFileImport(event)">
 
 <script>
+// ══════════════════════════════════════════════
+//  GITHUB CONFIG — впиши своё один раз
+// ══════════════════════════════════════════════
+const GITHUB_USER = 'fritiser-cloud';
+const GITHUB_REPO = 'flashcards';   // название репозитория
+
 // ══════════════════════════════════════════════
 //  DB
 // ══════════════════════════════════════════════
@@ -784,8 +836,114 @@ function showResults() {
 // ══════════════════════════════════════════════
 //  IMPORT
 // ══════════════════════════════════════════════
+let ghTabLoaded = false;
+
+function switchImportTab(tab, btn) {
+  document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('import-tab-file').style.display = tab === 'file' ? '' : 'none';
+  document.getElementById('import-tab-github').style.display = tab === 'github' ? '' : 'none';
+  if (tab === 'github' && !ghTabLoaded) { ghTabLoaded = true; loadGithubList(); }
+}
+
+async function loadGithubList() {
+  const loading = document.getElementById('gh-loading');
+  const errEl = document.getElementById('gh-error');
+  const list = document.getElementById('gh-list');
+  errEl.style.display = 'none';
+
+  if (GITHUB_USER === 'ТВОЙ_ЛОГИН') {
+    loading.style.display = 'none';
+    errEl.textContent = 'Сначала впиши свой логин GitHub в переменную GITHUB_USER в коде index.html';
+    errEl.style.display = '';
+    return;
+  }
+
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`GitHub: ${res.status}`);
+    const files = await res.json();
+    const jsonFiles = files.filter(f => f.name.endsWith('.json') && f.name !== 'manifest.json');
+
+    loading.style.display = 'none';
+
+    if (jsonFiles.length === 0) {
+      list.innerHTML = '<div class="gh-loading">Нет .json файлов в репозитории</div>';
+      return;
+    }
+
+    // Get already loaded deck names to mark them
+    const decks = await dbGetAll('decks');
+    const loadedNames = new Set(decks.map(d => d.name));
+
+    list.innerHTML = '';
+    for (const f of jsonFiles) {
+      const rawUrl = f.download_url;
+      // Try to get deck name from filename
+      const prettyName = f.name.replace('.json', '').replace(/_/g, ' ');
+
+      // Check if already loaded — we'll check after fetch but show hint now
+      const el = document.createElement('div');
+      el.className = 'gh-item';
+      el.id = 'gh-' + f.sha;
+      el.innerHTML = `
+        <div class="gh-item-icon">📄</div>
+        <div class="gh-item-info">
+          <div class="gh-item-name">${f.name}</div>
+          <div class="gh-item-sub">${(f.size / 1024).toFixed(1)} КБ</div>
+        </div>
+        <div class="gh-item-btn" id="gh-btn-${f.sha}">Загрузить</div>`;
+      el.onclick = () => importFromGithub(rawUrl, f.sha);
+      list.appendChild(el);
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+    errEl.textContent = 'Не удалось загрузить список. Проверь GITHUB_USER и GITHUB_REPO в коде.';
+    errEl.style.display = '';
+  }
+}
+
+async function importFromGithub(url, sha) {
+  const btn = document.getElementById('gh-btn-' + sha);
+  const item = document.getElementById('gh-' + sha);
+  if (!btn || btn.textContent === '✓ Добавлено') return;
+
+  btn.textContent = '…';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('fetch error');
+    const data = await res.json();
+    if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
+
+    const colors = ['#E8F4EE','#FDF0E8','#FEF9E7','#EEF0FD','#FDE8F0'];
+    const deck = {
+      name: data.name, icon: data.icon || '📚',
+      color: data.color || colors[Math.floor(Math.random() * colors.length)],
+      cards: data.cards, createdAt: Date.now()
+    };
+    await dbPut('decks', deck);
+    await renderHome();
+
+    btn.textContent = '✓ Добавлено';
+    item.classList.add('loaded');
+    showToast(`✓ ${data.name} — ${data.cards.length} карточек`);
+  } catch (e) {
+    btn.textContent = 'Ошибка';
+    setTimeout(() => { btn.textContent = 'Загрузить'; }, 2000);
+  }
+}
+
 function openImportModal() {
+  ghTabLoaded = false;
   document.getElementById('import-modal').classList.add('open');
+  // reset to file tab
+  document.querySelectorAll('.modal-tab').forEach((b,i) => b.classList.toggle('active', i===0));
+  document.getElementById('import-tab-file').style.display = '';
+  document.getElementById('import-tab-github').style.display = 'none';
+  document.getElementById('gh-loading').style.display = '';
+  document.getElementById('gh-list').innerHTML = '';
+  document.getElementById('gh-error').style.display = 'none';
 }
 function closeImportModal(e) {
   if (!e || e.target === document.getElementById('import-modal'))
