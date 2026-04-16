@@ -469,35 +469,79 @@ let db;
 function openDB() {
   return new Promise((res, rej) => {
     const req = indexedDB.open(DB_NAME, DB_VER);
+
     req.onupgradeneeded = e => {
       const d = e.target.result;
-      if (!d.objectStoreNames.contains('decks')) d.createObjectStore('decks', { keyPath: 'id', autoIncrement: true });
-      if (!d.objectStoreNames.contains('stats')) d.createObjectStore('stats', { keyPath: 'id' });
-      if (!d.objectStoreNames.contains('favorites')) d.createObjectStore('favorites', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('decks'))
+        d.createObjectStore('decks', { keyPath: 'id', autoIncrement: true });
+      if (!d.objectStoreNames.contains('stats'))
+        d.createObjectStore('stats', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('favorites'))
+        d.createObjectStore('favorites', { keyPath: 'id' });
     };
-    req.onsuccess = e => { db = e.target.result; res(db); };
+
+    req.onsuccess = e => {
+      db = e.target.result;
+      // If another tab opens a newer version — close this connection so upgrade can proceed
+      db.onversionchange = () => { db.close(); db = null; };
+      res(db);
+    };
+
+    // Another tab has the DB open and is blocking the upgrade
+    req.onblocked = () => {
+      console.warn('DB upgrade blocked by another tab. Please close other tabs.');
+      // Try again after a short delay
+      setTimeout(() => openDB().then(res).catch(rej), 500);
+    };
+
     req.onerror = () => rej(req.error);
   });
 }
-function dbGet(store, key) { return new Promise((r,j) => { const q=db.transaction(store,'readonly').objectStore(store).get(key); q.onsuccess=()=>r(q.result); q.onerror=()=>j(); }); }
-function dbGetAll(store) { return new Promise((r,j) => { const q=db.transaction(store,'readonly').objectStore(store).getAll(); q.onsuccess=()=>r(q.result); q.onerror=()=>j(); }); }
-function dbPut(store, value) { return new Promise((r,j) => { const q=db.transaction(store,'readwrite').objectStore(store).put(value); q.onsuccess=()=>r(q.result); q.onerror=()=>j(); }); }
-function dbDelete(store, key) { return new Promise((r,j) => { const q=db.transaction(store,'readwrite').objectStore(store).delete(key); q.onsuccess=()=>r(); q.onerror=()=>j(); }); }
+
+function ensureDB() {
+  if (!db) return openDB();
+  return Promise.resolve(db);
+}
+
+function dbGet(store, key) {
+  return ensureDB().then(d => new Promise((r,j) => {
+    const q = d.transaction(store,'readonly').objectStore(store).get(key);
+    q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error);
+  }));
+}
+function dbGetAll(store) {
+  return ensureDB().then(d => new Promise((r,j) => {
+    const q = d.transaction(store,'readonly').objectStore(store).getAll();
+    q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error);
+  }));
+}
+function dbPut(store, value) {
+  return ensureDB().then(d => new Promise((r,j) => {
+    const q = d.transaction(store,'readwrite').objectStore(store).put(value);
+    q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error);
+  }));
+}
+function dbDelete(store, key) {
+  return ensureDB().then(d => new Promise((r,j) => {
+    const q = d.transaction(store,'readwrite').objectStore(store).delete(key);
+    q.onsuccess=()=>r(); q.onerror=()=>j(q.error);
+  }));
+}
 function dbGetRange(store, prefix) {
-  return new Promise((r,j) => {
+  return ensureDB().then(d => new Promise((r,j) => {
     const range = IDBKeyRange.bound(prefix+'_', prefix+'_\uffff');
-    const q = db.transaction(store,'readonly').objectStore(store).getAll(range);
-    q.onsuccess=()=>r(q.result); q.onerror=()=>j();
-  });
+    const q = d.transaction(store,'readonly').objectStore(store).getAll(range);
+    q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error);
+  }));
 }
 function dbDeleteRange(store, prefix) {
-  return new Promise((r,j) => {
-    const os = db.transaction(store,'readwrite').objectStore(store);
+  return ensureDB().then(d => new Promise((r,j) => {
+    const os = d.transaction(store,'readwrite').objectStore(store);
     const range = IDBKeyRange.bound(prefix+'_', prefix+'_\uffff');
     const req = os.openCursor(range);
     req.onsuccess = e => { const c=e.target.result; if(c){c.delete();c.continue();}else r(); };
-    req.onerror=()=>j();
-  });
+    req.onerror=()=>j(req.error);
+  }));
 }
 
 // ══════════════════════════════════════════════
