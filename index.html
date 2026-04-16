@@ -451,7 +451,7 @@ input[type="file"] { display: none; }
 </div>
 
 <div class="toast" id="toast"></div>
-<input type="file" id="file-input" accept=".json" onchange="handleFileImport(event)">
+<input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileImport(event)">
 
 <script>
 // ══════════════════════════════════════════════
@@ -1137,23 +1137,28 @@ async function loadGithubList() {
   const list=document.getElementById('gh-list');
   errEl.style.display='none';
   try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/`);
+    const res = await fetch(
+      `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/`,
+      { headers: { 'Accept': 'application/vnd.github.v3+json' } }
+    );
     if (!res.ok) throw new Error(res.status);
     const files = await res.json();
-    const jsonFiles = files.filter(f=>f.name.endsWith('.json')&&f.name!=='manifest.json');
+    const jsonFiles = files.filter(f=>f.name.endsWith('.json') && f.name !== 'manifest.json' && f.type === 'file');
     loading.style.display='none';
     if (jsonFiles.length===0){list.innerHTML='<div class="gh-loading">Нет .json файлов</div>';return;}
     list.innerHTML='';
     for (const f of jsonFiles) {
+      // Build raw URL manually — more reliable than download_url (which can be null for large files)
+      const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${f.name}`;
       const el=document.createElement('div');
       el.className='gh-item'; el.id='gh-'+f.sha;
       el.innerHTML=`<div class="gh-item-icon">📄</div><div class="gh-item-info"><div class="gh-item-name">${f.name}</div><div class="gh-item-sub">${(f.size/1024).toFixed(1)} КБ</div></div><div class="gh-item-btn" id="gh-btn-${f.sha}">Загрузить</div>`;
-      el.onclick=()=>importFromGithub(f.download_url, f.sha);
+      el.onclick=()=>importFromGithub(rawUrl, f.sha);
       list.appendChild(el);
     }
   } catch(e) {
     loading.style.display='none';
-    errEl.textContent='Не удалось загрузить список. Проверь настройки репозитория.';
+    errEl.textContent=`Ошибка загрузки списка (${e.message}). Убедись что репозиторий публичный.`;
     errEl.style.display='';
   }
 }
@@ -1164,15 +1169,20 @@ async function importFromGithub(url, sha) {
   if(!btn||btn.textContent==='✓ Добавлено') return;
   btn.textContent='…';
   try {
-    const res=await fetch(url);
-    const data=await res.json();
+    const res = await fetch(url, { headers: { 'Accept': 'application/json, text/plain, */*' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const data = JSON.parse(text);
+    if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
     await saveDeck(data);
     btn.textContent='✓ Добавлено';
     item.classList.add('loaded');
-    showToast(`✓ ${data.name} — ${data.cards.length} блоков`);
+    showToast(`✓ ${data.name} — ${data.cards.length} карточек`);
   } catch(e) {
+    console.error('GitHub import error:', e);
     btn.textContent='Ошибка';
-    setTimeout(()=>{btn.textContent='Загрузить';},2000);
+    setTimeout(()=>{btn.textContent='Загрузить';},2500);
+    showToast(`Ошибка: ${e.message}`);
   }
 }
 
@@ -1205,14 +1215,19 @@ function closeSampleModal(e) { if(!e||e.target===document.getElementById('sample
 function triggerFileImport() { closeImportModal(); document.getElementById('file-input').click(); }
 
 async function handleFileImport(event) {
-  const file=event.target.files[0];
-  if(!file) return;
-  event.target.value='';
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
   try {
-    const data=JSON.parse(await file.text());
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
     await saveDeck(data);
     showToast(`✓ Добавлено: ${data.name}`);
-  } catch(e) { showToast('Ошибка: неверный файл'); }
+  } catch(e) {
+    if (e.message === 'bad format') showToast('Ошибка: неверный формат файла');
+    else showToast('Ошибка: не удалось прочитать файл');
+  }
 }
 
 // ══════════════════════════════════════════════
