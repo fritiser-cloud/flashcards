@@ -397,7 +397,7 @@ input[type="file"] { display: none; }
 <!-- ═══ NOTES SCREEN ═══ -->
 <div id="notes-screen" class="screen">
   <div class="nav">
-    <button class="nav-btn" onclick="showScreen('results-screen')">←</button>
+    <button class="nav-btn" onclick="closeNotes()">←</button>
     <div class="nav-title">Конспект ошибок</div>
     <div style="width:40px"></div>
   </div>
@@ -655,12 +655,14 @@ async function openDeck(deckId) {
       <button class="btn btn-primary" id="btn-study-all">▶ Учить все карточки</button>
       <button class="btn btn-fav" id="btn-study-fav">⭐ Избранное <span id="fav-count"></span></button>
       <button class="btn btn-danger" id="btn-study-errors">⚡ Отработать ошибки</button>
+      <button class="btn btn-notes" id="btn-notes-deck">📋 Конспект ошибок</button>
       <button class="btn btn-secondary" id="btn-reset">↺ Сбросить прогресс</button>`;
     document.getElementById('btn-study-all').onclick = () => startStudy(deckId, false, false);
     document.getElementById('btn-study-fav').onclick = () => startStudy(deckId, false, true);
     document.getElementById('btn-study-errors').onclick = () => startStudy(deckId, true, false);
     document.getElementById('btn-study-errors').disabled = errorCards.length === 0;
     document.getElementById('btn-reset').onclick = () => resetDeck(deckId);
+    document.getElementById('btn-notes-deck').onclick = () => openNotesDeck(deckId);
 
     // Favorites count
     const favs = await dbGetRange('favorites', String(deckId));
@@ -1067,12 +1069,29 @@ function goToDeckDetail() { openDeck(currentDeckId); }
 // ══════════════════════════════════════════════
 let sessionErrorCards = []; // [{q, a}] — ошибки текущей сессии
 let currentNotesTab = 'session';
+let notesDeckFilter = null; // null = все колоды, число = конкретная колода
 
 function openNotes() {
+  notesDeckFilter = null;
   currentNotesTab = 'session';
   showScreen('notes-screen');
   document.querySelectorAll('.notes-tab').forEach((b,i) => b.classList.toggle('active', i===0));
+  // Show both tabs when coming from results
+  document.getElementById('notes-tab-session').style.display = '';
+  document.getElementById('notes-tab-all').style.display = '';
   renderNotes('session');
+}
+
+function openNotesDeck(deckId) {
+  // Open notes for a specific deck — skip session tab, show only "all errors" for this deck
+  notesDeckFilter = deckId;
+  currentNotesTab = 'all';
+  showScreen('notes-screen');
+  // Hide session tab — not relevant from detail screen
+  document.querySelectorAll('.notes-tab').forEach((b,i) => b.classList.toggle('active', i===1));
+  document.getElementById('notes-tab-session').style.display = 'none';
+  document.getElementById('notes-tab-all').style.display = '';
+  renderNotes('all');
 }
 
 function switchNotesTab(tab, btn) {
@@ -1082,12 +1101,19 @@ function switchNotesTab(tab, btn) {
   renderNotes(tab);
 }
 
+function closeNotes() {
+  if (notesDeckFilter !== null) {
+    openDeck(notesDeckFilter);
+  } else {
+    showScreen('results-screen');
+  }
+}
+
 async function renderNotes(tab) {
   const scroll = document.getElementById('notes-scroll');
   scroll.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:14px">Загружаю…</div>';
 
   if (tab === 'session') {
-    // Show only current session errors
     if (sessionErrorCards.length === 0) {
       scroll.innerHTML = `
         <div class="notes-empty">
@@ -1108,12 +1134,16 @@ async function renderNotes(tab) {
       scroll.appendChild(item);
     }
   } else {
-    // Show all accumulated errors from stats
+    // Show accumulated errors — filtered by deck if notesDeckFilter is set
     const decks = await dbGetAll('decks');
     const allStats = await dbGetAll('stats');
-    const errorStats = allStats.filter(s => (s.errors || 0) > 0);
 
-    if (errorStats.length === 0) {
+    // If filtering by deck — only show stats for that deck
+    const filteredStats = notesDeckFilter !== null
+      ? allStats.filter(s => s.id.startsWith(notesDeckFilter + '_') && (s.errors || 0) > 0)
+      : allStats.filter(s => (s.errors || 0) > 0);
+
+    if (filteredStats.length === 0) {
       scroll.innerHTML = `
         <div class="notes-empty">
           <div class="notes-empty-icon">🎉</div>
@@ -1123,7 +1153,7 @@ async function renderNotes(tab) {
     }
 
     const byDeck = {};
-    for (const stat of errorStats) {
+    for (const stat of filteredStats) {
       const parts = stat.id.split('_');
       const deckId = parseInt(parts[0]);
       const cardIdx = parseInt(parts[1]);
@@ -1134,7 +1164,9 @@ async function renderNotes(tab) {
     scroll.innerHTML = '';
     const banner = document.createElement('div');
     banner.style.cssText = 'background:var(--yellow-light);border:1px solid #F5C842;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#9A6F00;font-weight:600;margin-bottom:4px';
-    banner.textContent = `📋 Все карточки с ошибками — ${errorStats.length} шт.`;
+    banner.textContent = notesDeckFilter !== null
+      ? `📋 Ошибки этого набора — ${filteredStats.length} шт.`
+      : `📋 Все карточки с ошибками — ${filteredStats.length} шт.`;
     scroll.appendChild(banner);
 
     for (const deck of decks) {
@@ -1142,10 +1174,13 @@ async function renderNotes(tab) {
       if (!deckErrors || deck.type === 'match') continue;
       deckErrors.sort((a, b) => b.errors - a.errors);
 
-      const titleEl = document.createElement('div');
-      titleEl.className = 'notes-deck-title';
-      titleEl.textContent = `${deck.icon || '📚'} ${deck.name}`;
-      scroll.appendChild(titleEl);
+      // Show deck title only when showing all decks
+      if (notesDeckFilter === null) {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'notes-deck-title';
+        titleEl.textContent = `${deck.icon || '📚'} ${deck.name}`;
+        scroll.appendChild(titleEl);
+      }
 
       for (const { cardIdx, errors, known } of deckErrors) {
         const card = deck.cards[cardIdx];
