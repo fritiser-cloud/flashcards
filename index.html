@@ -120,22 +120,22 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .study-counter { text-align: center; font-size: 13px; color: var(--text3); font-weight: 600; padding: 14px 20px 0; }
 .flashcard-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; perspective: 1000px; }
 .flashcard-wrap { width: 100%; max-width: 380px; }
-.flashcard-3d { width: 100%; min-height: 260px; transform-style: preserve-3d; transition: transform 0.45s cubic-bezier(.4,0,.2,1); cursor: pointer; position: relative; }
+.flashcard-3d { width: 100%; min-height: 340px; transform-style: preserve-3d; transition: transform 0.45s cubic-bezier(.4,0,.2,1); cursor: pointer; position: relative; }
 .flashcard-3d.flipped { transform: rotateY(180deg); }
 .fc-face {
-  position: absolute; width: 100%; min-height: 260px; top: 0; left: 0;
+  position: absolute; width: 100%; min-height: 340px; top: 0; left: 0;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); border: 1px solid var(--border);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 32px 28px; text-align: center;
+  padding: 36px 28px; text-align: center;
 }
 .fc-back { transform: rotateY(180deg); }
-.fc-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 16px; }
-.fc-text { font-family: var(--font-display); font-size: 22px; line-height: 1.4; font-weight: 500; }
-.fc-hint { font-size: 13px; color: var(--text3); margin-top: 16px; font-weight: 500; }
-.fc-back .fc-text { font-size: 18px; }
+.fc-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 18px; }
+.fc-text { font-family: var(--font-display); font-size: 26px; line-height: 1.45; font-weight: 500; }
+.fc-hint { font-size: 14px; color: var(--text3); margin-top: 20px; font-weight: 500; }
+.fc-back .fc-text { font-size: 20px; line-height: 1.55; }
 .study-actions { padding: 16px 20px 36px; display: flex; gap: 12px; }
-.study-actions .btn { flex: 1; padding: 18px 12px; font-size: 16px; }
+.study-actions .btn { flex: 1; padding: 20px 12px; font-size: 17px; }
 .btn-wrong { background: var(--accent2-light); color: var(--accent2); border: 1.5px solid #F9CEB3; }
 .btn-right { background: var(--accent-light); color: var(--accent); border: 1.5px solid #B7DEC9; }
 
@@ -212,6 +212,28 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .res-stat.good { background: var(--accent-light); color: var(--accent); }
 .res-stat.bad { background: var(--accent2-light); color: var(--accent2); }
 .results-btns { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.btn-notes { background: var(--yellow-light); color: #9A6F00; border: 1.5px solid #F5C842; }
+
+/* ── NOTES SCREEN ── */
+#notes-screen { background: var(--bg); }
+.notes-empty { text-align: center; padding: 60px 24px; }
+.notes-empty-icon { font-size: 48px; margin-bottom: 12px; }
+.notes-empty-text { font-size: 15px; color: var(--text3); font-weight: 500; line-height: 1.5; }
+.notes-item {
+  background: var(--surface); border-radius: var(--radius-sm);
+  border: 1px solid var(--border); padding: 16px 18px; margin-bottom: 10px;
+}
+.notes-item-q { font-weight: 700; font-size: 15px; color: var(--text); margin-bottom: 8px; line-height: 1.4; }
+.notes-item-a { font-size: 13px; color: var(--text2); line-height: 1.55; white-space: pre-wrap; }
+.notes-item-errors { display: inline-flex; align-items: center; gap: 4px; background: var(--accent2-light); color: var(--accent2); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; margin-bottom: 8px; }
+.notes-deck-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin: 16px 0 8px; }
+.notes-tab {
+  flex: 1; padding: 10px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); background: var(--surface2);
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  color: var(--text2); cursor: pointer; transition: all 0.15s;
+}
+.notes-tab.active { background: var(--yellow-light); color: #9A6F00; border-color: #F5C842; }
 
 /* ── MODALS ── */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: flex-end; justify-content: center; }
@@ -363,9 +385,24 @@ input[type="file"] { display: none; }
       <div class="res-stat bad"><div class="num" id="res-errors">0</div><div class="lbl">Ошибок</div></div>
     </div>
     <div class="results-btns">
+      <button class="btn btn-notes" onclick="openNotes()">📋 Конспект ошибок</button>
       <button class="btn btn-secondary" onclick="goToDeckDetail()">← К набору</button>
     </div>
   </div>
+</div>
+
+<!-- ═══ NOTES SCREEN ═══ -->
+<div id="notes-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('results-screen')">←</button>
+    <div class="nav-title">Конспект ошибок</div>
+    <div style="width:40px"></div>
+  </div>
+  <div style="padding:12px 20px 0; display:flex; gap:8px;">
+    <button class="notes-tab active" id="notes-tab-session" onclick="switchNotesTab('session', this)">Эта сессия</button>
+    <button class="notes-tab" id="notes-tab-all" onclick="switchNotesTab('all', this)">Все ошибки</button>
+  </div>
+  <div class="scroll" id="notes-scroll"></div>
 </div>
 
 <!-- ═══ IMPORT MODAL ═══ -->
@@ -626,7 +663,7 @@ async function startStudy(deckId, errorsOnly) {
     : deck.cards.map((_,i)=>i);
   indices = indices.sort(()=>Math.random()-0.5);
   studyQueue = indices.map(i=>({...deck.cards[i], idx:i}));
-  studyIdx = 0; sessionKnown = 0; sessionErrors = 0;
+  studyIdx = 0; sessionKnown = 0; sessionErrors = 0; sessionErrorCards = [];
   document.getElementById('study-deck-name').textContent = deck.name;
   showScreen('study-screen');
   showCard();
@@ -657,7 +694,10 @@ async function markCard(known) {
   const statId = `${currentDeckId}_${card.idx}`;
   let stat = await dbGet('stats', statId) || {id:statId, known:0, errors:0};
   if (known) { stat.known=(stat.known||0)+1; sessionKnown++; }
-  else { stat.errors=(stat.errors||0)+1; sessionErrors++; }
+  else {
+    stat.errors=(stat.errors||0)+1; sessionErrors++;
+    sessionErrorCards.push({ q: card.q, a: card.a });
+  }
   await dbPut('stats', stat);
   studyIdx++;
   showCard();
@@ -917,6 +957,106 @@ function showResults() {
 }
 
 function goToDeckDetail() { openDeck(currentDeckId); }
+
+// ══════════════════════════════════════════════
+//  NOTES (конспект ошибок)
+// ══════════════════════════════════════════════
+let sessionErrorCards = []; // [{q, a}] — ошибки текущей сессии
+let currentNotesTab = 'session';
+
+function openNotes() {
+  currentNotesTab = 'session';
+  showScreen('notes-screen');
+  document.querySelectorAll('.notes-tab').forEach((b,i) => b.classList.toggle('active', i===0));
+  renderNotes('session');
+}
+
+function switchNotesTab(tab, btn) {
+  currentNotesTab = tab;
+  document.querySelectorAll('.notes-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderNotes(tab);
+}
+
+async function renderNotes(tab) {
+  const scroll = document.getElementById('notes-scroll');
+  scroll.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:14px">Загружаю…</div>';
+
+  if (tab === 'session') {
+    // Show only current session errors
+    if (sessionErrorCards.length === 0) {
+      scroll.innerHTML = `
+        <div class="notes-empty">
+          <div class="notes-empty-icon">🎉</div>
+          <div class="notes-empty-text">В этой сессии ошибок не было!</div>
+        </div>`;
+      return;
+    }
+    scroll.innerHTML = '';
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:var(--yellow-light);border:1px solid #F5C842;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#9A6F00;font-weight:600;margin-bottom:4px';
+    banner.textContent = `📋 Ошибки этой сессии — ${sessionErrorCards.length} карточек`;
+    scroll.appendChild(banner);
+    for (const card of sessionErrorCards) {
+      const item = document.createElement('div');
+      item.className = 'notes-item';
+      item.innerHTML = `<div class="notes-item-q">${card.q}</div><div class="notes-item-a">${card.a}</div>`;
+      scroll.appendChild(item);
+    }
+  } else {
+    // Show all accumulated errors from stats
+    const decks = await dbGetAll('decks');
+    const allStats = await dbGetAll('stats');
+    const errorStats = allStats.filter(s => (s.errors || 0) > 0);
+
+    if (errorStats.length === 0) {
+      scroll.innerHTML = `
+        <div class="notes-empty">
+          <div class="notes-empty-icon">🎉</div>
+          <div class="notes-empty-text">Ошибок пока нет!<br>Продолжай в том же духе.</div>
+        </div>`;
+      return;
+    }
+
+    const byDeck = {};
+    for (const stat of errorStats) {
+      const parts = stat.id.split('_');
+      const deckId = parseInt(parts[0]);
+      const cardIdx = parseInt(parts[1]);
+      if (!byDeck[deckId]) byDeck[deckId] = [];
+      byDeck[deckId].push({ cardIdx, errors: stat.errors || 0, known: stat.known || 0 });
+    }
+
+    scroll.innerHTML = '';
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:var(--yellow-light);border:1px solid #F5C842;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#9A6F00;font-weight:600;margin-bottom:4px';
+    banner.textContent = `📋 Все карточки с ошибками — ${errorStats.length} шт.`;
+    scroll.appendChild(banner);
+
+    for (const deck of decks) {
+      const deckErrors = byDeck[deck.id];
+      if (!deckErrors || deck.type === 'match') continue;
+      deckErrors.sort((a, b) => b.errors - a.errors);
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'notes-deck-title';
+      titleEl.textContent = `${deck.icon || '📚'} ${deck.name}`;
+      scroll.appendChild(titleEl);
+
+      for (const { cardIdx, errors, known } of deckErrors) {
+        const card = deck.cards[cardIdx];
+        if (!card) continue;
+        const item = document.createElement('div');
+        item.className = 'notes-item';
+        item.innerHTML = `
+          <div class="notes-item-errors">✕ ${errors} ${errors===1?'ошибка':errors<5?'ошибки':'ошибок'}${known>0?' · ✓ '+known+' верно':''}</div>
+          <div class="notes-item-q">${card.q}</div>
+          <div class="notes-item-a">${card.a}</div>`;
+        scroll.appendChild(item);
+      }
+    }
+  }
+}
 
 // ══════════════════════════════════════════════
 //  IMPORT
