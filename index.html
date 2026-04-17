@@ -523,6 +523,7 @@
 </div>
 
 <!-- ДЕТАЛИ КОЛОДЫ -->
+<!-- ДЕТАЛИ КОЛОДЫ (исправленная версия) -->
 <div id="deck-detail-screen" class="screen">
   <div class="nav">
     <button class="nav-btn" onclick="showScreen('decks-screen')">←</button>
@@ -530,10 +531,10 @@
     <button class="nav-btn" id="deck-delete-btn">🗑</button>
   </div>
   <div class="scroll" id="deck-detail-scroll">
-    <div class="deck-header-block" style="padding:24px 20px 16px;">
-      <div class="deck-header-icon" id="deck-detail-icon">📚</div>
-      <div class="deck-header-title" id="deck-detail-name">—</div>
-      <div class="deck-header-sub" id="deck-detail-sub">—</div>
+    <div style="padding:24px 20px 16px;">
+      <div style="font-size:40px; margin-bottom:10px;" id="deck-detail-icon">📚</div>
+      <div style="font-family:var(--font-display); font-size:28px; font-weight:600; letter-spacing:-0.4px;" id="deck-detail-name">—</div>
+      <div style="font-size:13px; color:var(--text3); margin-top:4px; font-weight:500;" id="deck-detail-sub">—</div>
     </div>
     <div class="big-stat-row" id="deck-stats-row">
       <div class="big-stat good"><div class="num" id="deck-known">0</div><div class="lbl">Знаю</div></div>
