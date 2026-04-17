@@ -220,8 +220,180 @@
     .btn-notes { background: var(--surface2); color: var(--text); }
 
     /* Flashcard и Match (остальные стили как в исходном "Наш язык") */
-    /* (для краткости опущены, но включены в полный код ниже) */
-    /* ... */
+    /* Study screen */
+    #study-screen { background: var(--bg); }
+    .study-progress-bar { height: 3px; background: var(--border); }
+    .study-progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+    .study-counter { text-align: center; font-size: 13px; color: var(--text3); font-weight: 600; padding: 14px 20px 0; }
+    .flashcard-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; perspective: 1000px; }
+    .flashcard-wrap { width: 100%; max-width: 380px; }
+    .flashcard-3d { width: 100%; min-height: 420px; transform-style: preserve-3d; transition: transform 0.45s cubic-bezier(.4,0,.2,1); cursor: pointer; position: relative; }
+    .flashcard-3d.flipped { transform: rotateY(180deg); }
+    .fc-face {
+      position: absolute; width: 100%; min-height: 420px; top: 0; left: 0;
+      backface-visibility: hidden; -webkit-backface-visibility: hidden;
+      background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 40px 32px; text-align: center;
+    }
+    .fc-back { transform: rotateY(180deg); }
+    .fc-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 20px; }
+    .fc-text { font-family: var(--font-display); font-size: 30px; line-height: 1.45; font-weight: 500; }
+    .fc-hint { font-size: 15px; color: var(--text3); margin-top: 22px; font-weight: 500; }
+    .fc-back .fc-text { font-size: 22px; line-height: 1.6; }
+    .study-actions { padding: 16px 20px 36px; display: flex; gap: 12px; }
+    .study-actions .btn { flex: 1; padding: 20px 12px; font-size: 17px; }
+    .btn-wrong { background: var(--accent2-light); color: var(--accent2); border: 1.5px solid #F9CEB3; }
+    .btn-right { background: var(--accent-light); color: var(--accent); border: 1.5px solid #B7DEC9; }
+
+    /* Match screen */
+    #match-screen { background: var(--bg); }
+    .match-progress-bar { height: 3px; background: var(--border); }
+    .match-progress-fill { height: 100%; background: #4A4AB0; transition: width 0.3s; }
+    .match-counter { text-align: center; font-size: 13px; color: var(--text3); font-weight: 600; padding: 12px 20px 4px; }
+    .match-set-title { text-align: center; font-family: var(--font-display); font-size: 17px; font-weight: 500; color: var(--text2); padding: 0 20px 8px; }
+    .match-area { flex: 1; padding: 12px 16px 0; position: relative; overflow: hidden; }
+    .match-columns { display: flex; gap: 10px; position: relative; z-index: 2; }
+    .match-col { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .match-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+    .match-chip {
+      padding: 12px 14px; border-radius: var(--radius-sm);
+      border: 2px solid var(--border); background: var(--surface);
+      font-size: 13px; font-weight: 600; cursor: pointer; line-height: 1.35;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      position: relative; user-select: none; text-align: center;
+    }
+    .match-chip:active { transform: scale(0.97); }
+    .match-chip.selected { border-color: #4A4AB0; background: #EEF0FD; color: #4A4AB0; }
+    .match-chip.connected { border-color: var(--border); background: var(--surface2); color: var(--text2); cursor: default; }
+    .match-chip.correct { border-color: var(--green); background: var(--green-light); color: var(--green); }
+    .match-chip.wrong { border-color: var(--red); background: var(--red-light); color: var(--red); animation: shake 0.3s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+    .match-actions { padding: 12px 16px 16px; display: flex; gap: 10px; }
+    .match-actions .btn { flex: 1; }
+    .btn-check { background: #4A4AB0; color: #fff; }
+    .btn-check:disabled { opacity: 0.4; }
+    .match-hints { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .hint-item {
+      padding: 12px 14px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--surface);
+      font-size: 13px; line-height: 1.45;
+    }
+    .hint-item.show-correct { border-color: var(--green); background: var(--green-light); }
+    .hint-item.show-wrong { border-color: var(--red); background: var(--red-light); }
+    .hint-word { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .hint-text { color: var(--text2); }
+    .hint-example { color: var(--text3); font-style: italic; margin-top: 2px; font-size: 12px; }
+    .match-result-bar {
+      margin: 0 16px 12px; padding: 12px 16px; border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 700; text-align: center; display: none;
+    }
+    .match-result-bar.correct { background: var(--green-light); color: var(--green); display: block; }
+    .match-result-bar.wrong { background: var(--red-light); color: var(--red); display: block; }
+
+    /* Results */
+    .results-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; text-align: center; }
+    .results-emoji { font-size: 64px; margin-bottom: 16px; }
+    .results-title { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-bottom: 8px; }
+    .results-sub { font-size: 15px; color: var(--text2); line-height: 1.5; }
+    .results-stats { display: flex; gap: 16px; margin: 28px 0; }
+    .res-stat { flex: 1; padding: 16px; border-radius: var(--radius-sm); text-align: center; }
+    .res-stat .num { font-family: var(--font-display); font-size: 36px; font-weight: 500; }
+    .res-stat .lbl { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    .res-stat.good { background: var(--accent-light); color: var(--accent); }
+    .res-stat.bad { background: var(--accent2-light); color: var(--accent2); }
+    .results-btns { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Notes screen */
+    #notes-screen { background: var(--bg); }
+    .notes-empty { text-align: center; padding: 60px 24px; }
+    .notes-empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .notes-empty-text { font-size: 15px; color: var(--text3); font-weight: 500; line-height: 1.5; }
+    .notes-item {
+      background: var(--surface); border-radius: var(--radius-sm);
+      border: 1px solid var(--border); padding: 16px 18px; margin-bottom: 10px;
+    }
+    .notes-item-q { font-weight: 700; font-size: 15px; color: var(--text); margin-bottom: 8px; line-height: 1.4; }
+    .notes-item-a { font-size: 13px; color: var(--text2); line-height: 1.55; white-space: pre-wrap; }
+    .notes-item-errors { display: inline-flex; align-items: center; gap: 4px; background: var(--accent2-light); color: var(--accent2); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; margin-bottom: 8px; }
+    .notes-deck-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin: 16px 0 8px; }
+    .notes-tab {
+      flex: 1; padding: 10px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); background: var(--surface2);
+      font-family: var(--font); font-size: 14px; font-weight: 600;
+      color: var(--text2); cursor: pointer; transition: all 0.15s;
+    }
+    .notes-tab.active { background: var(--yellow-light); color: #9A6F00; border-color: #F5C842; }
+
+    /* Модальные окна */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,21,48,0.4); z-index: 100; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
+    .modal-overlay.open { display: flex; animation: fadeIn 0.2s; }
+    .modal { background: var(--surface); width: 100%; max-width: 480px; border-radius: 28px 28px 0 0; padding: 28px 24px 44px; animation: slideUp 0.3s cubic-bezier(.34,1.56,.64,1); max-height: 85dvh; overflow-y: auto; }
+    .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 22px; }
+    .modal-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 20px; line-height: 1.5; }
+    .modal-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+    .modal-tab { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface2); font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+    .modal-tab.active { background: var(--lavender-deep); color: #fff; border-color: var(--lavender-deep); }
+    .modal-cancel { width: 100%; padding: 14px; border: none; background: none; font-family: var(--font); font-size: 15px; font-weight: 600; color: var(--text3); cursor: pointer; margin-top: 6px; }
+
+    /* GitHub list */
+    .gh-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: all 0.15s; }
+    .gh-item:active { background: var(--lavender); }
+    .gh-item.loaded { border-color: var(--sage-deep); background: var(--sage); }
+    .gh-item-icon { font-size: 22px; }
+    .gh-item-info { flex: 1; min-width: 0; }
+    .gh-item-name { font-weight: 700; font-size: 14px; }
+    .gh-item-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .gh-item-btn { font-size: 12px; font-weight: 700; color: var(--lavender-deep); white-space: nowrap; }
+    .gh-item.loaded .gh-item-btn { color: var(--text3); }
+    .gh-loading { text-align: center; padding: 20px 0; color: var(--text3); font-size: 14px; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.2s, transform 0.2s; z-index: 200; white-space: nowrap; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Настройки */
+    .settings-section { background: var(--surface); border-radius: var(--radius); padding: 18px 20px; border: 1.5px solid var(--border); margin-bottom: 12px; }
+    .settings-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-bottom: 12px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .settings-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .settings-row-label { font-size: 14px; font-weight: 500; color: var(--text); }
+    .settings-row-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .settings-input { flex: 1; margin-left: 12px; padding: 8px 12px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface2); font-family: var(--font); font-size: 14px; color: var(--text); outline: none; transition: border-color 0.2s; }
+    .settings-input:focus { border-color: var(--lavender-deep); }
+
+    /* Анимации */
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes slideUp { from{transform:translateY(60px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+    /* Прочее */
+    .empty { text-align: center; padding: 48px 24px; }
+    .empty-icon { font-size: 52px; margin-bottom: 12px; }
+    .empty-text { font-size: 15px; color: var(--text3); line-height: 1.6; }
+    .home-hero { padding: 32px 20px 8px; position: relative; z-index: 1; }
+    .home-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 6px; }
+    .home-title { font-family: var(--font-display); font-size: 38px; font-weight: 500; line-height: 1.1; color: var(--text); }
+    .home-title span { font-style: italic; color: var(--lavender-deep); }
+    .home-sub { font-size: 14px; color: var(--text3); margin-top: 8px; font-weight: 400; line-height: 1.5; }
+    .home-header { padding: 28px 20px 8px; }
+    .home-greeting { font-size: 13px; color: var(--text3); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
+    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 10px; }
+    .hard-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; }
+    .hard-rank { font-family: var(--font-display); font-size: 22px; color: var(--accent2); min-width: 32px; }
+    .hard-info { flex: 1; min-width: 0; }
+    .hard-q { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hard-stat { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .hard-badge { background: var(--accent2-light); color: var(--accent2); font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 20px; white-space: nowrap; }
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-box { background: var(--lavender); border-radius: var(--radius-sm); padding: 14px 16px; }
+    .stat-box.sage { background: var(--sage); }
+    .stat-num { font-family: var(--font-display); font-size: 28px; font-weight: 500; color: var(--lavender-text); }
+    .stat-box.sage .stat-num { color: var(--sage-text); }
+    .stat-lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); margin-top: 2px; }
+    #fav-btn { font-size: 22px; transition: transform 0.2s; }
+    #fav-btn.active { color: #F5C842; background: var(--yellow-light); }
+    #fav-btn.pop { transform: scale(1.4); }
   </style>
 </head>
 <body>
@@ -236,10 +408,10 @@
 
 <!-- ГЛАВНАЯ: БИБЛИОТЕКА ПОСОБИЙ (Биолаб) -->
 <div id="library-screen" class="screen active">
-  <div class="home-hero" style="padding:32px 20px 8px;">
-    <div class="home-label" style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3);">Твоя библиотека</div>
-    <div class="home-title" style="font-family:var(--font-display); font-size:38px; font-weight:500; line-height:1.1;">Биолаб <span style="font-style:italic; color:var(--lavender-deep);">&</span><br>Наш язык</div>
-    <div class="home-sub" style="font-size:14px; color:var(--text3);">Учебные пособия и флеш-карточки для ЕГЭ</div>
+  <div class="home-hero">
+    <div class="home-label">Твоя библиотека</div>
+    <div class="home-title">Биолаб <span>&</span><br>Наш язык</div>
+    <div class="home-sub">Учебные пособия и флеш-карточки для ЕГЭ</div>
   </div>
   <div class="cats" id="cats-row">
     <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
@@ -255,13 +427,13 @@
 
 <!-- КОЛОДЫ КАРТОЧЕК -->
 <div id="decks-screen" class="screen">
-  <div class="home-header" style="padding:28px 20px 8px;">
-    <div class="home-greeting" style="font-size:13px; color:var(--text3);">Колоды карточек</div>
-    <div class="home-title" style="font-size:36px;">Карточки</div>
+  <div class="home-header">
+    <div class="home-greeting">Колоды карточек</div>
+    <div class="home-title">Карточки</div>
     <div class="home-sub" id="decks-sub">Загрузи колоду через +</div>
   </div>
   <div class="scroll">
-    <div class="section-title" style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--text3);">Мои колоды</div>
+    <div class="section-title">Мои колоды</div>
     <div id="decks-list"></div>
   </div>
   <button class="fab" onclick="openAddModal('deck')">＋</button>
@@ -317,8 +489,91 @@
   </div>
 </div>
 
-<!-- ЭКРАНЫ ИЗУЧЕНИЯ (flashcard, match, results, notes) - идентичны "Наш язык" -->
-<!-- (включаем полную реализацию из index.html) -->
+<!-- ЭКРАН ИЗУЧЕНИЯ КАРТОЧЕК -->
+<div id="study-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="exitStudy()">✕</button>
+    <div class="nav-title" id="study-deck-name"></div>
+    <button class="nav-btn" id="fav-btn" onclick="toggleFavorite()" title="В избранное">☆</button>
+  </div>
+  <div class="study-progress-bar"><div class="study-progress-fill" id="study-prog"></div></div>
+  <div class="study-counter" id="study-counter"></div>
+  <div class="flashcard-area">
+    <div class="flashcard-wrap">
+      <div class="flashcard-3d" id="flashcard" onclick="flipCard()">
+        <div class="fc-face fc-front">
+          <div class="fc-label">Вопрос</div>
+          <div class="fc-text" id="fc-question"></div>
+          <div class="fc-hint">нажмите, чтобы увидеть ответ</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-label">Ответ</div>
+          <div class="fc-text" id="fc-answer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="study-actions" id="study-actions" style="visibility:hidden">
+    <button class="btn btn-wrong" onclick="markCard(false)">✕ Не знал</button>
+    <button class="btn btn-right" onclick="markCard(true)">✓ Знал</button>
+  </div>
+</div>
+
+<!-- ЭКРАН MATCH (ПАРОНИМЫ) -->
+<div id="match-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="exitMatch()">✕</button>
+    <div class="nav-title" id="match-deck-name"></div>
+    <div style="width:40px"></div>
+  </div>
+  <div class="match-progress-bar"><div class="match-progress-fill" id="match-prog"></div></div>
+  <div class="match-counter" id="match-counter"></div>
+  <div class="match-set-title" id="match-set-title"></div>
+  <div class="match-area" id="match-area">
+    <svg class="match-svg" id="match-svg"></svg>
+    <div class="match-columns">
+      <div class="match-col" id="match-col-left"></div>
+      <div class="match-col" id="match-col-right"></div>
+    </div>
+  </div>
+  <div class="match-result-bar" id="match-result-bar"></div>
+  <div class="match-actions">
+    <button class="btn btn-secondary" onclick="skipMatchSet()">Пропустить</button>
+    <button class="btn btn-check" id="btn-check" onclick="checkMatch()" disabled>Проверить</button>
+  </div>
+  <div class="match-hints" id="match-hints"></div>
+</div>
+
+<!-- ЭКРАН РЕЗУЛЬТАТОВ -->
+<div id="results-screen" class="screen">
+  <div class="results-content">
+    <div class="results-emoji" id="res-emoji">🎉</div>
+    <div class="results-title" id="res-title">Отличная работа!</div>
+    <div class="results-sub" id="res-sub"></div>
+    <div class="results-stats">
+      <div class="res-stat good"><div class="num" id="res-known">0</div><div class="lbl">Верно</div></div>
+      <div class="res-stat bad"><div class="num" id="res-errors">0</div><div class="lbl">Ошибок</div></div>
+    </div>
+    <div class="results-btns">
+      <button class="btn btn-notes" onclick="openNotes()">📋 Конспект ошибок</button>
+      <button class="btn btn-secondary" onclick="goToDeckDetail()">← К набору</button>
+    </div>
+  </div>
+</div>
+
+<!-- ЭКРАН КОНСПЕКТА ОШИБОК -->
+<div id="notes-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="closeNotes()">←</button>
+    <div class="nav-title">Конспект ошибок</div>
+    <div style="width:40px"></div>
+  </div>
+  <div style="padding:12px 20px 0; display:flex; gap:8px;">
+    <button class="notes-tab active" id="notes-tab-session" onclick="switchNotesTab('session', this)">Эта сессия</button>
+    <button class="notes-tab" id="notes-tab-all" onclick="switchNotesTab('all', this)">Все ошибки</button>
+  </div>
+  <div class="scroll" id="notes-scroll"></div>
+</div>
 
 <!-- НАСТРОЙКИ -->
 <div id="settings-screen" class="screen">
@@ -410,14 +665,22 @@
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
 
 <script>
-  // ==================== КОНФИГУРАЦИЯ ====================
+  // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
   let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
   let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
-  let currentAddType = 'guide'; // 'guide' или 'deck'
+  let currentAddType = 'guide';
   let currentGuideId = null;
   let currentDeckId = null;
   let currentCat = 'all';
   let ghTabLoaded = false;
+
+  // Состояние изучения
+  let studyQueue = [], studyIdx = 0, sessionKnown = 0, sessionErrors = 0, isFlipped = false, isErrorsMode = false, isFavMode = false;
+  let sessionErrorCards = [];
+  let matchSets = [], matchSetIdx = 0, matchSessionCorrect = 0, matchSessionWrong = 0;
+  let matchSelected = { left: null, right: null };
+  let matchConnections = [];
+  let matchChecked = false;
 
   // ==================== ХРАНИЛИЩЕ ПОСОБИЙ (localStorage) ====================
   function getGuides() {
@@ -433,7 +696,7 @@
   }
   function removeGuide(id) { saveGuides(getGuides().filter(g => g.id !== id)); }
 
-  // ==================== INDEXEDDB (колоды + статистика) ====================
+  // ==================== INDEXEDDB ====================
   const DB_NAME = 'flashcards_db', DB_VER = 2;
   let db;
   function openDB() {
@@ -450,54 +713,67 @@
     });
   }
   function dbGet(store, key) {
-    return new Promise((r,j) => {
-      const q = db.transaction(store,'readonly').objectStore(store).get(key);
-      q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error);
+    return new Promise((r, j) => {
+      const q = db.transaction(store, 'readonly').objectStore(store).get(key);
+      q.onsuccess = () => r(q.result); q.onerror = () => j(q.error);
     });
   }
   function dbGetAll(store) {
-    return new Promise((r,j) => {
-      const q = db.transaction(store,'readonly').objectStore(store).getAll();
-      q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error);
+    return new Promise((r, j) => {
+      const q = db.transaction(store, 'readonly').objectStore(store).getAll();
+      q.onsuccess = () => r(q.result); q.onerror = () => j(q.error);
     });
   }
   function dbPut(store, value) {
-    return new Promise((r,j) => {
-      const q = db.transaction(store,'readwrite').objectStore(store).put(value);
-      q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error);
+    return new Promise((r, j) => {
+      const q = db.transaction(store, 'readwrite').objectStore(store).put(value);
+      q.onsuccess = () => r(q.result); q.onerror = () => j(q.error);
     });
   }
   function dbDelete(store, key) {
-    return new Promise((r,j) => {
-      const q = db.transaction(store,'readwrite').objectStore(store).delete(key);
-      q.onsuccess=()=>r(); q.onerror=()=>j(q.error);
+    return new Promise((r, j) => {
+      const q = db.transaction(store, 'readwrite').objectStore(store).delete(key);
+      q.onsuccess = () => r(); q.onerror = () => j(q.error);
     });
   }
   function dbGetRange(store, prefix) {
-    return new Promise((r,j) => {
-      const range = IDBKeyRange.bound(prefix+'_', prefix+'_\uffff');
-      const q = db.transaction(store,'readonly').objectStore(store).getAll(range);
-      q.onsuccess=()=>r(q.result); q.onerror=()=>j(q.error);
+    return new Promise((r, j) => {
+      const range = IDBKeyRange.bound(prefix + '_', prefix + '_\uffff');
+      const q = db.transaction(store, 'readonly').objectStore(store).getAll(range);
+      q.onsuccess = () => r(q.result); q.onerror = () => j(q.error);
     });
   }
   function dbDeleteRange(store, prefix) {
-    return new Promise((r,j) => {
-      const os = db.transaction(store,'readwrite').objectStore(store);
-      const range = IDBKeyRange.bound(prefix+'_', prefix+'_\uffff');
+    return new Promise((r, j) => {
+      const os = db.transaction(store, 'readwrite').objectStore(store);
+      const range = IDBKeyRange.bound(prefix + '_', prefix + '_\uffff');
       const req = os.openCursor(range);
-      req.onsuccess = e => { const c=e.target.result; if(c){c.delete();c.continue();}else r(); };
-      req.onerror=()=>j(req.error);
+      req.onsuccess = e => { const c = e.target.result; if (c) { c.delete(); c.continue(); } else r(); };
+      req.onerror = () => j(req.error);
     });
   }
 
-  // ==================== НАВИГАЦИЯ ====================
+  // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+  function plural(n, one, few, many) {
+    if (n % 10 === 1 && n % 100 !== 11) return one;
+    if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return few;
+    return many;
+  }
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+  }
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
   }
   function navTo(tab) {
     document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('nav-'+tab).classList.add('active');
+    document.getElementById('nav-' + tab).classList.add('active');
     if (tab === 'library') { showScreen('library-screen'); renderLibrary(); }
     else if (tab === 'decks') { showScreen('decks-screen'); renderDecks(); }
     else if (tab === 'settings') { showScreen('settings-screen'); renderSettings(); }
@@ -519,11 +795,11 @@
       return;
     }
     list.innerHTML = '';
-    for (const guide of filtered) {
+    filtered.forEach(guide => {
       const card = document.createElement('div');
       card.className = `guide-card ${guide.category || 'bio'}`;
       const tags = (guide.tags || []).map((t, i) => {
-        const cls = ['','sage','peach','sky'][i % 4];
+        const cls = ['', 'sage', 'peach', 'sky'][i % 4];
         return `<span class="card-tag ${cls}">${t}</span>`;
       }).join('');
       card.innerHTML = `
@@ -534,9 +810,8 @@
         <div class="card-arrow">›</div>`;
       card.onclick = () => openGuide(guide.id);
       list.appendChild(card);
-    }
+    });
   }
-
   function openGuide(id) {
     currentGuideId = id;
     const guide = getGuides().find(g => g.id === id);
@@ -546,12 +821,11 @@
     document.getElementById('guide-category-label').textContent = { bio: '🧬 Биология', ru: '✍️ Русский язык', phys: '⚗️ Химия / Физика' }[guide.category] || '📖 Пособие';
     document.getElementById('guide-desc').textContent = guide.desc || '';
     document.getElementById('guide-delete-btn').onclick = () => deleteGuide(id);
-    const tagsEl = document.getElementById('guide-tags');
-    tagsEl.innerHTML = (guide.tags || []).map((t, i) => `<span class="card-tag ${['','sage','peach','sky'][i % 4]}">${t}</span>`).join('');
+    document.getElementById('guide-tags').innerHTML = (guide.tags || []).map((t, i) => `<span class="card-tag ${['', 'sage', 'peach', 'sky'][i % 4]}">${t}</span>`).join('');
     const chapters = guide.chapters || [];
-    const chapEl = document.getElementById('guide-chapters-list');
     const statsEl = document.getElementById('guide-stats');
-    if (chapters.length > 0) {
+    const chapEl = document.getElementById('guide-chapters-list');
+    if (chapters.length) {
       statsEl.style.display = '';
       document.getElementById('stat-chapters').textContent = chapters.length;
       document.getElementById('stat-tasks').textContent = chapters.reduce((s, c) => s + (c.tasks || 0), 0);
@@ -574,15 +848,13 @@
     }
     showScreen('guide-detail-screen');
   }
-
   function openGuideUrl() {
     const guide = getGuides().find(g => g.id === currentGuideId);
-    if (guide && guide.url) window.open(guide.url, '_blank');
+    if (guide?.url) window.open(guide.url, '_blank');
     else showToast('URL пособия не указан');
   }
-
   function deleteGuide(id) {
-    if (!confirm('Удалить это пособие?')) return;
+    if (!confirm('Удалить пособие?')) return;
     removeGuide(id);
     showScreen('library-screen');
     renderLibrary();
@@ -595,7 +867,7 @@
     const allStats = await dbGetAll('stats');
     const list = document.getElementById('decks-list');
     const sub = document.getElementById('decks-sub');
-    if (decks.length === 0) {
+    if (!decks.length) {
       sub.textContent = 'Загрузи колоду через +';
       list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Нет колод.<br>Нажми + чтобы добавить</div></div>`;
       return;
@@ -608,27 +880,473 @@
       let pct = 0;
       if (!isMatch) {
         const deckStats = allStats.filter(s => s.id.startsWith(deck.id + '_'));
-        const mastered = deckStats.filter(s => (s.known||0) > 0 && (s.errors||0) === 0).length;
-        pct = total ? Math.round(mastered/total*100) : 0;
+        const mastered = deckStats.filter(s => (s.known || 0) > 0 && (s.errors || 0) === 0).length;
+        pct = total ? Math.round(mastered / total * 100) : 0;
       }
       const el = document.createElement('div');
       el.className = 'deck-item';
       el.innerHTML = `
-        <div class="deck-icon" style="background:${deck.color||'#E8F4EE'}">${deck.icon||'📚'}</div>
+        <div class="deck-icon" style="background:${deck.color || '#E8F4EE'}">${deck.icon || '📚'}</div>
         <div class="deck-info">
           <div class="deck-name">${deck.name}</div>
-          <div class="deck-meta">${total} ${isMatch ? 'блоков' : 'карточек'}${!isMatch ? ' · '+pct+'% освоено' : ''}</div>
+          <div class="deck-meta">${total} ${isMatch ? 'блоков' : 'карточек'}${!isMatch ? ' · ' + pct + '% освоено' : ''}</div>
           ${!isMatch ? `<div class="deck-progress"><div class="deck-progress-fill" style="width:${pct}%"></div></div>` : ''}
         </div>
-        <span class="deck-type-badge ${isMatch?'match':''}">${isMatch ? '🔗 Паронимы' : '📋 Карточки'}</span>
+        <span class="deck-type-badge ${isMatch ? 'match' : ''}">${isMatch ? '🔗 Паронимы' : '📋 Карточки'}</span>
         <div class="deck-arrow">›</div>`;
       el.onclick = () => openDeck(deck.id);
       list.appendChild(el);
     }
   }
+  async function openDeck(deckId) {
+    currentDeckId = deckId;
+    const deck = await dbGet('decks', deckId);
+    if (!deck) return;
+    const isMatch = deck.type === 'match';
+    document.getElementById('deck-detail-icon').textContent = deck.icon || '📚';
+    document.getElementById('deck-detail-name').textContent = deck.name;
+    document.getElementById('deck-detail-nav-title').textContent = deck.name;
+    document.getElementById('deck-detail-sub').textContent = `${deck.cards.length} ${isMatch ? 'блоков паронимов' : 'карточек'}`;
+    document.getElementById('deck-delete-btn').onclick = () => deleteDeck(deckId);
+    const actionsEl = document.getElementById('deck-actions');
+    const statsRow = document.getElementById('deck-stats-row');
+    const hardSection = document.getElementById('hard-section');
+    if (isMatch) {
+      statsRow.style.display = 'none';
+      hardSection.style.display = 'none';
+      actionsEl.innerHTML = `
+        <button class="btn btn-primary" onclick="startMatch(${deckId})">▶ Начать тренировку</button>
+        <button class="btn btn-secondary" onclick="deleteDeck(${deckId})">🗑 Удалить колоду</button>`;
+    } else {
+      statsRow.style.display = '';
+      hardSection.style.display = '';
+      const allStats = await dbGetRange('stats', String(deckId));
+      const known = allStats.reduce((a, s) => a + (s.known || 0), 0);
+      const errors = allStats.reduce((a, s) => a + (s.errors || 0), 0);
+      const errorCards = allStats.filter(s => (s.errors || 0) > 0);
+      document.getElementById('deck-known').textContent = known;
+      document.getElementById('deck-errors').textContent = errors;
+      const favs = await dbGetRange('favorites', String(deckId));
+      const favCount = favs.length;
+      actionsEl.innerHTML = `
+        <button class="btn btn-primary" id="btn-study-all">▶ Учить все</button>
+        <button class="btn btn-fav" id="btn-study-fav">⭐ Избранное <span id="fav-count">${favCount ? '('+favCount+')' : ''}</span></button>
+        <button class="btn btn-danger" id="btn-study-errors" ${errorCards.length ? '' : 'disabled'}>⚡ Отработать ошибки</button>
+        <button class="btn btn-notes" id="btn-notes-deck">📋 Конспект ошибок</button>
+        <button class="btn btn-secondary" id="btn-reset">↺ Сбросить прогресс</button>`;
+      document.getElementById('btn-study-all').onclick = () => startStudy(deckId, false, false);
+      document.getElementById('btn-study-fav').onclick = () => startStudy(deckId, false, true);
+      document.getElementById('btn-study-errors').onclick = () => startStudy(deckId, true, false);
+      document.getElementById('btn-reset').onclick = () => resetDeck(deckId);
+      document.getElementById('btn-notes-deck').onclick = () => openNotesDeck(deckId);
+      const hardList = document.getElementById('hard-list');
+      const sorted = allStats.filter(s => (s.errors || 0) > 0).sort((a, b) => (b.errors || 0) - (a.errors || 0)).slice(0, 5);
+      if (sorted.length === 0) {
+        hardList.innerHTML = `<div class="empty" style="padding:20px"><div class="empty-text">Ошибок пока нет 🎉</div></div>`;
+      } else {
+        hardList.innerHTML = '';
+        sorted.forEach((s, i) => {
+          const idx = parseInt(s.id.split('_')[1]);
+          const card = deck.cards[idx];
+          if (!card) return;
+          const el = document.createElement('div');
+          el.className = 'hard-item';
+          el.innerHTML = `<div class="hard-rank">${i+1}</div><div class="hard-info"><div class="hard-q">${card.q}</div><div class="hard-stat">${s.known||0} верно · ${s.errors||0} ошибок</div></div><div class="hard-badge">${s.errors} ✕</div>`;
+          hardList.appendChild(el);
+        });
+      }
+    }
+    showScreen('deck-detail-screen');
+  }
+  async function resetDeck(deckId) {
+    if (!confirm('Сбросить прогресс этой колоды?')) return;
+    await dbDeleteRange('stats', String(deckId));
+    await openDeck(deckId);
+    showToast('Прогресс сброшен');
+  }
+  async function deleteDeck(deckId) {
+    if (!confirm('Удалить колоду?')) return;
+    await dbDelete('decks', deckId);
+    await dbDeleteRange('stats', String(deckId));
+    await dbDeleteRange('favorites', String(deckId));
+    showScreen('decks-screen');
+    renderDecks();
+    showToast('Колода удалена');
+  }
 
-  // Детали колоды и остальные функции изучения (flashcard, match) полностью перенесены из "Наш язык"
-  // ... (включены в итоговый код)
+  // ==================== ИЗУЧЕНИЕ КАРТОЧЕК ====================
+  async function startStudy(deckId, errorsOnly, favOnly) {
+    currentDeckId = deckId;
+    isErrorsMode = errorsOnly;
+    isFavMode = favOnly;
+    const deck = await dbGet('decks', deckId);
+    const allStats = await dbGetRange('stats', String(deckId));
+    let indices;
+    if (favOnly) {
+      const favs = await dbGetRange('favorites', String(deckId));
+      indices = favs.map(f => parseInt(f.id.split('_')[1]));
+    } else if (errorsOnly) {
+      indices = allStats.filter(s => (s.errors || 0) > 0).map(s => parseInt(s.id.split('_')[1]));
+    } else {
+      indices = deck.cards.map((_, i) => i);
+    }
+    indices = indices.sort(() => Math.random() - 0.5);
+    studyQueue = indices.map(i => ({ ...deck.cards[i], idx: i }));
+    studyIdx = 0; sessionKnown = 0; sessionErrors = 0; sessionErrorCards = [];
+    document.getElementById('study-deck-name').textContent = (favOnly ? '⭐ ' : '') + deck.name;
+    showScreen('study-screen');
+    showCard();
+  }
+  function showCard() {
+    if (studyIdx >= studyQueue.length) { showResults(); return; }
+    const card = studyQueue[studyIdx];
+    document.getElementById('study-prog').style.width = (studyIdx / studyQueue.length * 100) + '%';
+    document.getElementById('study-counter').textContent = `${studyIdx + 1} / ${studyQueue.length}`;
+    document.getElementById('fc-question').textContent = card.q;
+    document.getElementById('fc-answer').textContent = card.a;
+    isFlipped = false;
+    document.getElementById('flashcard').classList.remove('flipped');
+    document.getElementById('study-actions').style.visibility = 'hidden';
+    updateFavBtn();
+  }
+  function flipCard() {
+    if (isFlipped) return;
+    isFlipped = true;
+    document.getElementById('flashcard').classList.add('flipped');
+    setTimeout(() => document.getElementById('study-actions').style.visibility = 'visible', 300);
+  }
+  async function markCard(known) {
+    const card = studyQueue[studyIdx];
+    const statId = `${currentDeckId}_${card.idx}`;
+    let stat = await dbGet('stats', statId) || { id: statId, known: 0, errors: 0 };
+    if (known) { stat.known = (stat.known || 0) + 1; sessionKnown++; }
+    else { stat.errors = (stat.errors || 0) + 1; sessionErrors++; sessionErrorCards.push({ q: card.q, a: card.a }); }
+    await dbPut('stats', stat);
+    studyIdx++;
+    showCard();
+  }
+  function exitStudy() { openDeck(currentDeckId); }
+  async function updateFavBtn() {
+    if (studyIdx >= studyQueue.length) return;
+    const card = studyQueue[studyIdx];
+    const favId = `${currentDeckId}_${card.idx}`;
+    const existing = await dbGet('favorites', favId);
+    const btn = document.getElementById('fav-btn');
+    btn.textContent = existing ? '★' : '☆';
+    btn.classList.toggle('active', !!existing);
+  }
+  async function toggleFavorite() {
+    if (studyIdx >= studyQueue.length) return;
+    const card = studyQueue[studyIdx];
+    const favId = `${currentDeckId}_${card.idx}`;
+    const existing = await dbGet('favorites', favId);
+    const btn = document.getElementById('fav-btn');
+    if (existing) {
+      await dbDelete('favorites', favId);
+      btn.textContent = '☆';
+      btn.classList.remove('active');
+      showToast('Убрано из избранного');
+      if (isFavMode) { studyIdx++; showCard(); }
+    } else {
+      await dbPut('favorites', { id: favId });
+      btn.textContent = '★';
+      btn.classList.add('active');
+      btn.classList.add('pop');
+      setTimeout(() => btn.classList.remove('pop'), 200);
+      showToast('Добавлено в избранное ⭐');
+    }
+  }
+
+  // ==================== MATCH ====================
+  async function startMatch(deckId) {
+    currentDeckId = deckId;
+    const deck = await dbGet('decks', deckId);
+    matchSets = [...deck.cards].sort(() => Math.random() - 0.5);
+    matchSetIdx = 0;
+    matchSessionCorrect = 0;
+    matchSessionWrong = 0;
+    document.getElementById('match-deck-name').textContent = deck.name;
+    showScreen('match-screen');
+    renderMatchSet();
+  }
+  function renderMatchSet() {
+    if (matchSetIdx >= matchSets.length) { showMatchResults(); return; }
+    const set = matchSets[matchSetIdx];
+    const pairs = set.pairs;
+    const total = matchSets.length;
+    document.getElementById('match-prog').style.width = (matchSetIdx / total * 100) + '%';
+    document.getElementById('match-counter').textContent = `${matchSetIdx + 1} / ${total}`;
+    document.getElementById('match-set-title').textContent = `Соедини слова с примерами`;
+    document.getElementById('match-result-bar').className = 'match-result-bar';
+    document.getElementById('match-hints').innerHTML = '';
+    document.getElementById('btn-check').disabled = true;
+    document.getElementById('btn-check').textContent = 'Проверить';
+    document.getElementById('btn-check').onclick = checkMatch;
+    document.getElementById('match-svg').innerHTML = '';
+    matchSelected = { left: null, right: null };
+    matchConnections = [];
+    matchChecked = false;
+    const leftItems = pairs.map((p, i) => ({ ...p, idx: i }));
+    const rightItems = [...pairs].map((p, i) => ({ ...p, idx: i })).sort(() => Math.random() - 0.5);
+    const leftCol = document.getElementById('match-col-left');
+    const rightCol = document.getElementById('match-col-right');
+    leftCol.innerHTML = ''; rightCol.innerHTML = '';
+    leftItems.forEach((item, i) => {
+      const el = document.createElement('div');
+      el.className = 'match-chip';
+      el.textContent = item.word;
+      el.dataset.idx = i;
+      el.dataset.side = 'left';
+      el.onclick = () => onChipClick('left', i, el);
+      leftCol.appendChild(el);
+    });
+    rightItems.forEach((item, i) => {
+      const el = document.createElement('div');
+      el.className = 'match-chip';
+      el.textContent = item.example;
+      el.dataset.originalIdx = item.idx;
+      el.dataset.displayIdx = i;
+      el.dataset.side = 'right';
+      el.onclick = () => onChipClick('right', i, el, item.idx);
+      rightCol.appendChild(el);
+    });
+  }
+  function onChipClick(side, displayIdx, el, originalIdx) {
+    if (matchChecked) return;
+    if (el.classList.contains('connected') || el.classList.contains('correct') || el.classList.contains('wrong')) return;
+    if (side === 'left') {
+      document.querySelectorAll('#match-col-left .match-chip.selected').forEach(c => c.classList.remove('selected'));
+      if (matchSelected.left === displayIdx) { matchSelected.left = null; return; }
+      matchSelected.left = displayIdx;
+      el.classList.add('selected');
+    } else {
+      document.querySelectorAll('#match-col-right .match-chip.selected').forEach(c => c.classList.remove('selected'));
+      if (matchSelected.right === displayIdx) { matchSelected.right = null; return; }
+      matchSelected.right = displayIdx;
+      matchSelected.rightOriginal = originalIdx;
+      el.classList.add('selected');
+    }
+    if (matchSelected.left !== null && matchSelected.right !== null) {
+      connectPair(matchSelected.left, matchSelected.right, matchSelected.rightOriginal);
+    }
+  }
+  function connectPair(leftIdx, rightDisplayIdx, rightOriginalIdx) {
+    matchConnections = matchConnections.filter(c => c.leftIdx !== leftIdx && c.rightDisplay !== rightDisplayIdx);
+    matchConnections.push({ leftIdx, rightDisplay: rightDisplayIdx, rightOriginal: rightOriginalIdx });
+    document.querySelectorAll('.match-chip.selected').forEach(c => c.classList.remove('selected'));
+    matchSelected = { left: null, right: null };
+    drawLines();
+    const connectedLefts = new Set(matchConnections.map(c => c.leftIdx));
+    document.getElementById('btn-check').disabled = connectedLefts.size < matchSets[matchSetIdx].pairs.length;
+  }
+  function drawLines() {
+    const svg = document.getElementById('match-svg');
+    const area = document.getElementById('match-area');
+    svg.innerHTML = '';
+    const areaRect = area.getBoundingClientRect();
+    matchConnections.forEach(conn => {
+      const leftChips = document.querySelectorAll('#match-col-left .match-chip');
+      const rightChips = document.querySelectorAll('#match-col-right .match-chip');
+      const leftEl = leftChips[conn.leftIdx];
+      const rightEl = [...rightChips].find(c => parseInt(c.dataset.displayIdx) === conn.rightDisplay);
+      if (!leftEl || !rightEl) return;
+      const lr = leftEl.getBoundingClientRect();
+      const rr = rightEl.getBoundingClientRect();
+      const x1 = lr.right - areaRect.left;
+      const y1 = lr.top + lr.height/2 - areaRect.top;
+      const x2 = rr.left - areaRect.left;
+      const y2 = rr.top + rr.height/2 - areaRect.top;
+      const cx = (x1 + x2)/2;
+      let stroke = '#4A4AB0', opacity = '0.5';
+      if (matchChecked) {
+        const isCorrect = conn.leftIdx === conn.rightOriginal;
+        stroke = isCorrect ? 'var(--green)' : 'var(--red)';
+        opacity = '0.8';
+      }
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+      path.setAttribute('stroke', stroke);
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-opacity', opacity);
+      path.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(path);
+    });
+  }
+  function checkMatch() {
+    if (matchConnections.length === 0) return;
+    matchChecked = true;
+    const pairs = matchSets[matchSetIdx].pairs;
+    let allCorrect = true;
+    const leftChips = document.querySelectorAll('#match-col-left .match-chip');
+    const rightChips = document.querySelectorAll('#match-col-right .match-chip');
+    matchConnections.forEach(conn => {
+      const isCorrect = conn.leftIdx === conn.rightOriginal;
+      if (!isCorrect) allCorrect = false;
+      const leftEl = leftChips[conn.leftIdx];
+      const rightEl = [...rightChips].find(c => parseInt(c.dataset.displayIdx) === conn.rightDisplay);
+      if (leftEl) leftEl.classList.add(isCorrect ? 'correct' : 'wrong');
+      if (rightEl) rightEl.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+    drawLines();
+    const resultBar = document.getElementById('match-result-bar');
+    if (allCorrect) {
+      matchSessionCorrect++;
+      resultBar.textContent = '✓ Все верно!';
+      resultBar.className = 'match-result-bar correct';
+    } else {
+      matchSessionWrong++;
+      resultBar.textContent = '✗ Есть ошибки — посмотри пояснения ниже';
+      resultBar.className = 'match-result-bar wrong';
+    }
+    const hintsEl = document.getElementById('match-hints');
+    hintsEl.innerHTML = '';
+    pairs.forEach((pair, i) => {
+      const conn = matchConnections.find(c => c.leftIdx === i);
+      const isCorrect = conn && conn.rightOriginal === i;
+      const el = document.createElement('div');
+      el.className = 'hint-item ' + (conn ? (isCorrect ? 'show-correct' : 'show-wrong') : '');
+      el.innerHTML = `<div class="hint-word">${pair.word}</div><div class="hint-text">${pair.hint}</div><div class="hint-example">Пример: ${pair.example}</div>`;
+      hintsEl.appendChild(el);
+    });
+    document.getElementById('btn-check').textContent = 'Далее →';
+    document.getElementById('btn-check').disabled = false;
+    document.getElementById('btn-check').onclick = nextMatchSet;
+  }
+  function nextMatchSet() {
+    matchSetIdx++;
+    renderMatchSet();
+  }
+  function skipMatchSet() {
+    matchSessionWrong++;
+    nextMatchSet();
+  }
+  function exitMatch() { openDeck(currentDeckId); }
+  function showMatchResults() {
+    const total = matchSets.length;
+    const pct = total ? Math.round(matchSessionCorrect / total * 100) : 0;
+    let emoji = '😅', title = 'Продолжай!';
+    if (pct >= 90) { emoji = '🏆'; title = 'Великолепно!'; }
+    else if (pct >= 70) { emoji = '🎉'; title = 'Отличная работа!'; }
+    else if (pct >= 50) { emoji = '💪'; title = 'Хороший прогресс!'; }
+    document.getElementById('res-emoji').textContent = emoji;
+    document.getElementById('res-title').textContent = title;
+    document.getElementById('res-sub').textContent = `Ты верно соединил ${pct}% блоков`;
+    document.getElementById('res-known').textContent = matchSessionCorrect;
+    document.getElementById('res-errors').textContent = matchSessionWrong;
+    showScreen('results-screen');
+  }
+
+  // ==================== РЕЗУЛЬТАТЫ И ЗАМЕТКИ ====================
+  function showResults() {
+    const total = sessionKnown + sessionErrors;
+    const pct = total ? Math.round(sessionKnown / total * 100) : 0;
+    let emoji = '😅', title = 'Продолжай!';
+    if (pct >= 90) { emoji = '🏆'; title = 'Великолепно!'; }
+    else if (pct >= 70) { emoji = '🎉'; title = 'Отличная работа!'; }
+    else if (pct >= 50) { emoji = '💪'; title = 'Хороший прогресс!'; }
+    document.getElementById('res-emoji').textContent = emoji;
+    document.getElementById('res-title').textContent = title;
+    document.getElementById('res-sub').textContent = `Ты ответил верно на ${pct}% карточек`;
+    document.getElementById('res-known').textContent = sessionKnown;
+    document.getElementById('res-errors').textContent = sessionErrors;
+    showScreen('results-screen');
+  }
+  function goToDeckDetail() { openDeck(currentDeckId); }
+  function openNotes() {
+    currentNotesTab = 'session';
+    notesDeckFilter = null;
+    showScreen('notes-screen');
+    document.querySelectorAll('.notes-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
+    document.getElementById('notes-tab-session').style.display = '';
+    document.getElementById('notes-tab-all').style.display = '';
+    renderNotes('session');
+  }
+  function openNotesDeck(deckId) {
+    notesDeckFilter = deckId;
+    currentNotesTab = 'all';
+    showScreen('notes-screen');
+    document.querySelectorAll('.notes-tab').forEach((b, i) => b.classList.toggle('active', i === 1));
+    document.getElementById('notes-tab-session').style.display = 'none';
+    document.getElementById('notes-tab-all').style.display = '';
+    renderNotes('all');
+  }
+  let currentNotesTab = 'session';
+  let notesDeckFilter = null;
+  function switchNotesTab(tab, btn) {
+    currentNotesTab = tab;
+    document.querySelectorAll('.notes-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderNotes(tab);
+  }
+  function closeNotes() {
+    if (notesDeckFilter !== null) openDeck(notesDeckFilter);
+    else showScreen('results-screen');
+  }
+  async function renderNotes(tab) {
+    const scroll = document.getElementById('notes-scroll');
+    scroll.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:14px">Загружаю…</div>';
+    if (tab === 'session') {
+      if (sessionErrorCards.length === 0) {
+        scroll.innerHTML = `<div class="notes-empty"><div class="notes-empty-icon">🎉</div><div class="notes-empty-text">В этой сессии ошибок не было!</div></div>`;
+        return;
+      }
+      scroll.innerHTML = '';
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:var(--yellow-light);border:1px solid #F5C842;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#9A6F00;font-weight:600;margin-bottom:4px';
+      banner.textContent = `📋 Ошибки этой сессии — ${sessionErrorCards.length} карточек`;
+      scroll.appendChild(banner);
+      sessionErrorCards.forEach(card => {
+        const item = document.createElement('div');
+        item.className = 'notes-item';
+        item.innerHTML = `<div class="notes-item-q">${card.q}</div><div class="notes-item-a">${card.a}</div>`;
+        scroll.appendChild(item);
+      });
+    } else {
+      const decks = await dbGetAll('decks');
+      const allStats = await dbGetAll('stats');
+      const filteredStats = notesDeckFilter !== null
+        ? allStats.filter(s => s.id.startsWith(notesDeckFilter + '_') && (s.errors || 0) > 0)
+        : allStats.filter(s => (s.errors || 0) > 0);
+      if (filteredStats.length === 0) {
+        scroll.innerHTML = `<div class="notes-empty"><div class="notes-empty-icon">🎉</div><div class="notes-empty-text">Ошибок пока нет!<br>Продолжай в том же духе.</div></div>`;
+        return;
+      }
+      const byDeck = {};
+      filteredStats.forEach(stat => {
+        const [deckId, cardIdx] = stat.id.split('_');
+        if (!byDeck[deckId]) byDeck[deckId] = [];
+        byDeck[deckId].push({ cardIdx: parseInt(cardIdx), errors: stat.errors || 0, known: stat.known || 0 });
+      });
+      scroll.innerHTML = '';
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:var(--yellow-light);border:1px solid #F5C842;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#9A6F00;font-weight:600;margin-bottom:4px';
+      banner.textContent = notesDeckFilter !== null ? `📋 Ошибки этого набора — ${filteredStats.length} шт.` : `📋 Все карточки с ошибками — ${filteredStats.length} шт.`;
+      scroll.appendChild(banner);
+      for (const deck of decks) {
+        const deckErrors = byDeck[deck.id];
+        if (!deckErrors || deck.type === 'match') continue;
+        deckErrors.sort((a, b) => b.errors - a.errors);
+        if (notesDeckFilter === null) {
+          const titleEl = document.createElement('div');
+          titleEl.className = 'notes-deck-title';
+          titleEl.textContent = `${deck.icon || '📚'} ${deck.name}`;
+          scroll.appendChild(titleEl);
+        }
+        deckErrors.forEach(({ cardIdx, errors, known }) => {
+          const card = deck.cards[cardIdx];
+          if (!card) return;
+          const item = document.createElement('div');
+          item.className = 'notes-item';
+          item.innerHTML = `
+            <div class="notes-item-errors">✕ ${errors} ${errors===1?'ошибка':errors<5?'ошибки':'ошибок'}${known>0?' · ✓ '+known+' верно':''}</div>
+            <div class="notes-item-q">${card.q}</div>
+            <div class="notes-item-a">${card.a}</div>`;
+          scroll.appendChild(item);
+        });
+      }
+    }
+  }
 
   // ==================== ИМПОРТ ====================
   function openAddModal(type) {
@@ -644,8 +1362,50 @@
     document.getElementById('gh-list').innerHTML = '';
     document.getElementById('gh-error').style.display = 'none';
   }
-
-  // Загрузка списка файлов GitHub с фильтрацией по типу
+  function closeAddModal(e) {
+    if (!e || e.target === document.getElementById('add-modal'))
+      document.getElementById('add-modal').classList.remove('open');
+  }
+  function switchAddTab(tab, btn) {
+    document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('add-tab-file').style.display = tab === 'file' ? '' : 'none';
+    document.getElementById('add-tab-github').style.display = tab === 'github' ? '' : 'none';
+    if (tab === 'github' && !ghTabLoaded) { ghTabLoaded = true; loadGithubList(); }
+  }
+  function triggerFileAdd() {
+    closeAddModal();
+    document.getElementById('file-input').click();
+  }
+  async function handleFileAdd(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = '';
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (currentAddType === 'guide') {
+        if (!data.name || !data.category) throw new Error('bad format');
+        addGuide(data);
+        renderLibrary();
+      } else {
+        if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
+        const colors = ['#E8F4EE', '#FDF0E8', '#FEF9E7', '#EEF0FD', '#FDE8F0'];
+        const deck = {
+          name: data.name, icon: data.icon || '📚',
+          type: data.type || 'flashcard',
+          color: data.color || colors[Math.floor(Math.random() * colors.length)],
+          cards: data.cards, createdAt: Date.now()
+        };
+        await dbPut('decks', deck);
+        renderDecks();
+      }
+      closeAddModal();
+      showToast(`✓ ${data.name} добавлено`);
+    } catch (e) {
+      showToast('Ошибка: неверный формат файла');
+    }
+  }
   async function loadGithubList() {
     const loading = document.getElementById('gh-loading');
     const errEl = document.getElementById('gh-error');
@@ -658,8 +1418,6 @@
       const files = await res.json();
       const jsonFiles = files.filter(f => f.name.endsWith('.json') && f.name !== 'manifest.json' && f.type === 'file');
       loading.style.display = 'none';
-      
-      // Фильтруем файлы по содержимому поля type (загружаем и проверяем)
       const filtered = [];
       for (const f of jsonFiles) {
         try {
@@ -670,16 +1428,15 @@
               (currentAddType === 'deck' && (data.type === 'flashcard' || data.type === 'match'))) {
             filtered.push({ ...f, data });
           }
-        } catch(e) { /* skip invalid JSON */ }
+        } catch (e) { /* skip */ }
       }
-      
       if (filtered.length === 0) {
         list.innerHTML = '<div class="gh-loading">Нет подходящих JSON файлов</div>';
         return;
       }
       list.innerHTML = '';
       for (const f of filtered) {
-        const existing = currentAddType === 'guide' 
+        const existing = currentAddType === 'guide'
           ? getGuides().find(g => g.sourceFile === f.name)
           : (await dbGetAll('decks')).find(d => d.sourceFile === f.name);
         const el = document.createElement('div');
@@ -694,13 +1451,12 @@
         el.onclick = () => importFromGithub(f.data, f.name, existing);
         list.appendChild(el);
       }
-    } catch(e) {
+    } catch (e) {
       loading.style.display = 'none';
       errEl.textContent = `Ошибка загрузки: ${e.message}`;
       errEl.style.display = '';
     }
   }
-
   async function importFromGithub(data, filename, alreadyExists) {
     if (alreadyExists) return;
     if (currentAddType === 'guide') {
@@ -711,86 +1467,18 @@
       renderDecks();
     }
     closeAddModal();
-    showToast(`✓ ${data.name} добавлено`);
+    showToast(`✓ ${data.name || filename} добавлено`);
   }
-
-  // ... остальные функции (импорт из файла, настройки, toast и т.д.)
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-function plural(n, one, few, many) {
-  if (n % 10 === 1 && n % 100 !== 11) return one;
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return few;
-  return many;
-}
-
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-// ========== МОДАЛЬНОЕ ОКНО ИМПОРТА ==========
-function closeAddModal(e) {
-  if (!e || e.target === document.getElementById('add-modal'))
-    document.getElementById('add-modal').classList.remove('open');
-}
-
-function switchAddTab(tab, btn) {
-  document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('add-tab-file').style.display = tab === 'file' ? '' : 'none';
-  document.getElementById('add-tab-github').style.display = tab === 'github' ? '' : 'none';
-  if (tab === 'github' && !ghTabLoaded) { ghTabLoaded = true; loadGithubList(); }
-}
-
-function triggerFileAdd() {
-  closeAddModal();
-  document.getElementById('file-input').click();
-}
-
-// Обработчик выбора файла (уже есть, но убедимся)
-async function handleFileAdd(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  event.target.value = '';
-  try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    if (currentAddType === 'guide') {
-      if (!data.name || !data.category) throw new Error('bad format');
-      addGuide({ ...data });
-      renderLibrary();
-    } else {
-      if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
-      const colors = ['#E8F4EE','#FDF0E8','#FEF9E7','#EEF0FD','#FDE8F0'];
-      const deck = {
-        name: data.name, icon: data.icon || '📚',
-        type: data.type || 'flashcard',
-        color: data.color || colors[Math.floor(Math.random()*colors.length)],
-        cards: data.cards, createdAt: Date.now()
-      };
-      await dbPut('decks', deck);
-      renderDecks();
-    }
+  function openSampleModal() {
     closeAddModal();
-    showToast(`✓ ${data.name} добавлено`);
-  } catch (e) {
-    showToast('Ошибка: неверный формат файла');
-  }
-}
-
-// ========== ПРИМЕР ФОРМАТА ==========
-function openSampleModal() {
-  closeAddModal();
-  const sampleModal = document.getElementById('sample-modal');
-  const title = document.getElementById('sample-title');
-  const sub = document.getElementById('sample-sub');
-  const pre = document.getElementById('sample-pre');
-  if (currentAddType === 'guide') {
-    title.textContent = 'Формат guide.json';
-    sub.textContent = 'Добавь файл с таким форматом в свой GitHub репозиторий:';
-    pre.textContent = `{
+    const sampleModal = document.getElementById('sample-modal');
+    const title = document.getElementById('sample-title');
+    const sub = document.getElementById('sample-sub');
+    const pre = document.getElementById('sample-pre');
+    if (currentAddType === 'guide') {
+      title.textContent = 'Формат guide.json';
+      sub.textContent = 'Добавь файл с таким форматом в свой GitHub репозиторий:';
+      pre.textContent = `{
   "name": "Название пособия",
   "type": "guide",
   "category": "bio",
@@ -803,10 +1491,10 @@ function openSampleModal() {
   ],
   "url": "https://ссылка-на-файл.pdf"
 }`;
-  } else {
-    title.textContent = 'Формат колоды';
-    sub.textContent = 'Для flashcard (обычные карточки) или match (паронимы):';
-    pre.textContent = `// Флеш-карточки
+    } else {
+      title.textContent = 'Формат колоды';
+      sub.textContent = 'Для flashcard (обычные карточки) или match (паронимы):';
+      pre.textContent = `// Флеш-карточки
 {
   "name": "Ударения ЕГЭ",
   "type": "flashcard",
@@ -827,60 +1515,50 @@ function openSampleModal() {
     }
   ]
 }`;
+    }
+    sampleModal.classList.add('open');
   }
-  sampleModal.classList.add('open');
-}
+  function closeSampleModal(e) {
+    if (!e || e.target === document.getElementById('sample-modal'))
+      document.getElementById('sample-modal').classList.remove('open');
+  }
 
-function closeSampleModal(e) {
-  if (!e || e.target === document.getElementById('sample-modal'))
-    document.getElementById('sample-modal').classList.remove('open');
-}
+  // ==================== НАСТРОЙКИ ====================
+  function renderSettings() {
+    document.getElementById('gh-user-input').value = GITHUB_USER;
+    document.getElementById('gh-repo-input').value = GITHUB_REPO;
+    document.getElementById('settings-guide-count').textContent = getGuides().length;
+    dbGetAll('decks').then(decks => {
+      document.getElementById('settings-deck-count').textContent = decks.length;
+    });
+  }
+  function saveSettings() {
+    GITHUB_USER = document.getElementById('gh-user-input').value.trim();
+    GITHUB_REPO = document.getElementById('gh-repo-input').value.trim();
+    localStorage.setItem('gh_user', GITHUB_USER);
+    localStorage.setItem('gh_repo', GITHUB_REPO);
+    showToast('✓ Настройки сохранены');
+  }
+  function clearAllData() {
+    if (!confirm('Удалить все пособия и колоды?')) return;
+    localStorage.removeItem('bio_guides');
+    dbDeleteRange('decks', '');
+    dbDeleteRange('stats', '');
+    dbDeleteRange('favorites', '');
+    renderLibrary();
+    renderDecks();
+    showToast('Все данные удалены');
+  }
 
-// ========== НАСТРОЙКИ ==========
-function renderSettings() {
-  document.getElementById('gh-user-input').value = GITHUB_USER;
-  document.getElementById('gh-repo-input').value = GITHUB_REPO;
-  document.getElementById('settings-guide-count').textContent = getGuides().length;
-  dbGetAll('decks').then(decks => {
-    document.getElementById('settings-deck-count').textContent = decks.length;
-  });
-}
-
-function saveSettings() {
-  GITHUB_USER = document.getElementById('gh-user-input').value.trim();
-  GITHUB_REPO = document.getElementById('gh-repo-input').value.trim();
-  localStorage.setItem('gh_user', GITHUB_USER);
-  localStorage.setItem('gh_repo', GITHUB_REPO);
-  showToast('✓ Настройки сохранены');
-}
-
-function clearAllData() {
-  if (!confirm('Удалить все пособия и колоды?')) return;
-  localStorage.removeItem('bio_guides');
-  // Очистка IndexedDB
-  dbDeleteRange('decks', '');
-  dbDeleteRange('stats', '');
-  dbDeleteRange('favorites', '');
-  renderLibrary();
-  renderDecks();
-  showToast('Все данные удалены');
-}
-
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
-openDB().then(() => {
-  renderLibrary();
-  renderDecks();
-  // Восстанавливаем активную вкладку при загрузке
-  navTo('library');
-});
   // ==================== ИНИЦИАЛИЗАЦИЯ ====================
   openDB().then(() => {
     renderLibrary();
     renderDecks();
+    navTo('library');
   });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
-
-  // (Весь остальной код "Наш язык" для изучения карточек включен в полную версию)
+  window.addEventListener('resize', () => {
+    if (document.getElementById('match-screen').classList.contains('active')) drawLines();
+  });
 </script>
 </body>
 </html>
