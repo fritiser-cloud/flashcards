@@ -447,46 +447,16 @@
     #fav-btn.active { color: #F5C842; background: var(--yellow-light); }
     #fav-btn.pop { transform: scale(1.4); }
 
-     /* ===== НОВЫЕ СТИЛИ ДЛЯ ОТСТУПОВ В ПОСОБИИ ===== */
-    #guide-detail-screen {
-      display: flex;
-      flex-direction: column;
-      height: 100dvh;
-      overflow: hidden;
-    }
-
-    #guide-detail-screen .reader-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px 200px 400px; /* ← ВОТ ОТСТУПЫ! */
-      -webkit-overflow-scrolling: touch;
-    }
-
-    #guide-markdown-content {
-      padding: 8px 0 24px;
-      margin: 0;
-      word-wrap: break-word;
-    }
-
-    .markdown-body > *:first-child {
-      margin-top: 0 !important;
-    }
-
-    .markdown-body > *:last-child {
-      margin-bottom: 0 !important;
-    }
-
-    #guide-action-buttons {
-      margin-top: 16px;
-      margin-bottom: 8px;
-    }
-
+    /* Исправления для экрана пособия */
+    #guide-detail-screen { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+    #guide-detail-screen .reader-content { flex: 1; overflow-y: auto; padding: 8px 20px 40px; -webkit-overflow-scrolling: touch; }
+    #guide-markdown-content { padding: 8px 0 24px; margin: 0; word-wrap: break-word; }
+    .markdown-body > *:first-child { margin-top: 0 !important; }
+    .markdown-body > *:last-child { margin-bottom: 0 !important; }
+    #guide-action-buttons { margin-top: 16px; margin-bottom: 8px; }
     @media (max-width: 480px) {
-      #guide-detail-screen .reader-content {
-        padding: 8px 16px 32px;
-      }
-    } 
-    
+      #guide-detail-screen .reader-content { padding: 8px 16px 32px; }
+    }
   </style>
 </head>
 <body>
@@ -1026,10 +996,7 @@ async function renderDecks() {
       </div>
       <span class="deck-type-badge ${isMatch ? 'match' : ''}">${isMatch ? '🔗 Паронимы' : '📋 Карточки'}</span>
       <div class="deck-arrow">›</div>`;
-    
-    // ВАЖНО: правильный обработчик
     el.onclick = () => openDeck(deck.id);
-    
     list.appendChild(el);
   }
 }
@@ -1091,7 +1058,7 @@ async function openDeck(deckId) {
       });
     }
   }
-  showScreen('guide-detail-screen');
+  showScreen('deck-detail-screen');
 }
 async function resetDeck(deckId) {
   if (!confirm('Сбросить прогресс этой колоды?')) return;
