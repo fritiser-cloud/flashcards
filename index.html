@@ -456,6 +456,23 @@
     #guide-action-buttons { margin-top: 16px; margin-bottom: 8px; }
     @media (max-width: 480px) {
       #guide-detail-screen .reader-content { padding: 8px 16px 32px; }
+
+      /* Изоляция экрана колоды */
+#deck-detail-screen .scroll {
+  padding: 0 0 20px 0;
+}
+#deck-detail-screen .big-stat-row {
+  padding: 0 20px;
+}
+#deck-detail-screen .action-btns {
+  padding: 0 20px;
+}
+#deck-detail-screen #hard-section {
+  padding: 0 20px;
+}
+#deck-detail-screen .section-title {
+  margin-top: 20px;
+}
     }
   </style>
 </head>
@@ -523,7 +540,7 @@
 </div>
 
 <!-- ДЕТАЛИ КОЛОДЫ -->
-<!-- ДЕТАЛИ КОЛОДЫ (исправленная версия) -->
+<!-- ДЕТАЛИ КОЛОДЫ (полностью изолированный экран) -->
 <div id="deck-detail-screen" class="screen">
   <div class="nav">
     <button class="nav-btn" onclick="showScreen('decks-screen')">←</button>
