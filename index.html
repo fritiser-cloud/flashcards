@@ -715,7 +715,164 @@
   }
 
   // ... остальные функции (импорт из файла, настройки, toast и т.д.)
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+function plural(n, one, few, many) {
+  if (n % 10 === 1 && n % 100 !== 11) return one;
+  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return few;
+  return many;
+}
 
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ========== МОДАЛЬНОЕ ОКНО ИМПОРТА ==========
+function closeAddModal(e) {
+  if (!e || e.target === document.getElementById('add-modal'))
+    document.getElementById('add-modal').classList.remove('open');
+}
+
+function switchAddTab(tab, btn) {
+  document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('add-tab-file').style.display = tab === 'file' ? '' : 'none';
+  document.getElementById('add-tab-github').style.display = tab === 'github' ? '' : 'none';
+  if (tab === 'github' && !ghTabLoaded) { ghTabLoaded = true; loadGithubList(); }
+}
+
+function triggerFileAdd() {
+  closeAddModal();
+  document.getElementById('file-input').click();
+}
+
+// Обработчик выбора файла (уже есть, но убедимся)
+async function handleFileAdd(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (currentAddType === 'guide') {
+      if (!data.name || !data.category) throw new Error('bad format');
+      addGuide({ ...data });
+      renderLibrary();
+    } else {
+      if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
+      const colors = ['#E8F4EE','#FDF0E8','#FEF9E7','#EEF0FD','#FDE8F0'];
+      const deck = {
+        name: data.name, icon: data.icon || '📚',
+        type: data.type || 'flashcard',
+        color: data.color || colors[Math.floor(Math.random()*colors.length)],
+        cards: data.cards, createdAt: Date.now()
+      };
+      await dbPut('decks', deck);
+      renderDecks();
+    }
+    closeAddModal();
+    showToast(`✓ ${data.name} добавлено`);
+  } catch (e) {
+    showToast('Ошибка: неверный формат файла');
+  }
+}
+
+// ========== ПРИМЕР ФОРМАТА ==========
+function openSampleModal() {
+  closeAddModal();
+  const sampleModal = document.getElementById('sample-modal');
+  const title = document.getElementById('sample-title');
+  const sub = document.getElementById('sample-sub');
+  const pre = document.getElementById('sample-pre');
+  if (currentAddType === 'guide') {
+    title.textContent = 'Формат guide.json';
+    sub.textContent = 'Добавь файл с таким форматом в свой GitHub репозиторий:';
+    pre.textContent = `{
+  "name": "Название пособия",
+  "type": "guide",
+  "category": "bio",
+  "icon": "🧬",
+  "color": "lavender",
+  "desc": "Краткое описание",
+  "tags": ["ЕГЭ 2026", "Задание 27"],
+  "chapters": [
+    { "title": "Глава 1", "tasks": 14 }
+  ],
+  "url": "https://ссылка-на-файл.pdf"
+}`;
+  } else {
+    title.textContent = 'Формат колоды';
+    sub.textContent = 'Для flashcard (обычные карточки) или match (паронимы):';
+    pre.textContent = `// Флеш-карточки
+{
+  "name": "Ударения ЕГЭ",
+  "type": "flashcard",
+  "icon": "🗣️",
+  "cards": [{"q": "вручит", "a": "вручИт"}]
+}
+
+// Паронимы (match)
+{
+  "name": "Паронимы ЕГЭ",
+  "type": "match",
+  "cards": [
+    {
+      "pairs": [
+        {"word": "Абонемент", "example": "...", "hint": "..."},
+        {"word": "Абонент", "example": "...", "hint": "..."}
+      ]
+    }
+  ]
+}`;
+  }
+  sampleModal.classList.add('open');
+}
+
+function closeSampleModal(e) {
+  if (!e || e.target === document.getElementById('sample-modal'))
+    document.getElementById('sample-modal').classList.remove('open');
+}
+
+// ========== НАСТРОЙКИ ==========
+function renderSettings() {
+  document.getElementById('gh-user-input').value = GITHUB_USER;
+  document.getElementById('gh-repo-input').value = GITHUB_REPO;
+  document.getElementById('settings-guide-count').textContent = getGuides().length;
+  dbGetAll('decks').then(decks => {
+    document.getElementById('settings-deck-count').textContent = decks.length;
+  });
+}
+
+function saveSettings() {
+  GITHUB_USER = document.getElementById('gh-user-input').value.trim();
+  GITHUB_REPO = document.getElementById('gh-repo-input').value.trim();
+  localStorage.setItem('gh_user', GITHUB_USER);
+  localStorage.setItem('gh_repo', GITHUB_REPO);
+  showToast('✓ Настройки сохранены');
+}
+
+function clearAllData() {
+  if (!confirm('Удалить все пособия и колоды?')) return;
+  localStorage.removeItem('bio_guides');
+  // Очистка IndexedDB
+  dbDeleteRange('decks', '');
+  dbDeleteRange('stats', '');
+  dbDeleteRange('favorites', '');
+  renderLibrary();
+  renderDecks();
+  showToast('Все данные удалены');
+}
+
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+openDB().then(() => {
+  renderLibrary();
+  renderDecks();
+  // Восстанавливаем активную вкладку при загрузке
+  navTo('library');
+});
   // ==================== ИНИЦИАЛИЗАЦИЯ ====================
   openDB().then(() => {
     renderLibrary();
