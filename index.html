@@ -473,6 +473,70 @@
 #deck-detail-screen .section-title {
   margin-top: 20px;
 }
+
+      /* Полная изоляция экрана колоды */
+#deck-detail-screen .nav {
+  background: var(--bg);
+}
+#deck-detail-screen .big-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+#deck-detail-screen .big-stat .num {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 500;
+}
+#deck-detail-screen .big-stat .lbl {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+#deck-detail-screen .big-stat.good .num { color: var(--accent); }
+#deck-detail-screen .big-stat.bad .num { color: var(--accent2); }
+#deck-detail-screen .hard-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+#deck-detail-screen .hard-rank {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--accent2);
+  min-width: 32px;
+}
+#deck-detail-screen .hard-info { flex: 1; min-width: 0; }
+#deck-detail-screen .hard-q {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#deck-detail-screen .hard-stat {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+#deck-detail-screen .hard-badge {
+  background: var(--accent2-light);
+  color: var(--accent2);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
     }
   </style>
 </head>
@@ -540,26 +604,35 @@
 </div>
 
 <!-- ДЕТАЛИ КОЛОДЫ -->
-<!-- ДЕТАЛИ КОЛОДЫ (полностью изолированный экран) -->
+<!-- ДЕТАЛИ КОЛОДЫ (ПОЛНОСТЬЮ ИЗОЛИРОВАННЫЙ ЭКРАН) -->
 <div id="deck-detail-screen" class="screen">
   <div class="nav">
     <button class="nav-btn" onclick="showScreen('decks-screen')">←</button>
     <div class="nav-title" id="deck-detail-nav-title">Колода</div>
     <button class="nav-btn" id="deck-delete-btn">🗑</button>
   </div>
-  <div class="scroll" id="deck-detail-scroll">
-    <div style="padding:24px 20px 16px;">
-      <div style="font-size:40px; margin-bottom:10px;" id="deck-detail-icon">📚</div>
-      <div style="font-family:var(--font-display); font-size:28px; font-weight:600; letter-spacing:-0.4px;" id="deck-detail-name">—</div>
-      <div style="font-size:13px; color:var(--text3); margin-top:4px; font-weight:500;" id="deck-detail-sub">—</div>
+  <div class="scroll" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+    <!-- Иконка и название -->
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="width: 60px; height: 60px; border-radius: 18px; background: var(--lavender); display: flex; align-items: center; justify-content: center; font-size: 32px;" id="deck-detail-icon">📚</div>
+      <div style="flex:1;">
+        <div style="font-family: var(--font-display); font-size: 24px; font-weight: 600;" id="deck-detail-name">—</div>
+        <div style="font-size: 13px; color: var(--text3); margin-top: 2px;" id="deck-detail-sub">—</div>
+      </div>
     </div>
-    <div class="big-stat-row" id="deck-stats-row">
+
+    <!-- Статистика -->
+    <div class="big-stat-row" id="deck-stats-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
       <div class="big-stat good"><div class="num" id="deck-known">0</div><div class="lbl">Знаю</div></div>
       <div class="big-stat bad"><div class="num" id="deck-errors">0</div><div class="lbl">Ошибок</div></div>
     </div>
-    <div class="action-btns" id="deck-actions"></div>
+
+    <!-- Кнопки действий -->
+    <div class="action-btns" id="deck-actions" style="display: flex; flex-direction: column; gap: 10px;"></div>
+
+    <!-- Сложные карточки -->
     <div id="hard-section">
-      <div class="section-title">Сложные карточки</div>
+      <div class="section-title" style="margin-bottom: 10px;">Сложные карточки</div>
       <div id="hard-list"></div>
     </div>
   </div>
@@ -1026,7 +1099,7 @@ async function openDeck(deckId) {
   document.getElementById('deck-detail-icon').textContent = deck.icon || '📚';
   document.getElementById('deck-detail-name').textContent = deck.name;
   document.getElementById('deck-detail-nav-title').textContent = deck.name;
-  document.getElementById('deck-detail-sub').textContent = `${deck.cards.length} ${isMatch ? 'блоков паронимов' : 'карточек'}`;
+  document.getElementById('deck-detail-sub').textContent = `${deck.cards.length} ${isMatch ? 'блоков' : 'карточек'}`;
   document.getElementById('deck-delete-btn').onclick = () => deleteDeck(deckId);
   const actionsEl = document.getElementById('deck-actions');
   const statsRow = document.getElementById('deck-stats-row');
