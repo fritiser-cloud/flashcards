@@ -1,134 +1,68 @@
 // ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
 
-// Настройка marked
-if (typeof marked !== 'undefined') {
-  marked.setOptions({
-    breaks: true,
-    gfm: true
-  });
-} else {
-  console.warn('marked не загружен');
-  window.marked = { 
-    parse: (txt) => '<pre>' + (window.escapeHtml ? window.escapeHtml(txt) : txt) + '</pre>' 
-  };
-}
+if(typeof marked!=='undefined') marked.setOptions({breaks:true,gfm:true});
+else { window.marked={ parse:(txt)=>'<pre>'+(window.escapeHtml?window.escapeHtml(txt):txt)+'</pre>' }; }
 
-// Функции для экрана настроек
-function updateSettingsStats() {
-  const guides = window.getGuides ? window.getGuides() : [];
-  const notes = window.getNotes ? window.getNotes() : [];
-  const atlas = window.getAtlasItems ? window.getAtlasItems() : [];
-  
-  const guideCount = window.getElement('settings-guide-count');
-  const deckCount = window.getElement('settings-deck-count');
-  const atlasCount = window.getElement('settings-atlas-count');
-  const notesCount = window.getElement('settings-notes-count');
-  
-  if (guideCount) guideCount.textContent = guides.length;
-  if (atlasCount) atlasCount.textContent = atlas.length;
-  if (notesCount) notesCount.textContent = notes.length;
-  
-  window.dbGetAll('decks').then(decks => {
-    if (deckCount) deckCount.textContent = decks.length;
-  }).catch(() => {});
+function updateSettingsStats(){
+  const guides=window.getGuides?.()||[]; const notes=window.getNotes?.()||[]; const atlas=window.getAtlasItems?.()||[];
+  const guideCount=window.getElement('settings-guide-count'); if(guideCount) guideCount.textContent=guides.length;
+  const atlasCount=window.getElement('settings-atlas-count'); if(atlasCount) atlasCount.textContent=atlas.length;
+  const notesCount=window.getElement('settings-notes-count'); if(notesCount) notesCount.textContent=notes.length;
+  window.dbGetAll('decks').then(decks=>{ const deckCount=window.getElement('settings-deck-count'); if(deckCount) deckCount.textContent=decks.length; }).catch(()=>{});
 }
-
-function clearAllData() {
-  if (!confirm('Удалить ВСЕ данные: колоды, заметки, атлас, пособия? Отменить нельзя.')) return;
-  
-  localStorage.removeItem('notes');
-  localStorage.removeItem('atlas');
-  localStorage.removeItem('bio_guides');
-  localStorage.removeItem('gh_user');
-  localStorage.removeItem('gh_repo');
-  
-  window.dbGetAll('decks').then(decks => {
-    for (const deck of decks) {
-      window.dbDelete('decks', deck.id);
-    }
-  }).then(() => {
-    if (window.showToast) window.showToast('🗑 Все данные удалены');
-    if (window.renderLibrary) window.renderLibrary();
-    if (window.renderDecks) window.renderDecks();
-    if (window.renderAtlas) window.renderAtlas();
-    if (window.renderNotes) window.renderNotes();
-    updateSettingsStats();
-  }).catch(err => console.error(err));
+function clearAllData(){
+  if(!confirm('Удалить ВСЕ данные: колоды, заметки, атлас, пособия? Отменить нельзя.')) return;
+  localStorage.removeItem('notes'); localStorage.removeItem('atlas'); localStorage.removeItem('bio_guides'); localStorage.removeItem('gh_user'); localStorage.removeItem('gh_repo');
+  window.dbGetAll('decks').then(decks=>Promise.all(decks.map(d=>window.dbDelete('decks',d.id)))).then(()=>{
+    window.showToast?.('🗑 Все данные удалены'); window.renderLibrary?.(); window.renderDecks?.(); window.renderAtlas?.(); window.renderNotes?.(); updateSettingsStats();
+  }).catch(err=>console.error(err));
 }
-
-function saveSettings() {
-  const ghUser = window.getElement('gh-user-input')?.value.trim() || 'fritiser-cloud';
-  const ghRepo = window.getElement('gh-repo-input')?.value.trim() || 'flashcards';
-  localStorage.setItem('gh_user', ghUser);
-  localStorage.setItem('gh_repo', ghRepo);
-  if (window.showToast) window.showToast('✓ Настройки сохранены');
+function saveSettings(){
+  const ghUser=window.getElement('gh-user-input')?.value.trim()||'fritiser-cloud';
+  const ghRepo=window.getElement('gh-repo-input')?.value.trim()||'flashcards';
+  localStorage.setItem('gh_user',ghUser); localStorage.setItem('gh_repo',ghRepo);
+  window.showToast?.('✓ Настройки сохранены');
 }
-
-// Firebase заглушки (если нет конфига – просто показываем сообщение)
-function signInWithGoogle() {
-  if (window.showToast) window.showToast('🔐 Авторизация через Google будет доступна в следующей версии');
+function signInWithGoogle(){ window.showToast?.('🔐 Авторизация через Google будет доступна в следующей версии'); }
+function signOut(){ window.showToast?.('🔓 Выход из аккаунта (демо-режим)'); showAuthUI(false); }
+function showAuthUI(isLoggedIn){
+  const loggedOut=window.getElement('auth-logged-out'); const loggedIn=window.getElement('auth-logged-in');
+  if(loggedOut) loggedOut.style.display=isLoggedIn?'none':'block';
+  if(loggedIn) loggedIn.style.display=isLoggedIn?'block':'none';
+  if(isLoggedIn){
+    const avatar=window.getElement('user-avatar'); if(avatar) avatar.src='https://ui-avatars.com/api/?background=9575CD&color=fff&bold=true&name=User';
+    const name=window.getElement('user-name'); if(name) name.textContent='Демо-пользователь';
+    const email=window.getElement('user-email'); if(email) email.textContent='demo@example.com';
+  }
 }
+function checkAuth(){ showAuthUI(false); }
 
-function signOut() {
-  if (window.showToast) window.showToast('🔓 Выход из аккаунта (демо-режим)');
-  // Обновляем интерфейс (скрываем панель)
-  const loggedOut = window.getElement('auth-logged-out');
-  const loggedIn = window.getElement('auth-logged-in');
-  if (loggedOut) loggedOut.style.display = 'block';
-  if (loggedIn) loggedIn.style.display = 'none';
-}
-
-// Проверка авторизации (демо)
-function checkAuth() {
-  // Для демонстрации показываем неавторизованного
-  const loggedOut = window.getElement('auth-logged-out');
-  const loggedIn = window.getElement('auth-logged-in');
-  if (loggedOut) loggedOut.style.display = 'block';
-  if (loggedIn) loggedIn.style.display = 'none';
-}
-
-// Инициализация
-(async function init() {
-  try {
+(async function init(){
+  try{
     console.log('🚀 Запуск приложения...');
     await window.openDB();
     console.log('✓ База данных инициализирована');
-    
-    if (window.renderLibrary) window.renderLibrary();
-    if (window.navTo) window.navTo('library');
-    
+    if(window.renderLibrary) window.renderLibrary();
+    if(window.renderDecks) window.renderDecks();
+    if(window.renderAtlas) window.renderAtlas();
+    if(window.renderNotes) window.renderNotes();
+    if(window.navTo) window.navTo('library');
     checkAuth();
     updateSettingsStats();
-    
     console.log('✓ Приложение готово');
-  } catch (error) {
-    console.error('❌ Ошибка инициализации:', error);
-    if (window.showToast) window.showToast('⚠️ Ошибка инициализации');
-    if (window.renderLibrary) window.renderLibrary();
-    if (window.navTo) window.navTo('library');
+  } catch(error){
+    console.error('❌ Ошибка инициализации:',error);
+    window.showToast?.('⚠️ Ошибка инициализации');
+    if(window.renderLibrary) window.renderLibrary();
+    if(window.navTo) window.navTo('library');
   }
 })();
 
-window.addEventListener('online', () => {
-  if (window.showToast) window.showToast('🟢 Соединение восстановлено');
-});
+window.addEventListener('online',()=>window.showToast?.('🟢 Соединение восстановлено'));
+window.addEventListener('offline',()=>window.showToast?.('🔴 Нет соединения'));
+window.addEventListener('error',(event)=>console.error('Глобальная ошибка:',event.error));
+window.addEventListener('unhandledrejection',(event)=>console.error('Необработанное отклонение:',event.reason));
 
-window.addEventListener('offline', () => {
-  if (window.showToast) window.showToast('🔴 Нет соединения');
-});
-
-window.addEventListener('error', (event) => {
-  console.error('Глобальная ошибка:', event.error);
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('Необработанное отклонение промиса:', event.reason);
-});
-
-window.updateSettingsStats = updateSettingsStats;
-window.clearAllData = clearAllData;
-window.saveSettings = saveSettings;
-window.signInWithGoogle = signInWithGoogle;
-window.signOut = signOut;
-
+window.updateSettingsStats=updateSettingsStats; window.clearAllData=clearAllData; window.saveSettings=saveSettings;
+window.signInWithGoogle=signInWithGoogle; window.signOut=signOut;
 console.log('📚 Биолаб • Карточки • Заметки v3.0');
