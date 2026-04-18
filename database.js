@@ -1,169 +1,73 @@
-// ==================== INDEXEDDB ====================
-const DB_NAME = 'flashcards_db', DB_VER = 2;
-let db;
-let dbPromise;
+// ==================== УТИЛИТЫ ====================
 
-function openDB() {
-  if (dbPromise) return dbPromise;
+// Универсальная функция получения элемента
+function getElement(id) {
+  return document.getElementById(id);
+}
+
+// Показ экрана
+function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const screen = getElement(screenId);
+  if (screen) screen.classList.add('active');
   
-  dbPromise = new Promise((res, rej) => {
-    if (db) return res(db);
-    
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = e => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains('decks')) d.createObjectStore('decks', { keyPath: 'id', autoIncrement: true });
-      if (!d.objectStoreNames.contains('stats')) d.createObjectStore('stats', { keyPath: 'id' });
-      if (!d.objectStoreNames.contains('favorites')) d.createObjectStore('favorites', { keyPath: 'id' });
-    };
-    req.onsuccess = e => { db = e.target.result; res(db); };
-    req.onerror = () => rej(req.error);
-  });
+  // Обновление навигации
+  document.querySelectorAll('.bottom-nav-btn').forEach(btn => btn.classList.remove('active'));
+  if (screenId === 'library-screen') {
+    document.querySelectorAll('.bottom-nav-btn')[0]?.classList.add('active');
+  } else if (screenId === 'decks-screen') {
+    document.querySelectorAll('.bottom-nav-btn')[1]?.classList.add('active');
+  } else if (screenId === 'atlas-screen') {
+    document.querySelectorAll('.bottom-nav-btn')[2]?.classList.add('active');
+  } else if (screenId === 'notes-screen') {
+    document.querySelectorAll('.bottom-nav-btn')[3]?.classList.add('active');
+  } else if (screenId === 'settings-screen') {
+    document.querySelectorAll('.bottom-nav-btn')[4]?.classList.add('active');
+  }
+}
+
+// Навигация
+function navTo(screen) {
+  if (screen === 'library') {
+    showScreen('library-screen');
+    if (window.renderLibrary) renderLibrary();
+  } else if (screen === 'decks') {
+    showScreen('decks-screen');
+    if (window.renderDecks) renderDecks();
+  } else if (screen === 'atlas') {
+    showScreen('atlas-screen');
+    if (window.renderAtlas) renderAtlas();
+  } else if (screen === 'notes') {
+    showScreen('notes-screen');
+    if (window.renderNotes) renderNotes();
+  } else if (screen === 'settings') {
+    showScreen('settings-screen');
+    if (window.updateSettingsStats) window.updateSettingsStats();
+  }
+}
+
+// Toast уведомления
+let toastTimeout;
+function showToast(message) {
+  let toast = getElement('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
   
-  return dbPromise;
+  clearTimeout(toastTimeout);
+  toast.textContent = message;
+  toast.classList.add('show');
+  
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2500);
 }
 
-function dbGet(store, key) {
-  return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error('Database not initialized. Call openDB() first.'));
-      return;
-    }
-    
-    try {
-      const transaction = db.transaction(store, 'readonly');
-      const objectStore = transaction.objectStore(store);
-      const request = objectStore.get(key);
-      
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-function dbGetAll(store) {
-  return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error('Database not initialized'));
-      return;
-    }
-    
-    try {
-      const request = db.transaction(store, 'readonly').objectStore(store).getAll();
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-function dbPut(store, value) {
-  return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error('Database not initialized'));
-      return;
-    }
-    
-    try {
-      const transaction = db.transaction(store, 'readwrite');
-      const objectStore = transaction.objectStore(store);
-      const request = objectStore.put(value);
-      
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-function dbDelete(store, key) {
-  return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error('Database not initialized'));
-      return;
-    }
-    
-    try {
-      const request = db.transaction(store, 'readwrite').objectStore(store).delete(key);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-// ==================== LOCALSTORAGE ФУНКЦИИ ====================
-function getNotes() {
-  try { 
-    return JSON.parse(localStorage.getItem('notes') || '[]'); 
-  } catch { 
-    return []; 
-  }
-}
-
-function getAtlasItems() {
-  try { 
-    return JSON.parse(localStorage.getItem('atlas') || '[]'); 
-  } catch { 
-    return []; 
-  }
-}
-
-function getGuides() {
-  try { 
-    return JSON.parse(localStorage.getItem('bio_guides') || '[]'); 
-  } catch { 
-    return []; 
-  }
-}
-
-function saveNotes(notes) {
-  try {
-    localStorage.setItem('notes', JSON.stringify(notes));
-    if (window.autoSaveToCloud) window.autoSaveToCloud();
-  } catch (e) {
-    if (e.name === 'QuotaExceededError' && window.showToast) {
-      window.showToast('⚠️ Недостаточно места');
-    }
-  }
-}
-
-function saveAtlasItems(items) {
-  try {
-    localStorage.setItem('atlas', JSON.stringify(items));
-    if (window.autoSaveToCloud) window.autoSaveToCloud();
-  } catch (e) {
-    if (e.name === 'QuotaExceededError' && window.showToast) {
-      window.showToast('⚠️ Недостаточно места');
-    }
-  }
-}
-
-function saveGuides(guides) {
-  try {
-    localStorage.setItem('bio_guides', JSON.stringify(guides));
-    if (window.autoSaveToCloud) window.autoSaveToCloud();
-  } catch (e) {
-    if (e.name === 'QuotaExceededError' && window.showToast) {
-      window.showToast('⚠️ Недостаточно места');
-    }
-  }
-}
-
-// Экспорт для использования в других модулях
-window.openDB = openDB;
-window.dbGet = dbGet;
-window.dbGetAll = dbGetAll;
-window.dbPut = dbPut;
-window.dbDelete = dbDelete;
-window.getNotes = getNotes;
-window.getAtlasItems = getAtlasItems;
-window.getGuides = getGuides;
-window.saveNotes = saveNotes;
-window.saveAtlasItems = saveAtlasItems;
-window.saveGuides = saveGuides;
+// Экспорт
+window.getElement = getElement;
+window.showScreen = showScreen;
+window.navTo = navTo;
+window.showToast = showToast;
