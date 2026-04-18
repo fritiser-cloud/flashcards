@@ -6,22 +6,23 @@ let atlasImageBase64 = null;
 
 const CATEGORY_LABELS = {
   'anatomy': '🫀 Анатомия',
-  'histology': '🔬 Гистология',
-  'physiology': '⚡ Физиология',
-  'other': '🧩 Другое'
+  'botany': '🌿 Ботаника',
+  'zoology': '🦋 Зоология',
+  'cells': '🔬 Клетки',
+  'ecology': '🌍 Экология'
 };
 
-function filterAtlas(category) {
+function filterAtlas(category, btn) {
   currentAtlasCategory = category;
-  const pills = document.querySelectorAll('#atlas-cats .cat-pill');
+  const pills = document.querySelectorAll('#atlas-cats .atlas-cat-pill');
   pills.forEach(p => p.classList.remove('active'));
-  event.target?.classList.add('active');
+  if (btn) btn.classList.add('active');
   renderAtlas();
 }
 
 function renderAtlas() {
   const items = window.getAtlasItems ? window.getAtlasItems() : [];
-  const list = window.getElement('atlas-list');
+  const list = window.getElement('atlas-grid');
   if (!list) return;
   
   const filtered = currentAtlasCategory === 'all' 
@@ -38,27 +39,20 @@ function renderAtlas() {
   }
   
   list.innerHTML = '';
-  
-  // Создаем сетку карточек
   const grid = document.createElement('div');
-  grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;';
+  grid.className = 'atlas-grid';
   
   filtered.forEach(item => {
     const card = document.createElement('div');
     card.className = 'atlas-card';
-    card.style.cssText = 'background: var(--surface); border-radius: var(--radius); overflow: hidden; border: 1.5px solid var(--border); box-shadow: var(--shadow); cursor: pointer; transition: all 0.2s;';
     
     card.innerHTML = `
-      <div style="aspect-ratio: 4/3; background: var(--surface2); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-        ${item.image ? `<img src="${item.image}" alt="${window.escapeHtml(item.title)}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div style="font-size: 64px;">🖼️</div>'}
+      <div class="atlas-card-img">
+        ${item.image ? `<img src="${item.image}" alt="${window.escapeHtml(item.title)}">` : '🖼️'}
       </div>
-      <div style="padding: 16px 20px;">
-        <div style="font-weight: 700; font-size: 16px; margin-bottom: 8px; line-height: 1.3;">
-          ${window.escapeHtml(item.title)}
-        </div>
-        <div style="font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: var(--lavender); color: var(--lavender-text); display: inline-block;">
-          ${CATEGORY_LABELS[item.category] || '🧩 Другое'}
-        </div>
+      <div class="atlas-card-content">
+        <div class="atlas-card-title">${window.escapeHtml(item.title)}</div>
+        <div class="atlas-card-category">${CATEGORY_LABELS[item.category] || 'Другое'}</div>
       </div>
     `;
     
@@ -76,50 +70,30 @@ function openAtlasItem(id) {
   
   currentAtlasId = id;
   
-  const contentDiv = window.getElement('atlas-view-content');
-  if (!contentDiv) return;
+  const img = window.getElement('atlas-detail-image');
+  const categorySpan = window.getElement('atlas-detail-category');
+  const titleEl = window.getElement('atlas-detail-title');
+  const descDiv = window.getElement('atlas-detail-desc');
   
-  contentDiv.innerHTML = '';
-  
-  // Изображение
-  if (item.image) {
-    const imgDiv = document.createElement('div');
-    imgDiv.style.cssText = 'margin-bottom: 24px; border-radius: var(--radius); overflow: hidden; border: 1.5px solid var(--border);';
-    imgDiv.innerHTML = `<img src="${item.image}" alt="${window.escapeHtml(item.title)}" style="width: 100%; display: block;">`;
-    contentDiv.appendChild(imgDiv);
+  if (img) {
+    if (item.image) img.src = item.image;
+    else img.style.display = 'none';
   }
-  
-  // Категория
-  const catDiv = document.createElement('div');
-  catDiv.style.cssText = 'font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; background: var(--lavender); color: var(--lavender-text); display: inline-block; margin-bottom: 16px;';
-  catDiv.textContent = CATEGORY_LABELS[item.category] || '🧩 Другое';
-  contentDiv.appendChild(catDiv);
-  
-  // Заголовок
-  const title = document.createElement('h1');
-  title.style.cssText = 'font-family: var(--font-display); font-size: 32px; font-weight: 600; margin-bottom: 20px; line-height: 1.2;';
-  title.textContent = item.title;
-  contentDiv.appendChild(title);
-  
-  // Описание
-  if (item.description) {
-    const descDiv = document.createElement('div');
-    descDiv.style.cssText = 'font-size: 16px; line-height: 1.8; color: var(--text2);';
-    
+  if (categorySpan) categorySpan.textContent = CATEGORY_LABELS[item.category] || 'Другое';
+  if (titleEl) titleEl.textContent = item.title;
+  if (descDiv) {
     try {
       if (typeof marked !== 'undefined') {
-        descDiv.innerHTML = marked.parse(item.description);
+        descDiv.innerHTML = marked.parse(item.description || '');
       } else {
-        descDiv.innerHTML = '<pre>' + window.escapeHtml(item.description) + '</pre>';
+        descDiv.innerHTML = `<pre>${window.escapeHtml(item.description || '')}</pre>`;
       }
     } catch (e) {
-      descDiv.innerHTML = '<pre>' + window.escapeHtml(item.description) + '</pre>';
+      descDiv.innerHTML = `<pre>${window.escapeHtml(item.description || '')}</pre>`;
     }
-    
-    contentDiv.appendChild(descDiv);
   }
   
-  window.showScreen('atlas-view-screen');
+  window.showScreen('atlas-detail-screen');
 }
 
 function newAtlasItem() {
@@ -141,7 +115,15 @@ function newAtlasItem() {
   window.showScreen('atlas-editor-screen');
 }
 
-function handleAtlasImage(event) {
+function createAtlasItem() {
+  newAtlasItem();
+}
+
+function triggerAtlasImageUpload() {
+  document.getElementById('atlas-image-input')?.click();
+}
+
+function handleAtlasImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   
@@ -169,7 +151,6 @@ function saveAtlasItem() {
   const items = window.getAtlasItems ? window.getAtlasItems() : [];
   
   if (currentAtlasId) {
-    // Редактирование существующего
     const index = items.findIndex(i => i.id === currentAtlasId);
     if (index !== -1) {
       items[index].title = title;
@@ -179,7 +160,6 @@ function saveAtlasItem() {
       items[index].updatedAt = Date.now();
     }
   } else {
-    // Создание нового
     const newItem = {
       id: Date.now().toString(),
       title,
@@ -253,8 +233,10 @@ function closeAtlasEditor() {
 window.filterAtlas = filterAtlas;
 window.renderAtlas = renderAtlas;
 window.newAtlasItem = newAtlasItem;
+window.createAtlasItem = createAtlasItem;
+window.triggerAtlasImageUpload = triggerAtlasImageUpload;
+window.handleAtlasImageUpload = handleAtlasImageUpload;
 window.saveAtlasItem = saveAtlasItem;
-window.handleAtlasImage = handleAtlasImage;
 window.editAtlasItem = editAtlasItem;
 window.deleteAtlasItem = deleteAtlasItem;
 window.closeAtlasEditor = closeAtlasEditor;
