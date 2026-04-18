@@ -1,11 +1,10 @@
-// calendar.js – исправленная версия с навигацией по месяцам и корректной сеткой
+// calendar.js – исправленная версия с корректной сеткой и навигацией
 
 let currentReviewItem = null;
 let reviewSessionQueue = [];
 let reviewSessionIdx = 0;
 let calendarSearchQuery = '';
 
-// Текущий отображаемый месяц и год
 let currentDisplayMonth = new Date().getMonth();
 let currentDisplayYear = new Date().getFullYear();
 
@@ -41,20 +40,31 @@ function calculateNextReview(reviewItem, quality) {
 async function renderCalendar() {
   const container = document.getElementById('calendar-container');
   if (!container) return;
-  
-  const firstDayOfMonth = new Date(currentDisplayYear, currentDisplayMonth, 1);
-  const lastDayOfMonth = new Date(currentDisplayYear, currentDisplayMonth + 1, 0);
-  
-  // Определяем первый день сетки (понедельник)
-  let startDate = new Date(firstDayOfMonth);
-  const startDayOfWeek = startDate.getDay(); // 0 = воскресенье, 1 = понедельник...
+
+  const firstDayOfMonth = new Date(currentDisplayYear, currentDisplayMonth, 1, 12, 0, 0);
+  const startDayOfWeek = firstDayOfMonth.getDay(); // 0 = воскресенье
   const offset = (startDayOfWeek === 0) ? -6 : -(startDayOfWeek - 1);
-  startDate.setDate(startDate.getDate() + offset);
-  
-  // Последний день сетки (6 недель)
-  let endDate = new Date(startDate);
-  endDate.setDate(startDate.getDate() + 41);
-  
+  const startDate = new Date(firstDayOfMonth);
+  startDate.setDate(firstDayOfMonth.getDate() + offset);
+
+  const daysArray = [];
+  for (let i = 0; i < 42; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    daysArray.push(date);
+  }
+
+  const reviews = await window.getUpcomingReviews();
+  const reviewMap = new Map();
+  reviews.forEach(review => {
+    const dateKey = formatDate(new Date(review.next_review_date));
+    if (!reviewMap.has(dateKey)) reviewMap.set(dateKey, []);
+    reviewMap.get(dateKey).push(review);
+  });
+
+  const today = new Date();
+  const todayKey = formatDate(today);
+
   let html = `<div class="calendar-header">
                 <button class="calendar-nav" onclick="changeMonth(-1)">←</button>
                 <h2>${new Date(currentDisplayYear, currentDisplayMonth).toLocaleString('ru', { month: 'long', year: 'numeric' })}</h2>
@@ -64,33 +74,20 @@ async function renderCalendar() {
                 <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
               </div>
               <div class="calendar-days">`;
-  
-  const reviews = await window.getUpcomingReviews();
-  const reviewMap = new Map();
-  reviews.forEach(review => {
-    const dateKey = formatDate(new Date(review.next_review_date));
-    if (!reviewMap.has(dateKey)) reviewMap.set(dateKey, []);
-    reviewMap.get(dateKey).push(review);
-  });
-  
-  const today = new Date();
-  const todayKey = formatDate(today);
-  let currentDate = new Date(startDate);
-  
-  while (currentDate <= endDate) {
-    const dateKey = formatDate(currentDate);
+
+  for (const date of daysArray) {
+    const dateKey = formatDate(date);
     const isToday = (dateKey === todayKey);
-    const isCurrentMonth = (currentDate.getMonth() === currentDisplayMonth && currentDate.getFullYear() === currentDisplayYear);
+    const isCurrentMonth = (date.getMonth() === currentDisplayMonth && date.getFullYear() === currentDisplayYear);
     const hasReviews = reviewMap.has(dateKey);
     const reviewCount = hasReviews ? reviewMap.get(dateKey).length : 0;
     const extraClass = !isCurrentMonth ? 'other-month' : '';
-    
+
     html += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasReviews ? 'has-reviews' : ''} ${extraClass}" 
                   data-date="${dateKey}" onclick="window.selectDate('${dateKey}')">
-              <span class="day-number">${currentDate.getDate()}</span>
+              <span class="day-number">${date.getDate()}</span>
               ${hasReviews ? `<span class="review-badge">${reviewCount}</span>` : ''}
             </div>`;
-    currentDate.setDate(currentDate.getDate() + 1);
   }
   html += `</div>`;
   container.innerHTML = html;
