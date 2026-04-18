@@ -1,63 +1,66 @@
 // ==================== УТИЛИТЫ ====================
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+window.escapeHtml = escapeHtml;
+
 function getElement(id) {
-  return document.getElementById(id);
-}
-
-function showScreen(screenId) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const screen = getElement(screenId);
-  if (screen) screen.classList.add('active');
-  
-  document.querySelectorAll('.bottom-nav-btn').forEach(btn => btn.classList.remove('active'));
-  if (screenId === 'library-screen') {
-    document.querySelectorAll('.bottom-nav-btn')[0]?.classList.add('active');
-  } else if (screenId === 'decks-screen') {
-    document.querySelectorAll('.bottom-nav-btn')[1]?.classList.add('active');
-  } else if (screenId === 'atlas-screen') {
-    document.querySelectorAll('.bottom-nav-btn')[2]?.classList.add('active');
-  } else if (screenId === 'notes-screen') {
-    document.querySelectorAll('.bottom-nav-btn')[3]?.classList.add('active');
-  } else if (screenId === 'settings-screen') {
-    document.querySelectorAll('.bottom-nav-btn')[4]?.classList.add('active');
+  const el = document.getElementById(id);
+  if (!el && !id.startsWith('note-') && !id.startsWith('atlas-') && !id.startsWith('match-')) {
+    console.warn(`Element #${id} not found`);
   }
+  return el;
 }
-
-function navTo(screen) {
-  if (screen === 'library') {
-    showScreen('library-screen');
-    if (window.renderLibrary) renderLibrary();
-  } else if (screen === 'decks') {
-    showScreen('decks-screen');
-    if (window.renderDecks) renderDecks();
-  } else if (screen === 'atlas') {
-    showScreen('atlas-screen');
-    if (window.renderAtlas) renderAtlas();
-  } else if (screen === 'notes') {
-    showScreen('notes-screen');
-    if (window.renderNotes) renderNotes();
-  } else if (screen === 'settings') {
-    showScreen('settings-screen');
-    if (window.updateSettingsStats) window.updateSettingsStats();
-  }
-}
-
-let toastTimeout;
-function showToast(message) {
-  let toast = getElement('toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'toast';
-    toast.className = 'toast';
-    document.body.appendChild(toast);
-  }
-  clearTimeout(toastTimeout);
-  toast.textContent = message;
-  toast.classList.add('show');
-  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
-}
-
 window.getElement = getElement;
-window.showScreen = showScreen;
-window.navTo = navTo;
+
+let toastTimer;
+function showToast(msg) {
+  const t = getElement('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
 window.showToast = showToast;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = getElement(id);
+  if (el) el.classList.add('active');
+  window.scrollTo(0, 0);
+  
+  const bottomNav = document.querySelector('.bottom-nav');
+  if (!bottomNav) return;
+  const hideNavScreens = ['guide-detail-screen', 'study-screen', 'match-screen', 'results-screen', 'errors-screen', 'note-editor-screen', 'atlas-detail-screen', 'atlas-editor-screen'];
+  if (hideNavScreens.includes(id)) bottomNav.classList.add('hidden');
+  else bottomNav.classList.remove('hidden');
+}
+window.showScreen = showScreen;
+
+function navTo(tab) {
+  document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+  const btn = getElement('nav-' + tab);
+  if (btn) btn.classList.add('active');
+  
+  if (tab === 'library') { showScreen('library-screen'); if (window.renderLibrary) window.renderLibrary(); }
+  else if (tab === 'decks') { showScreen('decks-screen'); if (window.renderDecks) window.renderDecks(); }
+  else if (tab === 'atlas') { showScreen('atlas-screen'); if (window.renderAtlas) window.renderAtlas(); }
+  else if (tab === 'notes') { showScreen('notes-screen'); if (window.renderNotes) window.renderNotes(); }
+  else if (tab === 'settings') { showScreen('settings-screen'); if (window.renderSettings) window.renderSettings(); }
+}
+window.navTo = navTo;
+
+function plural(n, one, few, many) {
+  if (n % 10 === 1 && n % 100 !== 11) return one;
+  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return few;
+  return many;
+}
+window.plural = plural;
