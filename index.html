@@ -1151,7 +1151,7 @@
     /* ----- АДАПТАЦИЯ ДЛЯ ДЕСКТОПА ----- */
     @media (min-width: 768px) {
       .screen {
-        max-width: 2000px;
+        max-width: 1200px;
         margin: 0 auto;
         border-left: 1px solid var(--border);
         border-right: 1px solid var(--border);
@@ -1162,8 +1162,8 @@
       }
       
       .scroll, .reader-content, .editor-content {
-        padding-left: 20px;
-        padding-right: 40px;
+        padding-left: 32px;
+        padding-right: 32px;
       }
       
       .bottom-nav {
@@ -1233,7 +1233,7 @@
     <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
     <button class="cat-pill" onclick="filterCat('bio',this)">🧬 Биология</button>
     <button class="cat-pill" onclick="filterCat('ru',this)">✍️ Русский</button>
-    <button class="cat-pill" onclick="filterCat('phys',this)">⚗️ Химия</button>
+    <button class="cat-pill" onclick="filterCat('phys',this)">⚗️ Химия/Физика</button>
   </div>
   <div class="scroll" id="guides-list">
     <div class="empty"><div class="empty-icon">📚</div><div class="empty-text">Библиотека пуста.<br>Нажми + чтобы добавить пособие</div></div>
@@ -1767,6 +1767,7 @@ function getNotes() {
     return []; 
   }
 }
+window.getNotes = getNotes;
 
 function getAtlasItems() {
   try { 
@@ -1775,6 +1776,7 @@ function getAtlasItems() {
     return []; 
   }
 }
+window.getAtlasItems = getAtlasItems;
 
 function getGuides() {
   try { 
@@ -1783,6 +1785,7 @@ function getGuides() {
     return []; 
   }
 }
+window.getGuides = getGuides;
 
 function saveNotes(notes) {
   try {
@@ -1794,6 +1797,7 @@ function saveNotes(notes) {
     }
   }
 }
+window.saveNotes = saveNotes;
 
 function saveAtlasItems(items) {
   try {
@@ -1805,6 +1809,7 @@ function saveAtlasItems(items) {
     }
   }
 }
+window.saveAtlasItems = saveAtlasItems;
 
 function saveGuides(guides) {
   try {
@@ -1816,6 +1821,7 @@ function saveGuides(guides) {
     }
   }
 }
+window.saveGuides = saveGuides;
 </script>
 
 <script type="module">
@@ -1913,19 +1919,35 @@ async function syncAllData() {
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
       const cloudData = userDoc.data();
-      if (cloudData.notes && window.saveNotes) localStorage.setItem('notes', JSON.stringify(cloudData.notes));
-      if (cloudData.atlas && window.saveAtlasItems) localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
-      if (cloudData.guides && window.saveGuides) localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
-      if (window.renderNotes) renderNotes();
-      if (window.renderAtlas) renderAtlas();
-      if (window.renderLibrary) renderLibrary();
+      console.log('📥 Данные из облака:', cloudData);
+      
+      // Восстанавливаем заметки
+      if (cloudData.notes) {
+        localStorage.setItem('notes', JSON.stringify(cloudData.notes));
+        if (window.renderNotes) window.renderNotes();
+      }
+      
+      // Восстанавливаем атлас
+      if (cloudData.atlas) {
+        localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
+        if (window.renderAtlas) window.renderAtlas();
+      }
+      
+      // Восстанавливаем пособия
+      if (cloudData.guides) {
+        localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
+        if (window.renderLibrary) window.renderLibrary();
+      }
     }
+    
+    // Сохраняем локальные данные обратно в облако
     await saveToCloud();
+    
     updateSyncStatus('success', 'Синхронизировано');
     const lastSyncEl = getElement('last-sync');
     if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
   } catch (error) {
-    console.error('Ошибка синхронизации:', error);
+    console.error('❌ Ошибка синхронизации:', error);
     updateSyncStatus('error', 'Ошибка синхронизации');
   }
 }
@@ -1934,16 +1956,25 @@ async function saveToCloud() {
   if (!currentUser) return;
   try {
     const userId = currentUser.uid;
+    
+    // Безопасно получаем данные через глобальные функции
+    const notes = window.getNotes ? window.getNotes() : [];
+    const atlas = window.getAtlasItems ? window.getAtlasItems() : [];
+    const guides = window.getGuides ? window.getGuides() : [];
+    
     const data = {
-      notes: getNotes(),
-      atlas: getAtlasItems(),
-      guides: getGuides(),
+      notes: notes,
+      atlas: atlas,
+      guides: guides,
       updatedAt: serverTimestamp()
     };
+    
+    console.log('📤 Сохраняю в облако:', data);
+    
     const userDocRef = doc(db, 'users', userId);
     await setDoc(userDocRef, data, { merge: true });
   } catch (error) {
-    console.error('Ошибка сохранения:', error);
+    console.error('❌ Ошибка сохранения в облако:', error);
   }
 }
 
@@ -1988,9 +2019,15 @@ let matchSelected = { left: null, right: null };
 let matchConnections = [];
 let matchChecked = false;
 
-if (typeof marked === 'undefined') {
+// Настройка marked для поддержки одиночных переносов строк
+if (typeof marked !== 'undefined') {
+  marked.setOptions({
+    breaks: true,  // Включает перенос строк как <br>
+    gfm: true      // GitHub Flavored Markdown
+  });
+} else {
   console.warn('marked не загружен, используется простой рендеринг');
-  window.marked = { parse: (txt) => '<pre>' + txt.replace(/</g, '&lt;') + '</pre>' };
+  window.marked = { parse: (txt) => '<pre>' + escapeHtml(txt) + '</pre>' };
 }
 
 // ==================== INDEXEDDB ====================
@@ -2151,6 +2188,7 @@ function showToast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
+window.showToast = showToast;
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -2180,6 +2218,7 @@ function navTo(tab) {
   else if (tab === 'notes') { showScreen('notes-screen'); renderNotes(); }
   else if (tab === 'settings') { showScreen('settings-screen'); renderSettings(); }
 }
+window.navTo = navTo;
 
 // ==================== БИБЛИОТЕКА ПОСОБИЙ ====================
 function filterCat(cat, btn) {
@@ -2223,6 +2262,7 @@ function renderLibrary() {
     list.appendChild(card);
   });
 }
+window.renderLibrary = renderLibrary;
 
 function openGuide(id) {
   currentGuideId = id;
@@ -2364,6 +2404,7 @@ async function renderDecks() {
     }
   }
 }
+window.renderDecks = renderDecks;
 
 async function openDeck(deckId) {
   try {
@@ -3306,6 +3347,7 @@ function renderNotes() {
     list.appendChild(card);
   });
 }
+window.renderNotes = renderNotes;
 
 function formatTimeAgo(date) {
   const now = new Date();
@@ -3520,6 +3562,7 @@ function renderAtlas() {
     grid.appendChild(card);
   });
 }
+window.renderAtlas = renderAtlas;
 
 function filterAtlas(category, btn) {
   currentAtlasCategory = category;
