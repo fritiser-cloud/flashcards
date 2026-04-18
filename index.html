@@ -4,8 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#FAFAF7">
-  <title>Биолаб • Карточки • Заметки</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Биолаб • Карточки • Заметки">
   <link rel="manifest" href="manifest.json">
+  <title>Биолаб • Карточки • Заметки</title>
   <!-- Markdown парсер -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <!-- Firebase SDK (для модуля) -->
@@ -16,35 +19,1115 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* Стили – такие же, как в предыдущем полном HTML, я привожу их сокращённо для экономии места, но вы можете взять полные стили из предыдущего ответа */
+    /* ----- ОБЩИЕ ПЕРЕМЕННЫЕ И СТИЛИ ----- */
     :root {
-      --lavender: #EDE7F6; --lavender-mid: #D1C4E9; --lavender-deep: #9575CD; --lavender-text: #4527A0;
-      --sage: #E8F5E9; --sage-mid: #C8E6C9; --sage-deep: #66BB6A; --sage-text: #1B5E20;
-      --peach: #FBE9E7; --peach-mid: #FFCCBC; --peach-deep: #FF7043; --peach-text: #BF360C;
-      --sky: #E3F2FD; --sky-mid: #BBDEFB; --sky-deep: #42A5F5; --sky-text: #0D47A1;
-      --bg: #FAFAF7; --surface: #FFFFFF; --surface2: #F3F2EE; --border: #E8E6DF;
-      --text: #1A1A18; --text2: #6B6B62; --text3: #A8A89E; --accent: #2D6A4F; --accent-light: #E8F4EE;
-      --accent2: #D4550A; --accent2-light: #FDF0E8; --green: #1F8A5E; --green-light: #D6F5E8;
-      --red: #C0392B; --red-light: #FDECEA; --yellow: #F5C842; --yellow-light: #FEF9E7;
-      --radius: 22px; --radius-sm: 14px; --shadow: 0 2px 20px rgba(100,80,160,0.08);
+      --lavender: #EDE7F6;
+      --lavender-mid: #D1C4E9;
+      --lavender-deep: #9575CD;
+      --lavender-text: #4527A0;
+      --sage: #E8F5E9;
+      --sage-mid: #C8E6C9;
+      --sage-deep: #66BB6A;
+      --sage-text: #1B5E20;
+      --peach: #FBE9E7;
+      --peach-mid: #FFCCBC;
+      --peach-deep: #FF7043;
+      --peach-text: #BF360C;
+      --sky: #E3F2FD;
+      --sky-mid: #BBDEFB;
+      --sky-deep: #42A5F5;
+      --sky-text: #0D47A1;
+      --bg: #FAFAF7;
+      --surface: #FFFFFF;
+      --surface2: #F3F2EE;
+      --border: #E8E6DF;
+      --text: #1A1A18;
+      --text2: #6B6B62;
+      --text3: #A8A89E;
+      --accent: #2D6A4F;
+      --accent-light: #E8F4EE;
+      --accent2: #D4550A;
+      --accent2-light: #FDF0E8;
+      --green: #1F8A5E;
+      --green-light: #D6F5E8;
+      --red: #C0392B;
+      --red-light: #FDECEA;
+      --yellow: #F5C842;
+      --yellow-light: #FEF9E7;
+      --radius: 22px;
+      --radius-sm: 14px;
+      --shadow: 0 2px 20px rgba(100,80,160,0.08);
       --shadow-lg: 0 8px 40px rgba(100,80,160,0.14);
-      --font-display: 'Fraunces', 'Playfair Display', serif; --font: 'DM Sans', 'Manrope', sans-serif;
+      --font-display: 'Fraunces', 'Playfair Display', serif;
+      --font: 'DM Sans', 'Manrope', sans-serif;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100dvh; display: flex; flex-direction: column; align-items: center; }
-    #app { width: 100%; max-width: 1200px; margin: 0 auto; position: relative; }
-    .screen { display: none; flex-direction: column; min-height: 100dvh; width: 100%; }
+    body { 
+      font-family: var(--font); background: var(--bg); color: var(--text); 
+      min-height: 100dvh; overflow-x: hidden; 
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .screen { 
+      display: none; flex-direction: column; min-height: 100dvh; 
+      width: 100%; max-width: 100%; margin: 0 auto;
+    }
     .screen.active { display: flex; }
-    /* Остальные стили – вставьте сюда полностью из предыдущего полного HTML, они идентичны */
-    /* Для краткости я пропускаю детали, но вы можете скопировать блок <style> из предыдущего ответа */
+
+    .bg-blob {
+      position: fixed; pointer-events: none; z-index: 0;
+      border-radius: 50%; filter: blur(120px); opacity: 0.2;
+    }
+    .bg-blob-1 { width: 500px; height: 500px; background: radial-gradient(var(--lavender-mid), transparent); top: -150px; right: -150px; }
+    .bg-blob-2 { width: 400px; height: 400px; background: radial-gradient(var(--sage-mid), transparent); bottom: 100px; left: -100px; }
+    .bg-blob-3 { width: 350px; height: 350px; background: radial-gradient(var(--sky-mid), transparent); top: 40%; right: -80px; }
+
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; position: sticky; top: 0; z-index: 10;
+      background: rgba(250, 248, 255, 0.8); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-title { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); flex: 1; }
+    .nav-btn {
+      width: 44px; height: 44px; border-radius: 50%; border: none;
+      background: var(--surface); cursor: pointer; display: flex; align-items: center;
+      justify-content: center; font-size: 20px; color: var(--text2); transition: all 0.2s;
+      box-shadow: var(--shadow);
+    }
+    .nav-btn:active { background: var(--lavender); transform: scale(0.95); }
+
+    .scroll { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
+
+    .cats { display: flex; gap: 10px; overflow-x: auto; padding: 12px 24px 0; scrollbar-width: none; }
+    .cats::-webkit-scrollbar { display: none; }
+    .cat-pill {
+      flex-shrink: 0; padding: 10px 20px; border-radius: 30px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      font-family: var(--font); font-size: 14px; font-weight: 600; color: var(--text2);
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      box-shadow: var(--shadow);
+    }
+    .cat-pill.active { background: var(--lavender-deep); color: #fff; border-color: var(--lavender-deep); }
+
+    .guide-card {
+      background: var(--surface); border-radius: var(--radius); padding: 24px;
+      border: 1.5px solid var(--border); box-shadow: var(--shadow);
+      cursor: pointer; transition: all 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .guide-card:active { transform: scale(0.98); }
+    .guide-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .guide-card.bio::before { background: linear-gradient(90deg, var(--sage-deep), var(--sage-mid)); }
+    .guide-card.ru::before { background: linear-gradient(90deg, var(--peach-deep), var(--peach-mid)); }
+    .guide-card.phys::before { background: linear-gradient(90deg, var(--sky-deep), var(--sky-mid)); }
+
+    .card-emoji { font-size: 32px; margin-bottom: 12px; }
+    .card-title { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .card-sub { font-size: 14px; color: var(--text3); line-height: 1.5; }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .card-tag {
+      font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px;
+      background: var(--lavender); color: var(--lavender-text);
+    }
+    .card-tag.sage { background: var(--sage); color: var(--sage-text); }
+    .card-tag.peach { background: var(--peach); color: var(--peach-text); }
+    .card-tag.sky { background: var(--sky); color: var(--sky-text); }
+    .card-arrow { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); font-size: 24px; color: var(--text3); }
+
+    .deck-item {
+      background: var(--surface); border-radius: var(--radius); padding: 20px 24px;
+      box-shadow: var(--shadow); border: 1.5px solid var(--border);
+      display: flex; align-items: center; gap: 18px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .deck-item:active { transform: scale(0.98); }
+    .deck-icon { width: 56px; height: 56px; border-radius: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+    .deck-info { flex: 1; min-width: 0; }
+    .deck-name { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .deck-meta { font-size: 13px; color: var(--text3); margin-top: 4px; font-weight: 500; }
+    .deck-progress { height: 6px; border-radius: 3px; background: var(--border); margin-top: 10px; overflow: hidden; }
+    .deck-progress-fill { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.4s; }
+    .deck-type-badge { font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 20px; background: var(--yellow-light); color: #9A6F00; white-space: nowrap; flex-shrink: 0; }
+    .deck-type-badge.match { background: #EEF0FD; color: #4A4AB0; }
+    .deck-arrow { color: var(--text3); font-size: 24px; flex-shrink: 0; }
+
+    .fab {
+      position: fixed; bottom: 32px; right: 24px; z-index: 30; width: 60px; height: 60px;
+      border-radius: 50%; border: none; background: var(--lavender-deep); color: #fff;
+      font-size: 28px; cursor: pointer; box-shadow: 0 8px 24px rgba(149,117,205,0.4);
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .fab:active { transform: scale(0.92); }
+    
+    .fab-header {
+      width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--lavender-deep); color: #fff;
+      font-size: 24px; cursor: pointer; box-shadow: var(--shadow);
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .fab-header:active { transform: scale(0.92); background: var(--lavender-text); }
+
+    .bottom-nav {
+      display: flex; background: rgba(250, 248, 255, 0.8); backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border); padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+      position: sticky; bottom: 0; z-index: 10; width: 100%;
+    }
+    .bottom-nav.hidden { display: none !important; }
+    .bottom-nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px 4px; cursor: pointer; border: none; background: none;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .bottom-nav-btn .icon { font-size: 24px; transition: transform 0.2s; }
+    .bottom-nav-btn .label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.3px; }
+    .bottom-nav-btn.active .icon { transform: scale(1.1); }
+    .bottom-nav-btn.active .label { color: var(--lavender-deep); }
+
+    .reader-header { padding: 32px 24px 0; position: relative; z-index: 1; }
+    .reader-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 6px; }
+    .reader-title { font-family: var(--font-display); font-size: 32px; font-weight: 600; color: var(--text); line-height: 1.2; letter-spacing: -0.5px; }
+    .reader-desc { font-size: 15px; color: var(--text3); margin-top: 8px; line-height: 1.6; }
+    .chapter-item {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 20px; background: var(--surface); border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); margin-bottom: 12px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chapter-item:active { background: var(--lavender); }
+    .chapter-num {
+      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 18px; font-weight: 600;
+      background: var(--lavender); color: var(--lavender-text);
+    }
+    .chapter-info { flex: 1; }
+    .chapter-name { font-weight: 600; font-size: 15px; color: var(--text); }
+    .chapter-tasks { font-size: 13px; color: var(--text3); margin-top: 4px; }
+    .chapter-arrow { color: var(--text3); font-size: 20px; }
+
+    .big-stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .big-stat { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; }
+    .big-stat .num { font-family: var(--font-display); font-size: 36px; font-weight: 600; }
+    .big-stat .lbl { font-size: 12px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    .big-stat.good .num { color: var(--accent); }
+    .big-stat.bad .num { color: var(--accent2); }
+
+    .action-btns { display: flex; flex-direction: column; gap: 12px; }
+    .btn {
+      padding: 18px; border-radius: var(--radius-sm); border: none; font-family: var(--font);
+      font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn:active { opacity: 0.8; transform: scale(0.98); }
+    .btn-primary { background: var(--lavender-deep); color: #fff; box-shadow: 0 4px 12px rgba(149,117,205,0.3); }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-danger { background: var(--accent2-light); color: var(--accent2); border: 1.5px solid #F9CEB3; }
+    .btn-fav { background: var(--yellow-light); color: #9A6F00; border: 1.5px solid #F5C842; }
+    .btn-notes { background: var(--surface2); color: var(--text); }
+
+    #study-screen { background: var(--bg); }
+    .study-progress-bar { height: 4px; background: var(--border); }
+    .study-progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+    .study-counter { text-align: center; font-size: 14px; color: var(--text3); font-weight: 600; padding: 16px 24px 0; }
+    .flashcard-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; perspective: 1000px; }
+    .flashcard-wrap { width: 100%; max-width: 420px; }
+    .flashcard-3d { width: 100%; min-height: 480px; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(.4,0,.2,1); cursor: pointer; position: relative; }
+    .flashcard-3d.flipped { transform: rotateY(180deg); }
+    .fc-face {
+      position: absolute; width: 100%; min-height: 480px; top: 0; left: 0;
+      backface-visibility: hidden; -webkit-backface-visibility: hidden;
+      background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); border: 1.5px solid var(--border);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 48px 36px; text-align: center;
+    }
+    .fc-back { transform: rotateY(180deg); }
+    .fc-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 24px; }
+    .fc-text { font-family: var(--font-display); font-size: 34px; line-height: 1.5; font-weight: 500; }
+    .fc-hint { font-size: 16px; color: var(--text3); margin-top: 28px; font-weight: 500; }
+    .fc-back .fc-text { font-size: 26px; line-height: 1.7; }
+    .study-actions { padding: 20px 24px 40px; display: flex; gap: 16px; }
+    .study-actions .btn { flex: 1; padding: 22px 16px; font-size: 18px; }
+    .btn-wrong { background: var(--accent2-light); color: var(--accent2); border: 1.5px solid #F9CEB3; }
+    .btn-right { background: var(--accent-light); color: var(--accent); border: 1.5px solid #B7DEC9; }
+
+    #match-screen { background: var(--bg); }
+    .match-progress-bar { height: 4px; background: var(--border); }
+    .match-progress-fill { height: 100%; background: #4A4AB0; transition: width 0.3s; }
+    .match-counter { text-align: center; font-size: 14px; color: var(--text3); font-weight: 600; padding: 16px 24px 4px; }
+    .match-set-title { text-align: center; font-family: var(--font-display); font-size: 20px; font-weight: 500; color: var(--text2); padding: 0 24px 12px; }
+    .match-area { flex: 1; padding: 16px 20px 0; position: relative; overflow: hidden; }
+    .match-columns { display: flex; gap: 16px; position: relative; z-index: 2; }
+    .match-col { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .match-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+    .match-chip {
+      padding: 16px 16px; border-radius: var(--radius-sm);
+      border: 2px solid var(--border); background: var(--surface);
+      font-size: 15px; font-weight: 600; cursor: pointer; line-height: 1.4;
+      transition: all 0.2s;
+      position: relative; user-select: none; text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .match-chip:active { transform: scale(0.97); }
+    .match-chip.selected { border-color: #4A4AB0; background: #EEF0FD; color: #4A4AB0; }
+    .match-chip.connected { border-color: var(--border); background: var(--surface2); color: var(--text2); cursor: default; }
+    .match-chip.correct { border-color: var(--green); background: var(--green-light); color: var(--green); }
+    .match-chip.wrong { border-color: var(--red); background: var(--red-light); color: var(--red); animation: shake 0.3s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+    .match-actions { padding: 16px 20px 32px; display: flex; gap: 16px; }
+    .match-actions .btn { flex: 1; }
+    .btn-check { background: #4A4AB0; color: #fff; }
+    .btn-check:disabled { opacity: 0.4; }
+    .match-hints { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; }
+    .hint-item {
+      padding: 16px 18px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); background: var(--surface);
+      font-size: 14px; line-height: 1.6;
+    }
+    .hint-item.show-correct { border-color: var(--green); background: var(--green-light); }
+    .hint-item.show-wrong { border-color: var(--red); background: var(--red-light); }
+    .hint-word { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+    .hint-text { color: var(--text2); }
+    .hint-example { color: var(--text3); font-style: italic; margin-top: 4px; font-size: 13px; }
+    .match-result-bar {
+      margin: 0 20px 16px; padding: 14px 20px; border-radius: var(--radius-sm);
+      font-size: 15px; font-weight: 700; text-align: center; display: none;
+    }
+    .match-result-bar.correct { background: var(--green-light); color: var(--green); display: block; }
+    .match-result-bar.wrong { background: var(--red-light); color: var(--red); display: block; }
+
+    .results-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 32px; text-align: center; }
+    .results-emoji { font-size: 72px; margin-bottom: 20px; }
+    .results-title { font-family: var(--font-display); font-size: 36px; font-weight: 600; margin-bottom: 12px; }
+    .results-sub { font-size: 17px; color: var(--text2); line-height: 1.6; }
+    .results-stats { display: flex; gap: 20px; margin: 36px 0; }
+    .res-stat { flex: 1; padding: 20px; border-radius: var(--radius-sm); text-align: center; }
+    .res-stat .num { font-family: var(--font-display); font-size: 40px; font-weight: 600; }
+    .res-stat .lbl { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+    .res-stat.good { background: var(--accent-light); color: var(--accent); }
+    .res-stat.bad { background: var(--accent2-light); color: var(--accent2); }
+    .results-btns { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+
+    #errors-screen { background: var(--bg); }
+    .notes-empty { text-align: center; padding: 80px 32px; }
+    .notes-empty-icon { font-size: 56px; margin-bottom: 16px; }
+    .notes-empty-text { font-size: 17px; color: var(--text3); font-weight: 500; line-height: 1.6; }
+    .notes-item {
+      background: var(--surface); border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); padding: 20px 22px; margin-bottom: 14px;
+    }
+    .notes-item-q { font-weight: 700; font-size: 16px; color: var(--text); margin-bottom: 10px; line-height: 1.5; }
+    .notes-item-a { font-size: 15px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; }
+    .notes-item-errors { display: inline-flex; align-items: center; gap: 6px; background: var(--accent2-light); color: var(--accent2); font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 20px; margin-bottom: 10px; }
+    .notes-deck-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin: 24px 0 12px; }
+    .notes-tab {
+      flex: 1; padding: 12px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); background: var(--surface2);
+      font-family: var(--font); font-size: 15px; font-weight: 600;
+      color: var(--text2); cursor: pointer; transition: all 0.2s;
+    }
+    .notes-tab.active { background: var(--yellow-light); color: #9A6F00; border-color: #F5C842; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,21,48,0.4); z-index: 100; align-items: flex-end; justify-content: center; backdrop-filter: blur(6px); }
+    .modal-overlay.open { display: flex; animation: fadeIn 0.2s; }
+    .modal { background: var(--surface); width: 100%; max-width: 480px; border-radius: 36px 36px 0 0; padding: 32px 28px 48px; animation: slideUp 0.3s cubic-bezier(.34,1.56,.64,1); max-height: 85dvh; overflow-y: auto; }
+    .modal-handle { width: 44px; height: 5px; background: var(--border); border-radius: 3px; margin: 0 auto 28px; }
+    .modal-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+    .modal-sub { font-size: 15px; color: var(--text3); margin-bottom: 24px; line-height: 1.6; }
+    .modal-tabs { display: flex; gap: 10px; margin-bottom: 24px; }
+    .modal-tab { flex: 1; padding: 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface2); font-family: var(--font); font-size: 15px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; }
+    .modal-tab.active { background: var(--lavender-deep); color: #fff; border-color: var(--lavender-deep); }
+    .modal-cancel { width: 100%; padding: 16px; border: none; background: none; font-family: var(--font); font-size: 16px; font-weight: 600; color: var(--text3); cursor: pointer; margin-top: 8px; }
+
+    .gh-item { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+    .gh-item:active { background: var(--lavender); }
+    .gh-item.loaded { border-color: var(--sage-deep); background: var(--sage); }
+    .gh-item-icon { font-size: 26px; }
+    .gh-item-info { flex: 1; min-width: 0; }
+    .gh-item-name { font-weight: 700; font-size: 16px; }
+    .gh-item-sub { font-size: 13px; color: var(--text3); margin-top: 4px; }
+    .gh-item-btn { font-size: 13px; font-weight: 700; color: var(--lavender-deep); white-space: nowrap; }
+    .gh-item.loaded .gh-item-btn { color: var(--text3); }
+    .gh-loading { text-align: center; padding: 28px 0; color: var(--text3); font-size: 15px; }
+
+    .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; padding: 14px 24px; border-radius: 40px; font-size: 15px; font-weight: 600; opacity: 0; transition: opacity 0.2s, transform 0.2s; z-index: 200; white-space: nowrap; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    
+    #file-input { display: none; }
+
+    .settings-section { background: var(--surface); border-radius: var(--radius); padding: 22px 24px; border: 1.5px solid var(--border); margin-bottom: 16px; }
+    .settings-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-bottom: 16px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1.5px solid var(--border); }
+    .settings-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .settings-row-label { font-size: 16px; font-weight: 500; color: var(--text); }
+    .settings-row-sub { font-size: 13px; color: var(--text3); margin-top: 4px; }
+    .settings-input { flex: 1; margin-left: 16px; padding: 12px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface2); font-family: var(--font); font-size: 15px; color: var(--text); outline: none; transition: border-color 0.2s; }
+    .settings-input:focus { border-color: var(--lavender-deep); }
+    
+    .auth-card {
+      background: linear-gradient(135deg, var(--lavender), var(--lavender-mid));
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: 1.5px solid var(--lavender-deep);
+    }
+    .auth-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      border: 4px solid white;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .auth-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--lavender-text);
+      margin-bottom: 6px;
+    }
+    .auth-email {
+      font-size: 14px;
+      color: var(--lavender-text);
+      opacity: 0.8;
+      margin-bottom: 20px;
+    }
+    .auth-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 30px;
+      background: rgba(255,255,255,0.9);
+      color: var(--green);
+    }
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 16px 24px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: white;
+      font-family: var(--font);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: var(--shadow);
+    }
+    .btn-google:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,0.1); }
+    .btn-google:active { transform: translateY(0); }
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text3);
+      padding: 14px 0;
+    }
+    .sync-icon { font-size: 18px; animation: spin 1s linear infinite; }
+    .sync-icon.success { animation: none; color: var(--green); }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    #guide-detail-screen .markdown-body {
+      font-family: var(--font);
+      color: var(--text);
+      line-height: 1.8;
+      font-size: 16px;
+      word-wrap: break-word;
+    }
+    #guide-detail-screen .markdown-body h1,
+    #guide-detail-screen .markdown-body h2,
+    #guide-detail-screen .markdown-body h3 {
+      font-family: var(--font-display);
+      margin-top: 28px;
+      margin-bottom: 14px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    #guide-detail-screen .markdown-body h1 { font-size: 30px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+    #guide-detail-screen .markdown-body h2 { font-size: 24px; }
+    #guide-detail-screen .markdown-body h3 { font-size: 20px; }
+    #guide-detail-screen .markdown-body p { margin-bottom: 18px; }
+    #guide-detail-screen .markdown-body ul, #guide-detail-screen .markdown-body ol { padding-left: 28px; margin-bottom: 18px; }
+    #guide-detail-screen .markdown-body li { margin-bottom: 6px; }
+    #guide-detail-screen .markdown-body code { background: var(--surface2); padding: 3px 8px; border-radius: 8px; font-family: monospace; font-size: 15px; }
+    #guide-detail-screen .markdown-body pre { background: var(--surface2); padding: 20px; border-radius: var(--radius-sm); overflow-x: auto; margin-bottom: 20px; border: 1.5px solid var(--border); }
+    #guide-detail-screen .markdown-body pre code { background: none; padding: 0; }
+    #guide-detail-screen .markdown-body blockquote { border-left: 5px solid var(--lavender-deep); padding-left: 20px; margin: 20px 0; color: var(--text2); font-style: italic; }
+    #guide-detail-screen .markdown-body table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 15px; }
+    #guide-detail-screen .markdown-body th, #guide-detail-screen .markdown-body td { border: 1.5px solid var(--border); padding: 12px 16px; text-align: left; }
+    #guide-detail-screen .markdown-body th { background: var(--lavender); font-weight: 600; }
+    #guide-detail-screen .markdown-body strong { color: var(--lavender-text); }
+    #guide-detail-screen .markdown-body a { color: var(--lavender-deep); }
+
+    .note-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 22px;
+      border: 1.5px solid var(--border);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .note-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--lavender-deep), var(--lavender-mid));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .note-card.work::before { background: linear-gradient(90deg, #9575CD, #B39DDB); }
+    .note-card.study::before { background: linear-gradient(90deg, #66BB6A, #81C784); }
+    .note-card.personal::before { background: linear-gradient(90deg, #FF7043, #FF8A65); }
+    .note-card.ideas::before { background: linear-gradient(90deg, #42A5F5, #64B5F6); }
+    .note-card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(100,80,160,0.12); }
+    .note-card:hover::before { opacity: 1; }
+    .note-card:active { transform: scale(0.98) translateY(0); }
+    .note-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .note-title { font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--text); line-height: 1.4; letter-spacing: -0.2px; }
+    .note-date { font-size: 12px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .note-preview { font-size: 15px; color: var(--text2); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 14px; }
+    .note-folder {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+      padding: 6px 12px; border-radius: 20px; background: var(--lavender); color: var(--lavender-text);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .note-folder.work { background: linear-gradient(135deg, #EDE7F6, #D1C4E9); color: #4527A0; }
+    .note-folder.study { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); color: #1B5E20; }
+    .note-folder.personal { background: linear-gradient(135deg, #FBE9E7, #FFCCBC); color: #BF360C; }
+    .note-folder.ideas { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); color: #0D47A1; }
+    
+    .note-editor { display: flex; flex-direction: column; height: 100dvh; background: linear-gradient(180deg, #FAFAF9 0%, #F5F5F3 100%); }
+    .editor-title-input {
+      width: 100%; padding: 24px 28px; border: none; background: transparent;
+      font-family: var(--font-display); font-size: 32px; font-weight: 600; color: var(--text);
+      border-bottom: 2px solid var(--border); transition: border-color 0.3s;
+    }
+    .editor-title-input:focus { outline: none; border-bottom-color: var(--lavender-deep); }
+    .editor-title-input::placeholder { color: var(--text3); font-style: italic; }
+    .editor-textarea {
+      flex: 1; min-height: 450px; padding: 28px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); background: var(--surface);
+      font-family: var(--font); font-size: 17px; line-height: 1.9; color: var(--text);
+      resize: vertical; transition: all 0.3s;
+    }
+    .editor-textarea:focus { outline: none; border-color: var(--lavender-deep); box-shadow: 0 0 0 5px rgba(149,117,205,0.1); background: #FFFFFF; }
+    .editor-preview { padding: 28px; border-radius: var(--radius-sm); background: var(--surface); border: 1.5px solid var(--border); box-shadow: inset 0 2px 8px rgba(0,0,0,0.02); }
+    .folder-select { padding: 12px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface); font-family: var(--font); font-size: 14px; color: var(--text); font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .folder-select:focus { outline: none; border-color: var(--lavender-deep); box-shadow: 0 0 0 3px rgba(149,117,205,0.1); }
+    .folder-select:hover { background: var(--lavender); }
+    .search-box { padding: 16px 24px 12px; background: transparent; }
+    .search-input {
+      width: 100%; padding: 16px 20px 16px 48px; border-radius: 36px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      font-family: var(--font); font-size: 16px; color: var(--text);
+      transition: all 0.2s; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23A8A89E' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: 16px center;
+      box-shadow: var(--shadow);
+    }
+    .search-input:focus { outline: none; border-color: var(--lavender-deep); box-shadow: 0 0 0 4px rgba(149,117,205,0.1); }
+    .folder-pills {
+      display: flex; gap: 10px; overflow-x: auto; padding: 12px 24px 20px;
+      scrollbar-width: none; background: transparent;
+    }
+    .folder-pills::-webkit-scrollbar { display: none; }
+    .folder-pill {
+      flex-shrink: 0; padding: 10px 20px; border-radius: 30px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      font-size: 14px; font-weight: 600; color: var(--text2);
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: var(--shadow);
+    }
+    .folder-pill.active { background: var(--lavender-deep); color: #fff; border-color: var(--lavender-deep); }
+    
+    .editor-toolbar {
+      display: flex; align-items: center; gap: 14px; padding: 16px 28px;
+      background: var(--surface); border-bottom: 1.5px solid var(--border); flex-wrap: wrap;
+    }
+    .editor-btn {
+      padding: 12px 18px; border-radius: 14px; border: 1.5px solid var(--border);
+      background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text2);
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .editor-btn:active { background: var(--lavender); transform: scale(0.96); }
+    .editor-btn:hover { background: var(--lavender); border-color: var(--lavender-deep); color: var(--lavender-text); }
+    .editor-content { flex: 1; padding: 24px 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+    .empty-state { text-align: center; padding: 80px 32px; color: var(--text3); }
+    .empty-state-icon { font-size: 72px; margin-bottom: 20px; opacity: 0.6; }
+    .empty-state-text { font-size: 18px; font-weight: 500; margin-bottom: 10px; }
+    .empty-state-sub { font-size: 15px; line-height: 1.6; }
+    
+    .notes-hero { padding: 24px 24px 8px; position: relative; z-index: 1; }
+    .notes-hero-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 6px; }
+    .notes-hero-title { font-family: var(--font-display); font-size: 36px; font-weight: 600; line-height: 1.1; color: var(--text); margin-bottom: 8px; letter-spacing: -0.5px; }
+    .notes-hero-title span { font-style: italic; color: var(--lavender-deep); }
+    .notes-hero-sub { font-size: 15px; color: var(--text3); font-weight: 400; line-height: 1.5; }
+    
+    .notes-header-row { display: flex; align-items: center; gap: 12px; padding: 12px 24px; }
+    .notes-header-row .search-box { flex: 1; padding: 0; }
+    .notes-header-row .search-input { padding: 16px 20px 16px 48px; background-position: 16px center; }
+    
+    .note-image-item {
+      position: relative; width: 90px; height: 90px; border-radius: var(--radius-sm);
+      overflow: hidden; border: 1.5px solid var(--border); background: var(--surface2);
+    }
+    .note-image-item img { width: 100%; height: 100%; object-fit: cover; }
+    .note-image-delete {
+      position: absolute; top: 6px; right: 6px; width: 24px; height: 24px;
+      border-radius: 50%; background: rgba(0,0,0,0.7); color: white; border: none;
+      font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0.8; transition: opacity 0.2s;
+    }
+    .note-image-delete:hover { opacity: 1; }
+    .note-image-number {
+      position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.7);
+      color: white; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px;
+    }
+
+    .atlas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 18px;
+      padding: 0;
+    }
+    .atlas-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: var(--shadow);
+    }
+    .atlas-card:active { transform: scale(0.97); }
+    .atlas-card-img {
+      width: 100%; min-height: 180px; object-fit: contain;
+      background: var(--surface2); display: flex; align-items: center; justify-content: center;
+      font-size: 56px; border-bottom: 1.5px solid var(--border); padding: 16px;
+    }
+    .atlas-card-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .atlas-card-content { padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+    .atlas-card-title { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.4; word-break: break-word; }
+    .atlas-card-category { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); }
+    
+    .atlas-detail-img {
+      width: 100%; max-height: 500px; object-fit: contain;
+      background: var(--surface2); border-radius: var(--radius); border: 1.5px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .atlas-detail-title { font-family: var(--font-display); font-size: 30px; font-weight: 600; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+    .atlas-detail-category { display: inline-block; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; background: var(--lavender); color: var(--lavender-text); margin-bottom: 20px; }
+    .atlas-detail-desc { font-size: 16px; line-height: 1.8; color: var(--text2); }
+    .atlas-categories {
+      display: flex; gap: 10px; overflow-x: auto; padding: 16px 24px;
+      scrollbar-width: none; background: transparent;
+    }
+    .atlas-categories::-webkit-scrollbar { display: none; }
+    .atlas-cat-pill {
+      flex-shrink: 0; padding: 10px 20px; border-radius: 30px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      font-size: 14px; font-weight: 600; color: var(--text2);
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      box-shadow: var(--shadow);
+    }
+    .atlas-cat-pill.active { background: var(--sage-deep); color: #fff; border-color: var(--sage-deep); }
+
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes slideUp { from{transform:translateY(60px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+    .empty { text-align: center; padding: 60px 32px; }
+    .empty-icon { font-size: 64px; margin-bottom: 16px; }
+    .empty-text { font-size: 17px; color: var(--text3); line-height: 1.7; }
+    
+    .home-hero { padding: 36px 24px 20px; position: relative; z-index: 1; margin-bottom: 8px; }
+    .home-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--lavender-text); margin-bottom: 8px; opacity: 0.9; }
+    .home-title { font-family: var(--font-display); font-size: 44px; font-weight: 700; line-height: 1.1; color: var(--text); margin-bottom: 8px; letter-spacing: -1px; }
+    .home-title span { font-style: italic; background: linear-gradient(135deg, var(--lavender-deep), var(--sage-deep)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .home-sub { font-size: 16px; color: var(--text2); font-weight: 500; line-height: 1.6; max-width: 450px; }
+    .home-header { padding: 36px 24px 20px; position: relative; z-index: 1; margin-bottom: 8px; }
+    .home-greeting { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--peach-text); margin-bottom: 8px; opacity: 0.9; }
+    .atlas-hero { padding: 36px 24px 20px; position: relative; z-index: 1; margin-bottom: 8px; }
+    .atlas-hero .home-label { color: var(--sage-text); }
+    
+    .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 16px; }
+    .hard-item { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 12px; }
+    .hard-rank { font-family: var(--font-display); font-size: 26px; color: var(--accent2); min-width: 40px; }
+    .hard-info { flex: 1; min-width: 0; }
+    .hard-q { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hard-stat { font-size: 13px; color: var(--text3); margin-top: 4px; }
+    .hard-badge { background: var(--accent2-light); color: var(--accent2); font-size: 13px; font-weight: 700; padding: 5px 10px; border-radius: 20px; white-space: nowrap; }
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .stat-box { background: var(--lavender); border-radius: var(--radius-sm); padding: 18px 20px; }
+    .stat-box.sage { background: var(--sage); }
+    .stat-num { font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--lavender-text); }
+    .stat-box.sage .stat-num { color: var(--sage-text); }
+    .stat-lbl { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); margin-top: 4px; }
+    #fav-btn { font-size: 26px; transition: transform 0.2s; }
+    #fav-btn.active { color: #F5C842; background: var(--yellow-light); }
+    #fav-btn.pop { transform: scale(1.4); }
+
+    #guide-detail-screen .reader-content { flex: 1; overflow-y: auto; padding: 28px 24px 48px; }
+    #deck-detail-screen .scroll { padding: 28px 24px; gap: 20px; }
+    
+    @media (min-width: 768px) {
+      .screen { max-width: 1200px; margin: 0 auto; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+      body { background: #F0F0ED; }
+      .scroll, .reader-content, .editor-content { padding-left: 32px; padding-right: 32px; }
+      .bottom-nav { max-width: 1200px; margin: 0 auto; border-radius: var(--radius) var(--radius) 0 0; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+      .atlas-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
+      .atlas-card-img { min-height: 200px; padding: 20px; }
+      .note-editor, .flashcard-container { max-width: 1200px; margin: 0 auto; }
+    }
+    .atlas-card { display: flex; flex-direction: column; }
+    .atlas-card-img { display: flex; align-items: center; justify-content: center; background: var(--surface2); }
+    .atlas-card-title, .atlas-card-category { white-space: normal; word-break: break-word; }
+    #app { width: 100%; max-width: 1200px; margin: 0 auto; }
   </style>
 </head>
 <body>
+
 <div id="app">
-  <!-- Вся разметка – такая же, как в предыдущем полном HTML. 
-       Скопируйте её из моего предыдущего ответа (там все экраны: library, decks, study, match, atlas, notes, settings и т.д.) -->
-  <!-- ... -->
+<div class="bg-blob bg-blob-1"></div>
+<div class="bg-blob bg-blob-2"></div>
+<div class="bg-blob bg-blob-3"></div>
+
+<!-- ГЛАВНАЯ: БИБЛИОТЕКА ПОСОБИЙ -->
+<div id="library-screen" class="screen active">
+  <div class="home-hero">
+    <div class="home-label">📚 Твоя библиотека</div>
+    <div class="home-title">Биолаб <span>&</span><br>Наш язык</div>
+    <div class="home-sub">Учебные пособия для подготовки к ЕГЭ</div>
+  </div>
+  <div class="cats" id="cats-row">
+    <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
+    <button class="cat-pill" onclick="filterCat('bio',this)">🧬 Биология</button>
+    <button class="cat-pill" onclick="filterCat('ru',this)">✍️ Русский</button>
+    <button class="cat-pill" onclick="filterCat('phys',this)">⚗️ Химия/Физика</button>
+  </div>
+  <div class="scroll" id="guides-list">
+    <div class="empty"><div class="empty-icon">📚</div><div class="empty-text">Библиотека пуста.<br>Нажми + чтобы добавить пособие</div></div>
+  </div>
+  <button class="fab" onclick="openAddModal('guide')">＋</button>
 </div>
+
+<!-- КОЛОДЫ КАРТОЧЕК -->
+<div id="decks-screen" class="screen">
+  <div class="home-header">
+    <div class="home-greeting">📇 Колоды карточек</div>
+    <div class="home-title">Тренируй<br>память</div>
+    <div class="home-sub">Флеш-карты и паронимы для ЕГЭ</div>
+  </div>
+  <div class="scroll">
+    <div class="section-title">Мои колоды</div>
+    <div id="decks-list"></div>
+  </div>
+  <button class="fab" onclick="openAddModal('deck')">＋</button>
+</div>
+
+<!-- ДЕТАЛИ ПОСОБИЯ -->
+<div id="guide-detail-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('library-screen')">←</button>
+    <div class="nav-title" id="guide-detail-title">Пособие</div>
+    <button class="nav-btn" id="guide-delete-btn">🗑</button>
+  </div>
+  <div class="reader-header">
+    <div class="reader-label" id="guide-category-label">Биология</div>
+    <div class="reader-title" id="guide-name">—</div>
+    <div class="reader-desc" id="guide-desc">—</div>
+  </div>
+  <div class="reader-content">
+    <div class="stats-row" id="guide-stats" style="display:none; margin-bottom:20px">
+      <div class="stat-box"><div class="stat-num" id="stat-chapters">0</div><div class="stat-lbl">Глав</div></div>
+      <div class="stat-box sage"><div class="stat-num" id="stat-tasks">0</div><div class="stat-lbl">Задач разобрано</div></div>
+    </div>
+    <div class="card-tags" id="guide-tags" style="margin-bottom:20px"></div>
+    <div id="guide-chapters-list"></div>
+    <div id="guide-markdown-content" class="markdown-body" style="margin: 24px 0;"></div>
+    <div id="guide-action-buttons" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ДЕТАЛИ КОЛОДЫ -->
+<div id="deck-detail-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('decks-screen')">←</button>
+    <div class="nav-title" id="deck-detail-nav-title">Колода</div>
+    <button class="nav-btn" id="deck-delete-btn">🗑</button>
+  </div>
+  <div class="scroll">
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <div style="width: 70px; height: 70px; border-radius: 20px; background: var(--lavender); display: flex; align-items: center; justify-content: center; font-size: 36px;" id="deck-detail-icon">📚</div>
+      <div style="flex:1;">
+        <div style="font-family: var(--font-display); font-size: 28px; font-weight: 700;" id="deck-detail-name">—</div>
+        <div style="font-size: 15px; color: var(--text3); margin-top: 4px;" id="deck-detail-sub">—</div>
+      </div>
+    </div>
+    <div class="big-stat-row" id="deck-stats-row">
+      <div class="big-stat good"><div class="num" id="deck-known">0</div><div class="lbl">Знаю</div></div>
+      <div class="big-stat bad"><div class="num" id="deck-errors">0</div><div class="lbl">Ошибок</div></div>
+    </div>
+    <div class="action-btns" id="deck-actions"></div>
+    <div id="hard-section">
+      <div class="section-title">Сложные карточки</div>
+      <div id="hard-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ЭКРАН ИЗУЧЕНИЯ КАРТОЧЕК -->
+<div id="study-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="exitStudy()">✕</button>
+    <div class="nav-title" id="study-deck-name"></div>
+    <button class="nav-btn" id="fav-btn" onclick="toggleFavorite()" title="В избранное">☆</button>
+  </div>
+  <div class="study-progress-bar"><div class="study-progress-fill" id="study-prog"></div></div>
+  <div class="study-counter" id="study-counter"></div>
+  <div class="flashcard-area">
+    <div class="flashcard-wrap">
+      <div class="flashcard-3d" id="flashcard" onclick="flipCard()">
+        <div class="fc-face fc-front">
+          <div class="fc-label">Вопрос</div>
+          <div class="fc-text" id="fc-question"></div>
+          <div class="fc-hint">нажмите, чтобы увидеть ответ</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-label">Ответ</div>
+          <div class="fc-text" id="fc-answer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="study-actions" id="study-actions" style="visibility:hidden">
+    <button class="btn btn-wrong" onclick="markCard(false)">✕ Не знал</button>
+    <button class="btn btn-right" onclick="markCard(true)">✓ Знал</button>
+  </div>
+</div>
+
+<!-- ЭКРАН MATCH (ПАРОНИМЫ) -->
+<div id="match-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="exitMatch()">✕</button>
+    <div class="nav-title" id="match-deck-name"></div>
+    <div style="width:44px"></div>
+  </div>
+  <div class="match-progress-bar"><div class="match-progress-fill" id="match-prog"></div></div>
+  <div class="match-counter" id="match-counter"></div>
+  <div class="match-set-title" id="match-set-title"></div>
+  <div class="match-area" id="match-area">
+    <svg class="match-svg" id="match-svg"></svg>
+    <div class="match-columns">
+      <div class="match-col" id="match-col-left"></div>
+      <div class="match-col" id="match-col-right"></div>
+    </div>
+  </div>
+  <div class="match-result-bar" id="match-result-bar"></div>
+  <div class="match-actions">
+    <button class="btn btn-secondary" onclick="skipMatchSet()">Пропустить</button>
+    <button class="btn btn-check" id="btn-check" onclick="checkMatch()" disabled>Проверить</button>
+  </div>
+  <div class="match-hints" id="match-hints"></div>
+</div>
+
+<!-- ЭКРАН РЕЗУЛЬТАТОВ -->
+<div id="results-screen" class="screen">
+  <div class="results-content">
+    <div class="results-emoji" id="res-emoji">🎉</div>
+    <div class="results-title" id="res-title">Отличная работа!</div>
+    <div class="results-sub" id="res-sub"></div>
+    <div class="results-stats">
+      <div class="res-stat good"><div class="num" id="res-known">0</div><div class="lbl">Верно</div></div>
+      <div class="res-stat bad"><div class="num" id="res-errors">0</div><div class="lbl">Ошибок</div></div>
+    </div>
+    <div class="results-btns">
+      <button class="btn btn-notes" onclick="openNotes()">📋 Конспект ошибок</button>
+      <button class="btn btn-secondary" onclick="goToDeckDetail()">← К набору</button>
+    </div>
+  </div>
+</div>
+
+<!-- ЭКРАН КОНСПЕКТА ОШИБОК -->
+<div id="errors-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="closeNotes()">←</button>
+    <div class="nav-title">Конспект ошибок</div>
+    <div style="width:44px"></div>
+  </div>
+  <div style="padding:16px 24px 0; display:flex; gap:12px;">
+    <button class="notes-tab active" id="notes-tab-session" onclick="switchNotesTab('session', this)">Эта сессия</button>
+    <button class="notes-tab" id="notes-tab-all" onclick="switchNotesTab('all', this)">Все ошибки</button>
+  </div>
+  <div class="scroll" id="notes-scroll"></div>
+</div>
+
+<!-- ЗАМЕТКИ -->
+<div id="notes-screen" class="screen">
+  <div class="notes-hero">
+    <div class="notes-hero-label">Твои записи</div>
+    <div class="notes-hero-title">Заметки <span>&</span><br>Конспекты</div>
+    <div class="notes-hero-sub">Markdown, изображения и организация по папкам</div>
+  </div>
+  <div class="notes-header-row">
+    <div class="search-box">
+      <input type="text" class="search-input" id="notes-search" placeholder="Поиск заметок..." oninput="searchNotes()">
+    </div>
+    <button class="fab-header" onclick="createNote()">＋</button>
+  </div>
+  <div class="folder-pills">
+    <div class="folder-pill active" onclick="filterNotesByFolder('all', this)">📋 Все</div>
+    <div class="folder-pill" onclick="filterNotesByFolder('work', this)">💼 Работа</div>
+    <div class="folder-pill" onclick="filterNotesByFolder('study', this)">📚 Учёба</div>
+    <div class="folder-pill" onclick="filterNotesByFolder('personal', this)">✨ Личное</div>
+    <div class="folder-pill" onclick="filterNotesByFolder('ideas', this)">💡 Идеи</div>
+  </div>
+  <div class="scroll" id="notes-list"></div>
+  <button class="fab" onclick="createNote()" style="display:none;">＋</button>
+</div>
+
+<!-- РЕДАКТОР ЗАМЕТКИ -->
+<div id="note-editor-screen" class="screen">
+  <div class="note-editor">
+    <div class="nav">
+      <button class="nav-btn" onclick="closeNoteEditor()">←</button>
+      <div class="nav-title"></div>
+      <button class="nav-btn" onclick="saveNote()">✓</button>
+    </div>
+    <input type="text" class="editor-title-input" id="note-title" placeholder="Название заметки">
+    <div class="editor-toolbar">
+      <button class="editor-btn" onclick="togglePreview()"><span id="preview-toggle-text">👁 Превью</span></button>
+      <button class="editor-btn" onclick="triggerNoteImageUpload()">🖼️ Картинка</button>
+      <select class="folder-select" id="note-folder">
+        <option value="work">💼 Работа</option>
+        <option value="study">📚 Учёба</option>
+        <option value="personal">✨ Личное</option>
+        <option value="ideas">💡 Идеи</option>
+      </select>
+      <button class="editor-btn" onclick="deleteNote()" style="margin-left:auto;color:var(--red)">🗑</button>
+    </div>
+    <div class="editor-content">
+      <div id="note-images-gallery" style="display:none; margin-bottom:20px">
+        <div style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text3); margin-bottom:10px">Изображения</div>
+        <div id="note-images-container" style="display:flex; gap:12px; flex-wrap:wrap"></div>
+      </div>
+      <textarea class="editor-textarea" id="note-content" placeholder="Начни писать свою заметку..."></textarea>
+      <div class="editor-preview markdown-body" id="note-preview" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- АТЛАС -->
+<div id="atlas-screen" class="screen">
+  <div class="atlas-hero">
+    <div class="home-label">🗺️ Визуальный справочник</div>
+    <div class="home-title">Атлас<br>биологии</div>
+    <div class="home-sub">Схемы, диаграммы и иллюстрации</div>
+  </div>
+  <div class="atlas-categories">
+    <div class="atlas-cat-pill active" onclick="filterAtlas('all', this)">🗺️ Все</div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('anatomy', this)">🫀 Анатомия</div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('botany', this)">🌿 Ботаника</div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('zoology', this)">🦋 Зоология</div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('cells', this)">🔬 Клетки</div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('ecology', this)">🌍 Экология</div>
+  </div>
+  <div class="scroll">
+    <div class="atlas-grid" id="atlas-grid"></div>
+  </div>
+  <button class="fab" onclick="createAtlasItem()">＋</button>
+</div>
+
+<!-- ДЕТАЛИ АТЛАСА -->
+<div id="atlas-detail-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('atlas-screen')">←</button>
+    <div class="nav-title">Атлас</div>
+    <div style="display:flex; gap:10px">
+      <button class="nav-btn" onclick="editAtlasItem()">✏️</button>
+      <button class="nav-btn" onclick="deleteAtlasItem()">🗑</button>
+    </div>
+  </div>
+  <div class="reader-content">
+    <img id="atlas-detail-image" class="atlas-detail-img" src="" alt="">
+    <div id="atlas-detail-category" class="atlas-detail-category"></div>
+    <div id="atlas-detail-title" class="atlas-detail-title"></div>
+    <div id="atlas-detail-desc" class="atlas-detail-desc markdown-body"></div>
+  </div>
+</div>
+
+<!-- РЕДАКТОР АТЛАСА -->
+<div id="atlas-editor-screen" class="screen">
+  <div class="note-editor">
+    <div class="nav">
+      <button class="nav-btn" onclick="closeAtlasEditor()">←</button>
+      <div class="nav-title">Новый элемент</div>
+      <button class="nav-btn" onclick="saveAtlasItem()">✓</button>
+    </div>
+    <input type="text" class="editor-title-input" id="atlas-title" placeholder="Название (например: Строение сердца)">
+    <div class="editor-toolbar">
+      <select class="folder-select" id="atlas-category">
+        <option value="anatomy">🫀 Анатомия</option>
+        <option value="botany">🌿 Ботаника</option>
+        <option value="zoology">🦋 Зоология</option>
+        <option value="cells">🔬 Клетки</option>
+        <option value="ecology">🌍 Экология</option>
+      </select>
+      <button class="editor-btn" onclick="triggerAtlasImageUpload()">🖼️ Загрузить картинку</button>
+    </div>
+    <div class="editor-content">
+      <div id="atlas-image-preview" style="display:none; margin-bottom:20px">
+        <img id="atlas-preview-img" style="width:100%; max-height:350px; object-fit:contain; border-radius:var(--radius-sm); border:1.5px solid var(--border)">
+      </div>
+      <textarea class="editor-textarea" id="atlas-description" placeholder="Описание с поддержкой Markdown..."></textarea>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="atlas-image-input" accept="image/*" style="display:none" onchange="handleAtlasImageUpload(event)">
+<input type="file" id="note-image-input" accept="image/*" style="display:none" onchange="handleNoteImageUpload(event)">
+
+<!-- НАСТРОЙКИ -->
+<div id="settings-screen" class="screen">
+  <div class="nav">
+    <div style="width:44px"></div>
+    <div class="nav-title">Настройки</div>
+    <div style="width:44px"></div>
+  </div>
+  <div class="scroll">
+    <div id="auth-section">
+      <div id="auth-logged-out" style="display:none">
+        <div class="settings-section">
+          <div class="settings-label">Аккаунт</div>
+          <div style="padding:16px 0;text-align:center">
+            <div style="font-size:56px;margin-bottom:16px">👤</div>
+            <div style="font-size:17px;font-weight:500;color:var(--text);margin-bottom:8px">Не авторизован</div>
+            <div style="font-size:14px;color:var(--text3);margin-bottom:24px">Войдите для синхронизации данных</div>
+            <button class="btn-google" onclick="signInWithGoogle()">
+              <svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.96C.347 6.173 0 7.548 0 9s.348 2.827.96 4.042l3.005-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.96 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+              Войти через Google
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="auth-logged-in" style="display:none">
+        <div class="auth-card">
+          <img id="user-avatar" class="auth-avatar" src="" alt="Avatar">
+          <div class="auth-name" id="user-name">Загрузка...</div>
+          <div class="auth-email" id="user-email"></div>
+          <div class="auth-status"><span>●</span> Подключено</div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-label">Синхронизация</div>
+          <div class="sync-status" id="sync-status">
+            <span class="sync-icon success">☁️</span>
+            <span id="sync-text">Все данные синхронизированы</span>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Последняя синхронизация</div></div>
+            <div style="font-size:14px;color:var(--text3)" id="last-sync">Никогда</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="signOut()">Выйти из аккаунта</button>
+        <div style="height:16px"></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-label">GitHub репозиторий</div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Пользователь</div><div class="settings-row-sub">Логин GitHub</div></div>
+        <input class="settings-input" id="gh-user-input" placeholder="fritiser-cloud" value="fritiser-cloud">
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Репозиторий</div><div class="settings-row-sub">Название</div></div>
+        <input class="settings-input" id="gh-repo-input" placeholder="flashcards" value="flashcards">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить</button>
+    <div style="height:12px"></div>
+    <div class="settings-section">
+      <div class="settings-label">О приложении</div>
+      <div class="settings-row"><div><div class="settings-row-label">Биолаб + Карточки + Заметки</div><div class="settings-row-sub">Версия 3.0 · ЕГЭ помощник</div></div></div>
+      <div class="settings-row"><div><div class="settings-row-label">Пособий загружено</div></div><div style="font-weight:700;color:var(--lavender-text)" id="settings-guide-count">0</div></div>
+      <div class="settings-row"><div><div class="settings-row-label">Колод загружено</div></div><div style="font-weight:700;color:var(--accent)" id="settings-deck-count">0</div></div>
+      <div class="settings-row"><div><div class="settings-row-label">Элементов в атласе</div></div><div style="font-weight:700;color:var(--sage-deep)" id="settings-atlas-count">0</div></div>
+      <div class="settings-row"><div><div class="settings-row-label">Заметок создано</div></div><div style="font-weight:700;color:var(--sky-deep)" id="settings-notes-count">0</div></div>
+    </div>
+    <button class="btn btn-secondary" onclick="clearAllData()" style="color:#c00">🗑 Удалить все данные</button>
+  </div>
+</div>
+
+<!-- НИЖНЕЕ МЕНЮ -->
+<div class="bottom-nav">
+  <button class="bottom-nav-btn active" id="nav-library" onclick="navTo('library')"><span class="icon">📚</span><span class="label">Библиотека</span></button>
+  <button class="bottom-nav-btn" id="nav-decks" onclick="navTo('decks')"><span class="icon">📇</span><span class="label">Карточки</span></button>
+  <button class="bottom-nav-btn" id="nav-atlas" onclick="navTo('atlas')"><span class="icon">🗺️</span><span class="label">Атлас</span></button>
+  <button class="bottom-nav-btn" id="nav-notes" onclick="navTo('notes')"><span class="icon">📝</span><span class="label">Заметки</span></button>
+  <button class="bottom-nav-btn" id="nav-settings" onclick="navTo('settings')"><span class="icon">⚙️</span><span class="label">Настройки</span></button>
+</div>
+
+<!-- МОДАЛЬНЫЕ ОКНА -->
+<div class="modal-overlay" id="add-modal" onclick="closeAddModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Добавить</div>
+    <div class="modal-sub" id="modal-sub">Загрузи файл или выбери из GitHub</div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchAddTab('file',this)">📂 Файл</button>
+      <button class="modal-tab" onclick="switchAddTab('github',this)">🐙 GitHub</button>
+    </div>
+    <div id="add-tab-file">
+      <button class="btn btn-primary" onclick="triggerFileAdd()" style="margin-bottom:12px">📂 Загрузить JSON</button>
+      <button class="btn btn-secondary" onclick="openSampleModal()">👀 Формат файла</button>
+    </div>
+    <div id="add-tab-github" style="display:none">
+      <div class="gh-loading" id="gh-loading">Загружаю список…</div>
+      <div id="gh-list"></div>
+      <div id="gh-error" style="display:none; color:var(--peach-text)"></div>
+    </div>
+    <button class="modal-cancel" onclick="closeAddModal()">Отмена</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sample-modal" onclick="closeSampleModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="sample-title">Формат файла</div>
+    <div class="modal-sub" id="sample-sub"></div>
+    <pre id="sample-pre" style="background:var(--surface2); border-radius:16px; padding:18px; font-size:12px; overflow-x:auto; line-height:1.7; border:1.5px solid var(--border);"></pre>
+    <button class="modal-cancel" onclick="closeSampleModal()">Закрыть</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
+
+</div><!-- /#app -->
 
 <!-- Подключение модулей (порядок важен) -->
 <script src="utils.js"></script>
@@ -55,5 +1138,6 @@
 <script src="notes.js"></script>
 <script src="app.js"></script>
 <script type="module" src="firebase-module.js"></script>
+
 </body>
 </html>
