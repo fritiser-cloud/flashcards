@@ -3,7 +3,6 @@ let currentCat = 'all';
 let currentGuideId = null;
 let librarySearchQuery = '';
 
-// Функция поиска (вызывается из input)
 function searchLibrary() {
   const input = document.getElementById('library-search');
   if (input) librarySearchQuery = input.value.toLowerCase();
@@ -125,6 +124,4 @@ function deleteGuide(id) {
   window.showToast('Пособие удалено');
 }
 
-// Функции модальных окон (импорт) уже определены в library.js ранее, оставляем их как есть
-// При необходимости их можно добавить сюда, но они уже были в предыдущих версиях.
-// Если нет, добавьте их из предыдущего ответа.
+// Функции модальных окон (импорт) – они уже определены в вашем проекте, если нет – добавьте их из предыдущих версий
