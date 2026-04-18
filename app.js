@@ -66,7 +66,26 @@ function clearAllData() {
 }
 window.clearAllData = clearAllData;
 
-// ==================== НАВИГАЦИЯ (С ПОДДЕРЖКОЙ КАЛЕНДАРЯ) ====================
+// ==================== ОЧИСТКА ПОВТОРЕНИЙ ====================
+function clearAllReviews() {
+  if (!confirm('🗑 Удалить все запланированные повторения? Это действие нельзя отменить.')) return;
+  
+  window.dbDeleteRange('reviews', '').then(() => {
+    window.showToast('✓ Все повторения удалены');
+    
+    const calendarScreen = document.getElementById('calendar-screen');
+    if (calendarScreen && calendarScreen.classList.contains('active')) {
+      if (window.renderCalendar) window.renderCalendar();
+      if (window.renderUpcomingReviews) window.renderUpcomingReviews();
+    }
+  }).catch(err => {
+    console.error('Ошибка при удалении повторений:', err);
+    window.showToast('⚠️ Ошибка при удалении');
+  });
+}
+window.clearAllReviews = clearAllReviews;
+
+// ==================== НАВИГАЦИЯ ====================
 function navTo(tab) {
   document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('nav-' + tab);
@@ -89,9 +108,6 @@ function navTo(tab) {
     if (window.renderCalendar) {
       window.renderCalendar();
       if (window.renderUpcomingReviews) window.renderUpcomingReviews();
-    } else {
-      console.warn('renderCalendar не определён. Проверьте загрузку calendar.js');
-      window.showToast('⚠️ Ошибка загрузки календаря');
     }
   } else if (tab === 'settings') {
     window.showScreen('settings-screen');
@@ -99,18 +115,6 @@ function navTo(tab) {
   }
 }
 window.navTo = navTo;
-
-// Дублирующий обработчик для кнопки календаря (на случай, если navTo не сработает)
-document.addEventListener('DOMContentLoaded', () => {
-  const calendarBtn = document.getElementById('nav-calendar');
-  if (calendarBtn && !calendarBtn.hasAttribute('data-bound')) {
-    calendarBtn.setAttribute('data-bound', 'true');
-    calendarBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      navTo('calendar');
-    });
-  }
-});
 
 // ==================== ИНИЦИАЛИЗАЦИЯ ====================
 (async function init() {
@@ -145,22 +149,6 @@ window.addEventListener('resize', () => {
   if (document.getElementById('match-screen')?.classList.contains('active') && window.drawLines) {
     window.drawLines();
   }
-  // Очистка всех повторений (таблица reviews)
-function clearAllReviews() {
-  if (!confirm('Удалить все запланированные повторения? Это действие нельзя отменить.')) return;
-  window.dbDeleteRange('reviews', '').then(() => {
-    window.showToast('✓ Все повторения удалены');
-    // Если текущий экран — календарь, обновляем его
-    if (document.getElementById('calendar-screen')?.classList.contains('active')) {
-      if (window.renderCalendar) window.renderCalendar();
-      if (window.renderUpcomingReviews) window.renderUpcomingReviews();
-    }
-  }).catch(err => {
-    console.error(err);
-    window.showToast('⚠️ Ошибка при удалении');
-  });
-}
-window.clearAllReviews = clearAllReviews;
 });
 
 console.log('📚 Биолаб • Карточки • Заметки • Календарь повторений v3.0');
