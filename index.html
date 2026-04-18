@@ -12,11 +12,6 @@
   <!-- Markdown парсер -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -1707,15 +1702,12 @@
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
 
 <script>
+<script type="module">
 // ==================== FIREBASE КОНФИГУРАЦИЯ ====================
-// ВАЖНО: Замените эти значения на свои из Firebase Console
-const firebaseConfig = {
-  apiKey: "// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAlGPZkNsKMbfezIVwmky4EeXDUOJ-sUpw",
   authDomain: "biolab-app-dc4df.firebaseapp.com",
@@ -1725,36 +1717,21 @@ const firebaseConfig = {
   appId: "1:1070438650586:web:0e77c4a873412a8be60be3"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
-};
-
 // Инициализация Firebase
-let firebaseApp, auth, db;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 let currentUser = null;
 
-try {
-  firebaseApp = firebase.initializeApp(firebaseConfig);
-  auth = firebase.auth();
-  db = firebase.firestore();
-  
-  // Слушаем изменения состояния авторизации
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    updateAuthUI(user);
-    if (user) {
-      // Автоматическая синхронизация при входе
-      syncAllData();
-    }
-  });
-} catch (error) {
-  console.warn('Firebase не настроен:', error);
-}
+// Слушаем изменения состояния авторизации
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  updateAuthUI(user);
+  if (user) {
+    // Автоматическая синхронизация при входе
+    syncAllData();
+  }
+});
 
 // ==================== АВТОРИЗАЦИЯ ====================
 function updateAuthUI(user) {
@@ -1773,10 +1750,10 @@ function updateAuthUI(user) {
   }
 }
 
-async function signInWithGoogle() {
+window.signInWithGoogle = async function() {
   try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
     showToast('✓ Успешный вход!');
   } catch (error) {
     console.error('Ошибка входа:', error);
@@ -1784,10 +1761,10 @@ async function signInWithGoogle() {
   }
 }
 
-async function signOut() {
+window.signOut = async function() {
   if (!confirm('Выйти из аккаунта? Локальные данные сохранятся.')) return;
   try {
-    await auth.signOut();
+    await firebaseSignOut(auth);
     showToast('✓ Вы вышли из аккаунта');
   } catch (error) {
     console.error('Ошибка выхода:', error);
@@ -1803,11 +1780,10 @@ async function syncAllData() {
   
   try {
     const userId = currentUser.uid;
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
     
-    // Получаем данные из Firestore
-    const userDoc = await db.collection('users').doc(userId).get();
-    
-    if (userDoc.exists) {
+    if (userDoc.exists()) {
       // Загружаем данные с сервера
       const cloudData = userDoc.data();
       
@@ -1827,9 +1803,9 @@ async function syncAllData() {
       }
       
       // Обновляем UI
-      renderNotes();
-      renderAtlas();
-      renderLibrary();
+      if (window.renderNotes) renderNotes();
+      if (window.renderAtlas) renderAtlas();
+      if (window.renderLibrary) renderLibrary();
     }
     
     // Сохраняем локальные данные на сервер
@@ -1849,13 +1825,14 @@ async function saveToCloud() {
   try {
     const userId = currentUser.uid;
     const data = {
-      notes: getNotes(),
-      atlas: getAtlasItems(),
-      guides: getGuides(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      notes: window.getNotes ? getNotes() : [],
+      atlas: window.getAtlasItems ? getAtlasItems() : [],
+      guides: window.getGuides ? getGuides() : [],
+      updatedAt: serverTimestamp()
     };
     
-    await db.collection('users').doc(userId).set(data, { merge: true });
+    const userDocRef = doc(db, 'users', userId);
+    await setDoc(userDocRef, data, { merge: true });
   } catch (error) {
     console.error('Ошибка сохранения:', error);
   }
@@ -1863,6 +1840,8 @@ async function saveToCloud() {
 
 function updateSyncStatus(status, text) {
   const statusEl = document.getElementById('sync-status');
+  if (!statusEl) return;
+  
   const iconEl = statusEl.querySelector('.sync-icon');
   const textEl = document.getElementById('sync-text');
   
@@ -1881,12 +1860,14 @@ function updateSyncStatus(status, text) {
 }
 
 // Автосохранение на сервер при изменениях
-function autoSaveToCloud() {
+window.autoSaveToCloud = function() {
   if (currentUser) {
     saveToCloud();
   }
 }
+</script>
 
+<script>
 // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
 let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
