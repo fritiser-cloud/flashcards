@@ -11,6 +11,12 @@
   <title>Биолаб • Карточки • Заметки</title>
   <!-- Markdown парсер -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -77,7 +83,7 @@
       background: rgba(250, 248, 255, 0.85); backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
     }
-    .nav-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; letter-spacing: -0.3px; color: var(--text); }
+    .nav-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; letter-spacing: -0.3px; color: var(--text); flex: 1; }
     .nav-btn {
       width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border);
       background: var(--surface); cursor: pointer; display: flex; align-items: center;
@@ -356,6 +362,92 @@
     .settings-row-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
     .settings-input { flex: 1; margin-left: 12px; padding: 8px 12px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface2); font-family: var(--font); font-size: 14px; color: var(--text); outline: none; transition: border-color 0.2s; }
     .settings-input:focus { border-color: var(--lavender-deep); }
+    
+    /* Авторизация */
+    .auth-card {
+      background: linear-gradient(135deg, var(--lavender), var(--lavender-mid));
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+      text-align: center;
+      border: 1.5px solid var(--lavender-deep);
+    }
+    .auth-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .auth-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--lavender-text);
+      margin-bottom: 4px;
+    }
+    .auth-email {
+      font-size: 13px;
+      color: var(--lavender-text);
+      opacity: 0.8;
+      margin-bottom: 16px;
+    }
+    .auth-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.9);
+      color: var(--green);
+    }
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: white;
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: var(--shadow);
+    }
+    .btn-google:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    .btn-google:active {
+      transform: translateY(0);
+    }
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text3);
+      padding: 10px 0;
+    }
+    .sync-icon {
+      font-size: 16px;
+      animation: spin 1s linear infinite;
+    }
+    .sync-icon.success {
+      animation: none;
+      color: var(--green);
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
 
     /* Markdown (только внутри пособия) */
     #guide-detail-screen .markdown-body {
@@ -428,27 +520,182 @@
 
     /* ----- ЗАМЕТКИ ----- */
     .note-card {
-      background: var(--surface); border-radius: var(--radius-sm); padding: 16px;
-      border: 1.5px solid var(--border); box-shadow: var(--shadow);
-      cursor: pointer; transition: all 0.2s; margin-bottom: 12px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 18px;
+      border: 1.5px solid var(--border);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
     }
-    .note-card:active { transform: scale(0.98); background: var(--lavender); }
-    .note-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .note-title { font-weight: 600; font-size: 16px; color: var(--text); line-height: 1.3; }
-    .note-date { font-size: 11px; color: var(--text3); font-weight: 500; }
+    .note-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--lavender-deep), var(--lavender-mid));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .note-card.work::before { background: linear-gradient(90deg, #9575CD, #B39DDB); }
+    .note-card.study::before { background: linear-gradient(90deg, #66BB6A, #81C784); }
+    .note-card.personal::before { background: linear-gradient(90deg, #FF7043, #FF8A65); }
+    .note-card.ideas::before { background: linear-gradient(90deg, #42A5F5, #64B5F6); }
+    
+    .note-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(100,80,160,0.12);
+    }
+    .note-card:hover::before {
+      opacity: 1;
+    }
+    .note-card:active {
+      transform: scale(0.98) translateY(0);
+    }
+    
+    .note-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .note-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 17px;
+      color: var(--text);
+      line-height: 1.3;
+      letter-spacing: -0.2px;
+    }
+    .note-date {
+      font-size: 11px;
+      color: var(--text3);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
     .note-preview {
-      font-size: 14px; color: var(--text2); line-height: 1.5;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-      overflow: hidden; margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 10px;
     }
     .note-folder {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 8px;
-      background: var(--lavender); color: var(--lavender-text);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 10px;
+      background: var(--lavender);
+      color: var(--lavender-text);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    .note-folder.sage { background: var(--sage); color: var(--sage-text); }
-    .note-folder.peach { background: var(--peach); color: var(--peach-text); }
-    .note-folder.sky { background: var(--sky); color: var(--sky-text); }
+    .note-folder.work {
+      background: linear-gradient(135deg, #EDE7F6, #D1C4E9);
+      color: #4527A0;
+    }
+    .note-folder.study {
+      background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+      color: #1B5E20;
+    }
+    .note-folder.personal {
+      background: linear-gradient(135deg, #FBE9E7, #FFCCBC);
+      color: #BF360C;
+    }
+    .note-folder.ideas {
+      background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+      color: #0D47A1;
+    }
+    
+    /* Красивый редактор заметок */
+    .note-editor {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      background: linear-gradient(180deg, #FAFAF9 0%, #F5F5F3 100%);
+    }
+    .editor-title-input {
+      width: 100%;
+      padding: 20px 24px;
+      border: none;
+      background: transparent;
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text);
+      border-bottom: 2px solid var(--border);
+      transition: border-color 0.3s;
+    }
+    .editor-title-input:focus {
+      outline: none;
+      border-bottom-color: var(--lavender-deep);
+    }
+    .editor-title-input::placeholder {
+      color: var(--text3);
+      font-style: italic;
+    }
+    
+    .editor-textarea {
+      flex: 1;
+      min-height: 300px;
+      padding: 20px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--text);
+      resize: none;
+      transition: all 0.3s;
+    }
+    .editor-textarea:focus {
+      outline: none;
+      border-color: var(--lavender-deep);
+      box-shadow: 0 0 0 4px rgba(149,117,205,0.1);
+      background: #FFFFFF;
+    }
+    
+    .editor-preview {
+      padding: 20px;
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.02);
+    }
+    
+    .folder-select {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-family: var(--font);
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .folder-select:focus {
+      outline: none;
+      border-color: var(--lavender-deep);
+      box-shadow: 0 0 0 3px rgba(149,117,205,0.1);
+    }
+    .folder-select:hover {
+      background: var(--lavender);
+    }
     
     .search-box {
       position: sticky; top: 61px; z-index: 5;
@@ -489,24 +736,40 @@
       display: flex; flex-direction: column; height: 100dvh;
     }
     .editor-toolbar {
-      display: flex; align-items: center; gap: 8px; padding: 12px 20px;
+      display: flex; align-items: center; gap: 8px; padding: 12px 24px;
       background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
     }
     .editor-btn {
-      padding: 8px 12px; border-radius: 10px; border: 1.5px solid var(--border);
-      background: var(--surface); font-size: 12px; font-weight: 600;
-      color: var(--text2); cursor: pointer; transition: all 0.2s;
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
     }
-    .editor-btn:active { background: var(--lavender); }
+    .editor-btn:active {
+      background: var(--lavender);
+      transform: scale(0.96);
+    }
+    .editor-btn:hover {
+      background: var(--lavender);
+      border-color: var(--lavender-deep);
+      color: var(--lavender-text);
+    }
     .editor-title-input {
-      width: 100%; padding: 16px 20px; border: none; background: var(--surface);
+      width: 100%; padding: 16px 24px; border: none; background: var(--surface);
       font-family: var(--font-display); font-size: 24px; font-weight: 600;
       color: var(--text); border-bottom: 1px solid var(--border);
     }
     .editor-title-input::placeholder { color: var(--text3); }
     .editor-title-input:focus { outline: none; }
     .editor-content {
-      flex: 1; padding: 20px; overflow-y: auto;
+      flex: 1; padding: 20px 24px; overflow-y: auto;
       display: flex; flex-direction: column; gap: 16px;
     }
     .editor-textarea {
@@ -536,6 +799,40 @@
     .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
     .empty-state-text { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
     .empty-state-sub { font-size: 13px; line-height: 1.5; }
+    
+    /* Hero для заметок */
+    .notes-hero {
+      padding: 32px 20px 20px;
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(180deg, rgba(237,231,246,0.3) 0%, rgba(250,250,247,0) 100%);
+    }
+    .notes-hero-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text3);
+      margin-bottom: 6px;
+    }
+    .notes-hero-title {
+      font-family: var(--font-display);
+      font-size: 38px;
+      font-weight: 500;
+      line-height: 1.1;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .notes-hero-title span {
+      font-style: italic;
+      color: var(--lavender-deep);
+    }
+    .notes-hero-sub {
+      font-size: 14px;
+      color: var(--text3);
+      font-weight: 400;
+      line-height: 1.5;
+    }
     
     .note-image-item {
       position: relative;
@@ -676,6 +973,11 @@
       color: var(--text2);
     }
     .atlas-categories {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: rgba(250, 250, 247, 0.95);
+      backdrop-filter: blur(16px);
       display: flex;
       gap: 8px;
       overflow-x: auto;
@@ -711,13 +1013,79 @@
     .empty { text-align: center; padding: 48px 24px; }
     .empty-icon { font-size: 52px; margin-bottom: 12px; }
     .empty-text { font-size: 15px; color: var(--text3); line-height: 1.6; }
-    .home-hero { padding: 32px 20px 8px; position: relative; z-index: 1; }
-    .home-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 6px; }
-    .home-title { font-family: var(--font-display); font-size: 38px; font-weight: 500; line-height: 1.1; color: var(--text); }
-    .home-title span { font-style: italic; color: var(--lavender-deep); }
-    .home-sub { font-size: 14px; color: var(--text3); margin-top: 8px; font-weight: 400; line-height: 1.5; }
-    .home-header { padding: 28px 20px 8px; }
-    .home-greeting { font-size: 13px; color: var(--text3); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
+    
+    /* Красивые заголовки разделов */
+    .home-hero { 
+      padding: 40px 24px 24px; 
+      position: relative; 
+      z-index: 1;
+      background: linear-gradient(135deg, var(--lavender) 0%, var(--sage) 100%);
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin-bottom: 8px;
+    }
+    .home-label { 
+      font-size: 11px; 
+      font-weight: 700; 
+      text-transform: uppercase; 
+      letter-spacing: 2px; 
+      color: var(--lavender-text); 
+      margin-bottom: 8px;
+      opacity: 0.9;
+    }
+    .home-title { 
+      font-family: var(--font-display); 
+      font-size: 42px; 
+      font-weight: 600; 
+      line-height: 1.1; 
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+    }
+    .home-title span { 
+      font-style: italic; 
+      background: linear-gradient(135deg, var(--lavender-deep), var(--sage-deep));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .home-sub { 
+      font-size: 15px; 
+      color: var(--text2); 
+      font-weight: 500; 
+      line-height: 1.5;
+      max-width: 400px;
+    }
+    
+    .home-header { 
+      padding: 40px 24px 24px;
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(135deg, var(--peach) 0%, var(--sky) 100%);
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin-bottom: 8px;
+    }
+    .home-greeting { 
+      font-size: 11px; 
+      font-weight: 700; 
+      text-transform: uppercase; 
+      letter-spacing: 2px;
+      color: var(--peach-text);
+      margin-bottom: 8px;
+      opacity: 0.9;
+    }
+    
+    .atlas-hero {
+      padding: 40px 24px 24px;
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(135deg, var(--sage) 0%, var(--sky) 100%);
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin-bottom: 8px;
+    }
+    .atlas-hero .home-label {
+      color: var(--sage-text);
+    }
+    
     .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 10px; }
     .hard-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; }
     .hard-rank { font-family: var(--font-display); font-size: 22px; color: var(--accent2); min-width: 32px; }
@@ -828,9 +1196,9 @@
 <!-- ГЛАВНАЯ: БИБЛИОТЕКА ПОСОБИЙ -->
 <div id="library-screen" class="screen active">
   <div class="home-hero">
-    <div class="home-label">Твоя библиотека</div>
+    <div class="home-label">📚 Твоя библиотека</div>
     <div class="home-title">Биолаб <span>&</span><br>Наш язык</div>
-    <div class="home-sub">Учебные пособия и флеш-карточки для ЕГЭ</div>
+    <div class="home-sub">Учебные пособия для подготовки к ЕГЭ</div>
   </div>
   <div class="cats" id="cats-row">
     <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
@@ -847,9 +1215,9 @@
 <!-- КОЛОДЫ КАРТОЧЕК -->
 <div id="decks-screen" class="screen">
   <div class="home-header">
-    <div class="home-greeting">Колоды карточек</div>
-    <div class="home-title">Карточки</div>
-    <div class="home-sub" id="decks-sub">Загрузи колоду через +</div>
+    <div class="home-greeting">📇 Колоды карточек</div>
+    <div class="home-title">Тренируй<br>память</div>
+    <div class="home-sub">Флеш-карты и паронимы для ЕГЭ</div>
   </div>
   <div class="scroll">
     <div class="section-title">Мои колоды</div>
@@ -997,9 +1365,10 @@
 
 <!-- ЗАМЕТКИ -->
 <div id="notes-screen" class="screen">
-  <div class="nav">
-    <div class="nav-title">Заметки</div>
-    <button class="nav-btn" onclick="createNote()">+</button>
+  <div class="notes-hero">
+    <div class="notes-hero-label">Твои записи</div>
+    <div class="notes-hero-title">Заметки <span>&</span><br>Конспекты</div>
+    <div class="notes-hero-sub">Markdown, изображения и организация по папкам</div>
   </div>
   
   <div class="search-box">
@@ -1025,6 +1394,7 @@
   </div>
   
   <div class="scroll" id="notes-list"></div>
+  <button class="fab" onclick="createNote()">＋</button>
 </div>
 
 <!-- РЕДАКТОР ЗАМЕТКИ -->
@@ -1086,9 +1456,10 @@
 
 <!-- АТЛАС -->
 <div id="atlas-screen" class="screen">
-  <div class="nav">
-    <div class="nav-title">Атлас</div>
-    <button class="nav-btn" onclick="createAtlasItem()">+</button>
+  <div class="atlas-hero">
+    <div class="home-label">🗺️ Визуальный справочник</div>
+    <div class="home-title">Атлас<br>биологии</div>
+    <div class="home-sub">Схемы, диаграммы и иллюстрации</div>
   </div>
   
   <div class="atlas-categories">
@@ -1115,6 +1486,7 @@
   <div class="scroll">
     <div class="atlas-grid" id="atlas-grid"></div>
   </div>
+  <button class="fab" onclick="createAtlasItem()">＋</button>
 </div>
 
 <!-- ДЕТАЛИ АТЛАСА -->
@@ -1193,6 +1565,52 @@
     <div style="width:40px"></div>
   </div>
   <div class="scroll">
+    <!-- Авторизация -->
+    <div id="auth-section">
+      <!-- Если не авторизован -->
+      <div id="auth-logged-out" style="display:none">
+        <div class="settings-section">
+          <div class="settings-label">Аккаунт</div>
+          <div style="padding:12px 0;text-align:center">
+            <div style="font-size:48px;margin-bottom:12px">👤</div>
+            <div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:6px">Не авторизован</div>
+            <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Войдите для синхронизации данных</div>
+            <button class="btn-google" onclick="signInWithGoogle()">
+              <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.96C.347 6.173 0 7.548 0 9s.348 2.827.96 4.042l3.005-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.96 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+              Войти через Google
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Если авторизован -->
+      <div id="auth-logged-in" style="display:none">
+        <div class="auth-card">
+          <img id="user-avatar" class="auth-avatar" src="" alt="Avatar">
+          <div class="auth-name" id="user-name">Загрузка...</div>
+          <div class="auth-email" id="user-email"></div>
+          <div class="auth-status">
+            <span>●</span> Подключено
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-label">Синхронизация</div>
+          <div class="sync-status" id="sync-status">
+            <span class="sync-icon success">☁️</span>
+            <span id="sync-text">Все данные синхронизированы</span>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Последняя синхронизация</div></div>
+            <div style="font-size:13px;color:var(--text3)" id="last-sync">Никогда</div>
+          </div>
+        </div>
+        
+        <button class="btn btn-secondary" onclick="signOut()">Выйти из аккаунта</button>
+        <div style="height:12px"></div>
+      </div>
+    </div>
+    
     <div class="settings-section">
       <div class="settings-label">GitHub репозиторий</div>
       <div class="settings-row">
@@ -1209,7 +1627,7 @@
     <div class="settings-section">
       <div class="settings-label">О приложении</div>
       <div class="settings-row">
-        <div><div class="settings-row-label">Биолаб + Карточки + Заметки</div><div class="settings-row-sub">Версия 2.1 · ЕГЭ помощник</div></div>
+        <div><div class="settings-row-label">Биолаб + Карточки + Заметки</div><div class="settings-row-sub">Версия 2.2 · ЕГЭ помощник с Firebase</div></div>
       </div>
       <div class="settings-row">
         <div><div class="settings-row-label">Пособий загружено</div></div>
@@ -1289,6 +1707,186 @@
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
 
 <script>
+// ==================== FIREBASE КОНФИГУРАЦИЯ ====================
+// ВАЖНО: Замените эти значения на свои из Firebase Console
+const firebaseConfig = {
+  apiKey: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAlGPZkNsKMbfezIVwmky4EeXDUOJ-sUpw",
+  authDomain: "biolab-app-dc4df.firebaseapp.com",
+  projectId: "biolab-app-dc4df",
+  storageBucket: "biolab-app-dc4df.firebasestorage.app",
+  messagingSenderId: "1070438650586",
+  appId: "1:1070438650586:web:0e77c4a873412a8be60be3"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
+
+// Инициализация Firebase
+let firebaseApp, auth, db;
+let currentUser = null;
+
+try {
+  firebaseApp = firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  
+  // Слушаем изменения состояния авторизации
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    updateAuthUI(user);
+    if (user) {
+      // Автоматическая синхронизация при входе
+      syncAllData();
+    }
+  });
+} catch (error) {
+  console.warn('Firebase не настроен:', error);
+}
+
+// ==================== АВТОРИЗАЦИЯ ====================
+function updateAuthUI(user) {
+  const loggedIn = document.getElementById('auth-logged-in');
+  const loggedOut = document.getElementById('auth-logged-out');
+  
+  if (user) {
+    loggedIn.style.display = 'block';
+    loggedOut.style.display = 'none';
+    document.getElementById('user-name').textContent = user.displayName || 'Пользователь';
+    document.getElementById('user-email').textContent = user.email;
+    document.getElementById('user-avatar').src = user.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="32" fill="%239575CD"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="28" font-family="sans-serif">👤</text></svg>';
+  } else {
+    loggedIn.style.display = 'none';
+    loggedOut.style.display = 'block';
+  }
+}
+
+async function signInWithGoogle() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    showToast('✓ Успешный вход!');
+  } catch (error) {
+    console.error('Ошибка входа:', error);
+    showToast('⚠️ Ошибка входа: ' + error.message);
+  }
+}
+
+async function signOut() {
+  if (!confirm('Выйти из аккаунта? Локальные данные сохранятся.')) return;
+  try {
+    await auth.signOut();
+    showToast('✓ Вы вышли из аккаунта');
+  } catch (error) {
+    console.error('Ошибка выхода:', error);
+    showToast('⚠️ Ошибка выхода');
+  }
+}
+
+// ==================== СИНХРОНИЗАЦИЯ ДАННЫХ ====================
+async function syncAllData() {
+  if (!currentUser) return;
+  
+  updateSyncStatus('syncing', 'Синхронизация...');
+  
+  try {
+    const userId = currentUser.uid;
+    
+    // Получаем данные из Firestore
+    const userDoc = await db.collection('users').doc(userId).get();
+    
+    if (userDoc.exists) {
+      // Загружаем данные с сервера
+      const cloudData = userDoc.data();
+      
+      // Заметки
+      if (cloudData.notes) {
+        localStorage.setItem('notes', JSON.stringify(cloudData.notes));
+      }
+      
+      // Атлас
+      if (cloudData.atlas) {
+        localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
+      }
+      
+      // Пособия
+      if (cloudData.guides) {
+        localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
+      }
+      
+      // Обновляем UI
+      renderNotes();
+      renderAtlas();
+      renderLibrary();
+    }
+    
+    // Сохраняем локальные данные на сервер
+    await saveToCloud();
+    
+    updateSyncStatus('success', 'Все данные синхронизированы');
+    document.getElementById('last-sync').textContent = new Date().toLocaleTimeString('ru-RU');
+  } catch (error) {
+    console.error('Ошибка синхронизации:', error);
+    updateSyncStatus('error', 'Ошибка синхронизации');
+  }
+}
+
+async function saveToCloud() {
+  if (!currentUser) return;
+  
+  try {
+    const userId = currentUser.uid;
+    const data = {
+      notes: getNotes(),
+      atlas: getAtlasItems(),
+      guides: getGuides(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    await db.collection('users').doc(userId).set(data, { merge: true });
+  } catch (error) {
+    console.error('Ошибка сохранения:', error);
+  }
+}
+
+function updateSyncStatus(status, text) {
+  const statusEl = document.getElementById('sync-status');
+  const iconEl = statusEl.querySelector('.sync-icon');
+  const textEl = document.getElementById('sync-text');
+  
+  if (status === 'syncing') {
+    iconEl.className = 'sync-icon';
+    iconEl.textContent = '🔄';
+  } else if (status === 'success') {
+    iconEl.className = 'sync-icon success';
+    iconEl.textContent = '☁️';
+  } else if (status === 'error') {
+    iconEl.className = 'sync-icon';
+    iconEl.textContent = '⚠️';
+  }
+  
+  textEl.textContent = text;
+}
+
+// Автосохранение на сервер при изменениях
+function autoSaveToCloud() {
+  if (currentUser) {
+    saveToCloud();
+  }
+}
+
 // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
 let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
@@ -2259,6 +2857,7 @@ function getNotes() {
 // Сохранение заметок в localStorage
 function saveNotes(notes) {
   localStorage.setItem('notes', JSON.stringify(notes));
+  autoSaveToCloud();
 }
 
 // Рендеринг списка заметок
@@ -2293,20 +2892,13 @@ function renderNotes() {
   list.innerHTML = '';
   filtered.forEach(note => {
     const card = document.createElement('div');
-    card.className = 'note-card';
+    card.className = `note-card ${note.folder}`;
     
     const folderLabels = {
       work: '💼 Работа',
       study: '📚 Учёба',
       personal: '✨ Личное',
       ideas: '💡 Идеи'
-    };
-    
-    const folderColors = {
-      work: 'lavender',
-      study: 'sage',
-      personal: 'peach',
-      ideas: 'sky'
     };
     
     const preview = note.content.replace(/[#*`>\-\[\]]/g, '').trim().substring(0, 150);
@@ -2319,7 +2911,7 @@ function renderNotes() {
         <div class="note-date">${timeAgo}</div>
       </div>
       <div class="note-preview">${preview || 'Пустая заметка'}</div>
-      <div class="note-folder ${folderColors[note.folder]}">${folderLabels[note.folder]}</div>
+      <div class="note-folder ${note.folder}">${folderLabels[note.folder]}</div>
     `;
     
     card.onclick = () => openNoteEditor(note.id);
@@ -2555,6 +3147,7 @@ function getAtlasItems() {
 // Сохранение атласа
 function saveAtlasItems(items) {
   localStorage.setItem('atlas', JSON.stringify(items));
+  autoSaveToCloud();
 }
 
 // Рендеринг атласа
