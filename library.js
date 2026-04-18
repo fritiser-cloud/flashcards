@@ -167,9 +167,249 @@ function addGuideToDecks() {
   }
 }
 
+// ==================== МОДАЛЬНЫЕ ОКНА ====================
+let currentAddType = 'guide';
+let ghTabLoaded = false;
+let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
+let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
+
+function filterCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLibrary();
+}
+
+function openAddModal(type) {
+  currentAddType = type;
+  ghTabLoaded = false;
+  
+  const modalTitle = window.getElement('modal-title');
+  if (modalTitle) modalTitle.textContent = type === 'guide' ? 'Добавить пособие' : 'Добавить колоду';
+  
+  const modalSub = window.getElement('modal-sub');
+  if (modalSub) modalSub.textContent = type === 'guide' ? 'Загрузи JSON с описанием пособия' : 'Загрузи JSON с карточками';
+  
+  const addModal = window.getElement('add-modal');
+  if (addModal) addModal.classList.add('open');
+  
+  // Сброс табов
+  document.querySelectorAll('.modal-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
+  const tabFile = window.getElement('add-tab-file');
+  if (tabFile) tabFile.style.display = '';
+  const tabGithub = window.getElement('add-tab-github');
+  if (tabGithub) tabGithub.style.display = 'none';
+}
+
+function closeAddModal(e) {
+  if (!e || e.target === window.getElement('add-modal')) {
+    const modal = window.getElement('add-modal');
+    if (modal) modal.classList.remove('open');
+  }
+}
+
+function switchAddTab(tab, btn) {
+  document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  const tabFile = window.getElement('add-tab-file');
+  if (tabFile) tabFile.style.display = tab === 'file' ? '' : 'none';
+  
+  const tabGithub = window.getElement('add-tab-github');
+  if (tabGithub) tabGithub.style.display = tab === 'github' ? '' : 'none';
+  
+  if (tab === 'github' && !ghTabLoaded) {
+    ghTabLoaded = true;
+    loadGithubList();
+  }
+}
+
+function triggerFileAdd() {
+  closeAddModal();
+  const fileInput = window.getElement('file-input');
+  if (fileInput) fileInput.click();
+}
+
+async function handleFileAdd(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    
+    if (currentAddType === 'guide') {
+      if (!data.name || !data.category) throw new Error('bad format');
+      const guides = window.getGuides ? window.getGuides() : [];
+      const existing = guides.findIndex(g => g.name === data.name);
+      if (existing >= 0) guides[existing] = data;
+      else guides.push({ ...data, id: Date.now() });
+      if (window.saveGuides) window.saveGuides(guides);
+      renderLibrary();
+    } else {
+      if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
+      const colors = ['#E8F4EE', '#FDF0E8', '#FEF9E7', '#EEF0FD', '#FDE8F0'];
+      const deck = {
+        name: data.name,
+        icon: data.icon || '📚',
+        type: data.type || 'flashcard',
+        color: data.color || colors[Math.floor(Math.random() * colors.length)],
+        cards: data.cards,
+        createdAt: Date.now()
+      };
+      if (window.dbPut) await window.dbPut('decks', deck);
+      if (window.renderDecks) window.renderDecks();
+    }
+    
+    closeAddModal();
+    if (window.showToast) window.showToast(`✓ ${data.name} добавлено`);
+  } catch (e) {
+    if (window.showToast) window.showToast('⚠️ Ошибка: неверный формат файла');
+  }
+}
+
+async function loadGithubList() {
+  const loading = window.getElement('gh-loading');
+  const errEl = window.getElement('gh-error');
+  const list = window.getElement('gh-list');
+  
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    
+    if (!res.ok) throw new Error(res.status);
+    
+    const files = await res.json();
+    const jsonFiles = files.filter(f => f.name.endsWith('.json') && f.name !== 'manifest.json' && f.type === 'file');
+    
+    if (loading) loading.style.display = 'none';
+    
+    if (jsonFiles.length === 0) {
+      if (list) list.innerHTML = '<div class="gh-loading">Нет JSON файлов в репозитории</div>';
+      return;
+    }
+    
+    if (list) list.innerHTML = '<div class="gh-loading">Загрузка...</div>';
+    
+    const filtered = [];
+    for (const f of jsonFiles) {
+      try {
+        const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${f.name}`;
+        const resp = await fetch(rawUrl);
+        const data = await resp.json();
+        filtered.push({ ...f, data });
+      } catch (e) {
+        console.warn('Не удалось загрузить', f.name);
+      }
+    }
+    
+    if (filtered.length === 0) {
+      if (list) list.innerHTML = '<div class="gh-loading">Нет подходящих файлов</div>';
+      return;
+    }
+    
+    if (list) {
+      list.innerHTML = '';
+      
+      for (const f of filtered) {
+        const el = document.createElement('div');
+        el.className = 'gh-item';
+        el.innerHTML = `
+          <div class="gh-item-icon">📄</div>
+          <div class="gh-item-info">
+            <div class="gh-item-name">${escapeHtml(f.data.name || f.name)}</div>
+            <div class="gh-item-sub">${(f.size / 1024).toFixed(1)} КБ</div>
+          </div>
+          <div class="gh-item-btn">Добавить</div>`;
+        el.onclick = () => importFromGithub(f.data, f.name);
+        list.appendChild(el);
+      }
+    }
+  } catch (e) {
+    if (loading) loading.style.display = 'none';
+    if (errEl) {
+      errEl.textContent = `Ошибка загрузки: ${e.message}`;
+      errEl.style.display = '';
+    }
+  }
+}
+
+async function importFromGithub(data, filename) {
+  if (currentAddType === 'guide') {
+    const guides = window.getGuides ? window.getGuides() : [];
+    const existing = guides.findIndex(g => g.name === data.name);
+    if (existing >= 0) guides[existing] = { ...data, sourceFile: filename };
+    else guides.push({ ...data, id: Date.now(), sourceFile: filename });
+    if (window.saveGuides) window.saveGuides(guides);
+    renderLibrary();
+  } else {
+    const deck = { ...data, sourceFile: filename, createdAt: Date.now() };
+    if (window.dbPut) await window.dbPut('decks', deck);
+    if (window.renderDecks) window.renderDecks();
+  }
+  
+  closeAddModal();
+  if (window.showToast) window.showToast(`✓ ${data.name || filename} добавлено`);
+}
+
+function openSampleModal() {
+  closeAddModal();
+  const sampleModal = window.getElement('sample-modal');
+  if (sampleModal) sampleModal.classList.add('open');
+  
+  const title = window.getElement('sample-title');
+  const sub = window.getElement('sample-sub');
+  const pre = window.getElement('sample-pre');
+  
+  if (currentAddType === 'guide') {
+    if (title) title.textContent = 'Формат пособия';
+    if (sub) sub.textContent = 'JSON файл должен содержать следующие поля:';
+    if (pre) pre.textContent = `{
+  "type": "guide",
+  "name": "Название пособия",
+  "category": "bio",
+  "desc": "Описание",
+  "icon": "🧬",
+  "tags": ["ЕГЭ", "Биология"],
+  "content": "# Markdown контент\\n\\nТекст пособия..."
+}`;
+  } else {
+    if (title) title.textContent = 'Формат колоды';
+    if (sub) sub.textContent = 'JSON файл должен содержать следующие поля:';
+    if (pre) pre.textContent = `{
+  "type": "flashcard",
+  "name": "Название колоды",
+  "icon": "📚",
+  "cards": [
+    { "q": "Вопрос 1", "a": "Ответ 1" },
+    { "q": "Вопрос 2", "a": "Ответ 2" }
+  ]
+}`;
+  }
+}
+
+function closeSampleModal(e) {
+  if (!e || e.target === window.getElement('sample-modal')) {
+    const modal = window.getElement('sample-modal');
+    if (modal) modal.classList.remove('open');
+  }
+}
+
 // Экспорт функций
 window.filterLibrary = filterLibrary;
+window.filterCat = filterCat;
 window.renderLibrary = renderLibrary;
 window.openGuide = openGuide;
 window.addGuideToDecks = addGuideToDecks;
+window.openAddModal = openAddModal;
+window.closeAddModal = closeAddModal;
+window.switchAddTab = switchAddTab;
+window.triggerFileAdd = triggerFileAdd;
+window.handleFileAdd = handleFileAdd;
+window.loadGithubList = loadGithubList;
+window.importFromGithub = importFromGithub;
+window.openSampleModal = openSampleModal;
+window.closeSampleModal = closeSampleModal;
 window.escapeHtml = escapeHtml;
