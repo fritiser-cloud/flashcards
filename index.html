@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#FAFAF7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Биолаб • Карточки • Заметки">
+  <link rel="manifest" href="manifest.json">
+  <title>Биолаб • Карточки • Заметки</title>
+  
+  <!-- Markdown парсер -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore-compat.js"></script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Фоновые блики -->
+  <div class="bg-blob bg-blob-1"></div>
+  <div class="bg-blob bg-blob-2"></div>
+  <div class="bg-blob bg-blob-3"></div>
+
+  <div id="app">
+    <!-- ========== ЭКРАН БИБЛИОТЕКИ ========== -->
+    <div id="library-screen" class="screen">
+      <div class="nav">
+        <div class="nav-title">Библиотека</div>
+      </div>
+      <div class="cats" id="library-cats">
+        <div class="cat-pill active" onclick="filterLibrary('all')">Всё</div>
+        <div class="cat-pill" onclick="filterLibrary('bio')">🧬 Биология</div>
+        <div class="cat-pill" onclick="filterLibrary('ru')">📖 Русский</div>
+        <div class="cat-pill" onclick="filterLibrary('phys')">⚛️ Физика</div>
+      </div>
+      <div class="scroll" id="library-list"></div>
+      <div class="bottom-nav">
+        <button class="bottom-nav-btn active" onclick="navTo('library')">
+          <span class="nav-icon">📚</span>
+          <span class="nav-label">Библиотека</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('decks')">
+          <span class="nav-icon">🎴</span>
+          <span class="nav-label">Карточки</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('atlas')">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-label">Атлас</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('notes')">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">Заметки</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========== ЭКРАН ПОСОБИЯ ========== -->
+    <div id="guide-screen" class="screen">
+      <div class="nav">
+        <button class="nav-btn" onclick="showScreen('library-screen')">←</button>
+        <div class="nav-title" id="guide-title">Пособие</div>
+        <button class="nav-btn" onclick="addGuideToDecks()">+</button>
+      </div>
+      <div class="scroll" id="guide-content"></div>
+      <div class="bottom-nav hidden"></div>
+    </div>
+
+    <!-- ========== ЭКРАН КОЛОД ========== -->
+    <div id="decks-screen" class="screen">
+      <div class="nav">
+        <div class="nav-title">Колоды</div>
+      </div>
+      <div class="scroll" id="decks-list"></div>
+      <div class="bottom-nav">
+        <button class="bottom-nav-btn" onclick="navTo('library')">
+          <span class="nav-icon">📚</span>
+          <span class="nav-label">Библиотека</span>
+        </button>
+        <button class="bottom-nav-btn active" onclick="navTo('decks')">
+          <span class="nav-icon">🎴</span>
+          <span class="nav-label">Карточки</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('atlas')">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-label">Атлас</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('notes')">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">Заметки</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========== ЭКРАН КАРТОЧЕК ========== -->
+    <div id="card-screen" class="screen">
+      <div class="nav">
+        <button class="nav-btn" onclick="exitCards()">←</button>
+        <div class="nav-title" id="deck-name-title">Карточки</div>
+        <button class="nav-btn" onclick="restartDeck()">🔄</button>
+      </div>
+      <div class="scroll">
+        <div class="card-progress" id="card-progress">
+          <div class="progress-text"><span id="progress-num">0</span> / <span id="progress-total">0</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+        <div class="flashcard" id="flashcard">
+          <div class="card-inner" id="card-inner">
+            <div class="card-face card-front" id="card-front">Вопрос</div>
+            <div class="card-face card-back" id="card-back">Ответ</div>
+          </div>
+        </div>
+        <div class="card-controls" id="card-controls">
+          <button class="btn-ans wrong" onclick="answerCard(false)">✗ Неверно</button>
+          <button class="btn-ans correct" onclick="answerCard(true)">✓ Верно</button>
+        </div>
+        <div class="card-stats" id="card-stats">
+          <div class="stat"><span class="stat-icon">✓</span> <span id="stat-correct">0</span></div>
+          <div class="stat"><span class="stat-icon">✗</span> <span id="stat-wrong">0</span></div>
+          <div class="stat"><span class="stat-icon">📊</span> <span id="stat-rate">0%</span></div>
+        </div>
+        <div class="completion" id="completion-screen">
+          <div class="completion-emoji">🎉</div>
+          <div class="completion-title">Отлично!</div>
+          <div class="completion-text">Вы завершили колоду</div>
+          <div class="completion-stats">
+            <div class="comp-stat">
+              <div class="comp-stat-label">Правильных</div>
+              <div class="comp-stat-value" id="comp-correct">0</div>
+            </div>
+            <div class="comp-stat">
+              <div class="comp-stat-label">Неправильных</div>
+              <div class="comp-stat-value" id="comp-wrong">0</div>
+            </div>
+            <div class="comp-stat">
+              <div class="comp-stat-label">Точность</div>
+              <div class="comp-stat-value" id="comp-rate">0%</div>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="restartDeck()">Повторить</button>
+          <button class="btn-secondary" onclick="showScreen('decks-screen'); renderDecks()">Вернуться</button>
+        </div>
+      </div>
+      <div class="bottom-nav hidden"></div>
+    </div>
+
+    <!-- ========== ЭКРАН СОПОСТАВЛЕНИЯ ========== -->
+    <div id="match-screen" class="screen">
+      <div class="nav">
+        <button class="nav-btn" onclick="exitMatch()">←</button>
+        <div class="nav-title" id="match-deck-name">Сопоставление</div>
+        <button class="nav-btn" onclick="restartMatch()">🔄</button>
+      </div>
+      <div class="scroll">
+        <div class="match-progress" id="match-progress-info">Выберите пары</div>
+        <svg id="match-canvas"></svg>
+        <div class="match-grid" id="match-grid"></div>
+        <div class="match-completion" id="match-completion">
+          <div class="completion-emoji">🎯</div>
+          <div class="completion-title">Поздравляем!</div>
+          <div class="completion-text">Все пары найдены</div>
+          <div class="match-time">Время: <span id="match-time-display">0:00</span></div>
+          <button class="btn-primary" onclick="restartMatch()">Попробовать ещё раз</button>
+          <button class="btn-secondary" onclick="showScreen('decks-screen'); renderDecks()">Вернуться</button>
+        </div>
+      </div>
+      <div class="bottom-nav hidden"></div>
+    </div>
+
+    <!-- ========== ЭКРАН АТЛАСА ========== -->
+    <div id="atlas-screen" class="screen">
+      <div class="nav">
+        <div class="nav-title">Атлас</div>
+      </div>
+      <div class="cats" id="atlas-cats">
+        <div class="cat-pill active" onclick="filterAtlas('all')">Всё</div>
+        <div class="cat-pill" onclick="filterAtlas('anatomy')">🫀 Анатомия</div>
+        <div class="cat-pill" onclick="filterAtlas('histology')">🔬 Гистология</div>
+        <div class="cat-pill" onclick="filterAtlas('physiology')">⚡ Физиология</div>
+        <div class="cat-pill" onclick="filterAtlas('other')">🧩 Другое</div>
+      </div>
+      <div class="scroll" id="atlas-list"></div>
+      <button class="fab" onclick="newAtlasItem()">+</button>
+      <div class="bottom-nav">
+        <button class="bottom-nav-btn" onclick="navTo('library')">
+          <span class="nav-icon">📚</span>
+          <span class="nav-label">Библиотека</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('decks')">
+          <span class="nav-icon">🎴</span>
+          <span class="nav-label">Карточки</span>
+        </button>
+        <button class="bottom-nav-btn active" onclick="navTo('atlas')">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-label">Атлас</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('notes')">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">Заметки</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========== ЭКРАН РЕДАКТОРА АТЛАСА ========== -->
+    <div id="atlas-editor-screen" class="screen">
+      <div class="nav">
+        <button class="nav-btn" onclick="closeAtlasEditor()">✕</button>
+        <div class="nav-title">Редактор атласа</div>
+        <button class="nav-btn" onclick="saveAtlasItem()">✓</button>
+      </div>
+      <div class="scroll">
+        <div class="form-group">
+          <label class="form-label">Название</label>
+          <input type="text" id="atlas-title" class="form-input" placeholder="Например, Сердце человека">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Категория</label>
+          <select id="atlas-category" class="form-select">
+            <option value="anatomy">🫀 Анатомия</option>
+            <option value="histology">🔬 Гистология</option>
+            <option value="physiology">⚡ Физиология</option>
+            <option value="other">🧩 Другое</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea id="atlas-description" class="form-textarea" rows="4" placeholder="Подробное описание..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Изображение</label>
+          <input type="file" id="atlas-image-input" accept="image/*" class="form-file" onchange="handleAtlasImage(event)">
+          <div id="atlas-image-preview" class="image-preview">
+            <img id="atlas-preview-img" src="" alt="">
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav hidden"></div>
+    </div>
+
+    <!-- ========== ЭКРАН ПРОСМОТРА АТЛАСА ========== -->
+    <div id="atlas-view-screen" class="screen">
+      <div class="nav">
+        <button class="nav-btn" onclick="showScreen('atlas-screen'); renderAtlas()">←</button>
+        <div class="nav-title">Элемент атласа</div>
+        <div class="nav-actions">
+          <button class="nav-btn" onclick="editAtlasItem()">✎</button>
+          <button class="nav-btn" onclick="deleteAtlasItem()">🗑</button>
+        </div>
+      </div>
+      <div class="scroll" id="atlas-view-content"></div>
+      <div class="bottom-nav hidden"></div>
+    </div>
+
+    <!-- ========== ЭКРАН ЗАМЕТОК ========== -->
+    <div id="notes-screen" class="screen">
+      <div class="nav">
+        <div class="nav-title">Заметки</div>
+        <button class="fab-header" onclick="newNote()">+</button>
+      </div>
+      <div class="scroll" id="notes-list"></div>
+      <div class="bottom-nav">
+        <button class="bottom-nav-btn" onclick="navTo('library')">
+          <span class="nav-icon">📚</span>
+          <span class="nav-label">Библиотека</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('decks')">
+          <span class="nav-icon">🎴</span>
+          <span class="nav-label">Карточки</span>
+        </button>
+        <button class="bottom-nav-btn" onclick="navTo('atlas')">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-label">Атлас</span>
+        </button>
+        <button class="bottom-nav-btn active" onclick="navTo('notes')">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">Заметки</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========== ЭКРАН РЕДАКТОРА ЗАМЕТКИ ========== -->
+    <div id="note-editor-screen" class="screen">
+      <div class="nav">
+        <button class="nav-btn" onclick="closeNoteEditor()">✕</button>
+        <div class="nav-title">Заметка</div>
+        <div class="nav-actions">
+          <button class="nav-btn" id="note-preview-btn" onclick="toggleNotePreview()">👁</button>
+          <button class="nav-btn" onclick="saveNote()">✓</button>
+        </div>
+      </div>
+      <div class="scroll">
+        <div class="form-group">
+          <input type="text" id="note-title" class="form-input" placeholder="Название заметки">
+        </div>
+        <div class="form-group">
+          <textarea id="note-content" class="form-textarea note-editor" rows="20" placeholder="Текст заметки (поддерживается Markdown)..."></textarea>
+          <div id="note-preview-content" class="note-preview-content"></div>
+        </div>
+        <div id="note-images-container" class="note-images-container"></div>
+        <div class="form-group">
+          <label class="form-label">Тег</label>
+          <select id="note-tag" class="form-select">
+            <option value="">Без тега</option>
+            <option value="bio">🧬 Биология</option>
+            <option value="ru">📖 Русский</option>
+            <option value="phys">⚛️ Физика</option>
+            <option value="personal">💭 Личное</option>
+          </select>
+        </div>
+      </div>
+      <div class="bottom-nav hidden"></div>
+    </div>
+
+    <!-- ========== ЭКРАН ПРОСМОТРА ЗАМЕТКИ ========== -->
+    <div id="note-view-screen" class="screen">
+      <div class="nav">
+        <button class="nav-btn" onclick="showScreen('notes-screen'); renderNotes()">←</button>
+        <div class="nav-title">Заметка</div>
+        <div class="nav-actions">
+          <button class="nav-btn" onclick="editNote()">✎</button>
+          <button class="nav-btn" onclick="deleteNote()">🗑</button>
+        </div>
+      </div>
+      <div class="scroll" id="note-view-content"></div>
+      <div class="bottom-nav hidden"></div>
+    </div>
+  </div>
+
+  <!-- Модули приложения -->
+  <script src="utils.js"></script>
+  <script src="database.js"></script>
+  <script src="library.js"></script>
+  <script src="flashcards.js"></script>
+  <script src="atlas.js"></script>
+  <script src="notes.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
