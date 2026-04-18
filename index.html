@@ -612,7 +612,24 @@
   <div class="modal"><div class="modal-handle"></div><div class="modal-title" id="sample-title">Формат файла</div><div class="modal-sub" id="sample-sub"></div><pre id="sample-pre" style="background:var(--surface2); border-radius:16px; padding:18px; font-size:12px; overflow-x:auto; line-height:1.7; border:1.5px solid var(--border);"></pre><button class="modal-cancel" onclick="closeSampleModal()">Закрыть</button></div>
 </div>
 <div class="modal-overlay" id="topic-modal" onclick="closeTopicModal(event)">
-  <div class="modal onclick="event.stopPropagation()""><div class="modal-handle"></div><div class="modal-title">Новая тема для повторения</div><div class="modal-sub">Добавьте тему, которую хотите запомнить надолго</div><input type="text" class="settings-input" id="topic-name" placeholder="Название темы (например: Плоские черви)" style="width:100%; margin-bottom:16px"><select class="settings-input" id="topic-subject" style="width:100%; margin-bottom:16px"><option value="bio">🧬 Биология</option><option value="ru">📖 Русский язык</option><option value="phys">⚛️ Физика</option><option value="chem">🧪 Химия</option></select><div class="settings-row" style="padding:0 0 16px 0"><div><div class="settings-row-label">Дата первого изучения</div></div><input type="date" class="settings-input" id="topic-first-review" style="width:auto"></div><button class="btn btn-primary" onclick="saveTopic()" style="width:100%">➕ Добавить тему</button><button class="modal-cancel" onclick="closeTopicModal()">Отмена</button></div>
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Новая тема для повторения</div>
+    <div class="modal-sub">Добавьте тему, которую хотите запомнить надолго</div>
+    <input type="text" class="settings-input" id="topic-name" placeholder="Название темы (например: Плоские черви)" style="width:100%; margin-bottom:16px">
+    <select class="settings-input" id="topic-subject" style="width:100%; margin-bottom:16px">
+      <option value="bio">🧬 Биология</option>
+      <option value="ru">📖 Русский язык</option>
+      <option value="chem">🧪 Химия</option>
+    </select>
+    <div class="settings-row" style="padding:0 0 16px 0">
+      <div><div class="settings-row-label">Дата первого изучения</div></div>
+      <input type="date" class="settings-input" id="topic-first-review" style="width:auto">
+    </div>
+    <button class="btn btn-primary" onclick="saveTopic()" style="width:100%">➕ Добавить тему</button>
+    <button class="modal-cancel" onclick="closeTopicModal()">Отмена</button>
+  </div>
+</div>
 </div>
 
 <div class="toast" id="toast"></div>
