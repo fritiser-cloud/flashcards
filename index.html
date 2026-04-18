@@ -1718,7 +1718,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore();
+const firestoreDB = firebase.firestore();  // <-- переименовано!
 let currentUser = null;
 
 auth.onAuthStateChanged((user) => {
@@ -1894,7 +1894,7 @@ async function syncAllData() {
   updateSyncStatus('syncing', 'Синхронизация...');
   try {
     const userId = currentUser.uid;
-    const userDocRef = db.collection('users').doc(userId);
+    const userDocRef = firestoreDB.collection('users').doc(userId);
     const userDoc = await userDocRef.get();
     if (userDoc.exists) {
       const cloudData = userDoc.data();
@@ -1925,7 +1925,7 @@ async function saveToCloud() {
       guides: getGuides(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    await db.collection('users').doc(userId).set(data, { merge: true });
+    await firestoreDB.collection('users').doc(userId).set(data, { merge: true });
   } catch (error) {
     console.error('Ошибка сохранения:', error);
   }
