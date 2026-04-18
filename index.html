@@ -68,13 +68,14 @@
     .screen { display: none; flex-direction: column; min-height: 100dvh; }
     .screen.active { display: flex; }
 
-    .bg-blob {
-      position: fixed; pointer-events: none; z-index: 0;
-      border-radius: 50%; filter: blur(80px); opacity: 0.5;
-    }
-    .bg-blob-1 { width: 400px; height: 400px; background: radial-gradient(var(--lavender-mid), transparent); top: -100px; right: -100px; }
-    .bg-blob-2 { width: 300px; height: 300px; background: radial-gradient(var(--sage-mid), transparent); bottom: 100px; left: -80px; }
-    .bg-blob-3 { width: 250px; height: 250px; background: radial-gradient(var(--sky-mid), transparent); top: 40%; right: -60px; }
+   .bg-blob {
+  position: fixed; pointer-events: none; z-index: 0;
+  border-radius: 50%; filter: blur(120px); /* было 80px */
+  opacity: 0.3; /* было 0.5 – теперь более прозрачные */
+}
+.bg-blob-1 { width: 400px; height: 400px; background: radial-gradient(var(--lavender-mid), transparent); top: -100px; right: -100px; }
+.bg-blob-2 { width: 300px; height: 300px; background: radial-gradient(var(--sage-mid), transparent); bottom: 100px; left: -80px; }
+.bg-blob-3 { width: 250px; height: 250px; background: radial-gradient(var(--sky-mid), transparent); top: 40%; right: -60px; }
 
     .nav {
       display: flex; align-items: center; justify-content: space-between;
@@ -646,20 +647,20 @@
       font-style: italic;
     }
     
-    .editor-textarea {
-      flex: 1;
-      min-height: 300px;
-      padding: 20px;
-      border-radius: var(--radius-sm);
-      border: 1.5px solid var(--border);
-      background: var(--surface);
-      font-family: var(--font);
-      font-size: 16px;
-      line-height: 1.8;
-      color: var(--text);
-      resize: none;
-      transition: all 0.3s;
-    }
+  .editor-textarea {
+  flex: 1;
+  min-height: 400px;   /* было 300px */
+  padding: 24px;       /* было 20px */
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--text);
+  resize: vertical;    /* теперь можно растягивать по вертикали */
+  transition: all 0.3s;
+}
     .editor-textarea:focus {
       outline: none;
       border-color: var(--lavender-deep);
@@ -735,10 +736,14 @@
       display: flex; flex-direction: column; height: 100dvh;
     }
     .editor-toolbar {
-      display: flex; align-items: center; gap: 8px; padding: 12px 24px;
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
+  display: flex;
+  align-items: center;
+  gap: 12px;           /* было 8px */
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;     /* уже есть, оставляем */
+}
     .editor-btn {
       padding: 9px 14px;
       border-radius: 10px;
@@ -805,6 +810,8 @@
       position: relative;
       z-index: 1;
       background: linear-gradient(180deg, rgba(237,231,246,0.3) 0%, rgba(250,250,247,0) 100%);
+       background: linear-gradient(180deg, rgba(237, 231, 246, 0.3) 0%, rgba(250, 250, 247, 0) 100%);
+  backdrop-filter: blur(8px);
     }
     .notes-hero-label {
       font-size: 11px;
@@ -1021,7 +1028,9 @@
       background: linear-gradient(135deg, var(--lavender) 0%, var(--sage) 100%);
       border-radius: 0 0 var(--radius) var(--radius);
       margin-bottom: 8px;
-    }
+      background: linear-gradient(135deg, rgba(237, 231, 246, 0.7) 0%, rgba(200, 230, 201, 0.5) 100%);
+      backdrop-filter: blur(8px);
+}
     .home-label { 
       font-size: 11px; 
       font-weight: 700; 
@@ -1080,6 +1089,8 @@
       background: linear-gradient(135deg, var(--sage) 0%, var(--sky) 100%);
       border-radius: 0 0 var(--radius) var(--radius);
       margin-bottom: 8px;
+      background: linear-gradient(135deg, rgba(200, 230, 201, 0.7) 0%, rgba(187, 222, 251, 0.5) 100%);
+  backdrop-filter: blur(8px);
     }
     .atlas-hero .home-label {
       color: var(--sage-text);
@@ -1786,162 +1797,157 @@ function saveGuides(guides) {
 
 <!-- ✅ FIREBASE МОДУЛЬ -->
 <script type="module">
-// ==================== FIREBASE КОНФИГУРАЦИЯ ====================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+  // ==================== FIREBASE КОНФИГУРАЦИЯ ====================
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+  import { 
+    getAuth, 
+    GoogleAuthProvider, 
+    signInWithPopup, 
+    signOut as firebaseSignOut, 
+    onAuthStateChanged 
+  } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+  import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    setDoc, 
+    serverTimestamp 
+  } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAlGPZkNsKMbfezIVwmky4EeXDUOJ-sUpw",
-  authDomain: "biolab-app-dc4df.firebaseapp.com",
-  projectId: "biolab-app-dc4df",
-  storageBucket: "biolab-app-dc4df.firebasestorage.app",
-  messagingSenderId: "1070438650586",
-  appId: "1:1070438650586:web:0e77c4a873412a8be60be3"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyAlGPZkNsKMbfezIVwmky4EeXDUOJ-sUpw",
+    authDomain: "biolab-app-dc4df.firebaseapp.com",
+    projectId: "biolab-app-dc4df",
+    storageBucket: "biolab-app-dc4df.firebasestorage.app",
+    messagingSenderId: "1070438650586",
+    appId: "1:1070438650586:web:0e77c4a873412a8be60be3"
+  };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-let currentUser = null;
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  let currentUser = null;
 
-onAuthStateChanged(auth, (user) => {
-  currentUser = user;
-  updateAuthUI(user);
-  if (user) syncAllData();
-});
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    updateAuthUI(user);
+    if (user) syncAllData();
+  });
 
-function updateAuthUI(user) {
-  const loggedIn = getElement('auth-logged-in');
-  const loggedOut = getElement('auth-logged-out');
-  
-  if (!loggedIn || !loggedOut) return;
-  
-  if (user) {
-    loggedIn.style.display = 'block';
-    loggedOut.style.display = 'none';
-    const nameEl = getElement('user-name');
-    const emailEl = getElement('user-email');
-    const avatarEl = getElement('user-avatar');
+  function updateAuthUI(user) {
+    const loggedIn = getElement('auth-logged-in');
+    const loggedOut = getElement('auth-logged-out');
+    if (!loggedIn || !loggedOut) return;
     
-    if (nameEl) nameEl.textContent = user.displayName || 'Пользователь';
-    if (emailEl) emailEl.textContent = user.email;
-    if (avatarEl) avatarEl.src = user.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="32" fill="%239575CD"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="28">👤</text></svg>';
-  } else {
-    loggedIn.style.display = 'none';
-    loggedOut.style.display = 'block';
-  }
-}
-
-window.signInWithGoogle = async function() {
-  try {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-    if (window.showToast) showToast('✓ Успешный вход!');
-  } catch (error) {
-    console.error('Ошибка входа:', error);
-    if (window.showToast) showToast('⚠️ Ошибка входа');
-  }
-}
-
-window.signOut = async function() {
-  if (!confirm('Выйти из аккаунта?')) return;
-  try {
-    await firebaseSignOut(auth);
-    if (window.showToast) showToast('✓ Вы вышли');
-  } catch (error) {
-    console.error('Ошибка выхода:', error);
-  }
-}
-
-async function syncAllData() {
-  if (!currentUser) return;
-  
-  updateSyncStatus('syncing', 'Синхронизация...');
-  
-  try {
-    const userId = currentUser.uid;
-    const userDocRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
-    
-    if (userDoc.exists()) {
-      const cloudData = userDoc.data();
-      
-      if (cloudData.notes && window.saveNotes) {
-        localStorage.setItem('notes', JSON.stringify(cloudData.notes));
-      }
-      
-      if (cloudData.atlas && window.saveAtlasItems) {
-        localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
-      }
-      
-      if (cloudData.guides && window.saveGuides) {
-        localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
-      }
-      
-      if (window.renderNotes) renderNotes();
-      if (window.renderAtlas) renderAtlas();
-      if (window.renderLibrary) renderLibrary();
+    if (user) {
+      loggedIn.style.display = 'block';
+      loggedOut.style.display = 'none';
+      const nameEl = getElement('user-name');
+      const emailEl = getElement('user-email');
+      const avatarEl = getElement('user-avatar');
+      if (nameEl) nameEl.textContent = user.displayName || 'Пользователь';
+      if (emailEl) emailEl.textContent = user.email;
+      if (avatarEl) avatarEl.src = user.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="32" fill="%239575CD"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="28">👤</text></svg>';
+    } else {
+      loggedIn.style.display = 'none';
+      loggedOut.style.display = 'block';
     }
-    
-    await saveToCloud();
-    
-    updateSyncStatus('success', 'Синхронизировано');
-    const lastSyncEl = getElement('last-sync');
-    if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
-  } catch (error) {
-    console.error('Ошибка синхронизации:', error);
-    updateSyncStatus('error', 'Ошибка синхронизации');
   }
-}
 
-async function saveToCloud() {
-  if (!currentUser) return;
-  
-  try {
-    const userId = currentUser.uid;
-    const data = {
-      notes: getNotes(),
-      atlas: getAtlasItems(),
-      guides: getGuides(),
-      updatedAt: serverTimestamp()
-    };
-    
-    const userDocRef = doc(db, 'users', userId);
-    await setDoc(userDocRef, data, { merge: true });
-  } catch (error) {
-    console.error('Ошибка сохранения:', error);
+  window.signInWithGoogle = async function() {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      if (window.showToast) showToast('✓ Успешный вход!');
+    } catch (error) {
+      console.error('Ошибка входа:', error);
+      let message = '⚠️ Ошибка входа';
+      if (error.code === 'auth/popup-closed-by-user') {
+        message = '⏸️ Вход отменён';
+      } else if (error.code === 'auth/popup-blocked') {
+        message = '🚫 Всплывающие окна заблокированы';
+      }
+      if (window.showToast) showToast(message);
+    }
+  };
+
+  window.signOut = async function() {
+    if (!confirm('Выйти из аккаунта?')) return;
+    try {
+      await firebaseSignOut(auth);
+      if (window.showToast) showToast('✓ Вы вышли');
+    } catch (error) {
+      console.error('Ошибка выхода:', error);
+      if (window.showToast) showToast('⚠️ Ошибка выхода');
+    }
+  };
+
+  async function syncAllData() {
+    if (!currentUser) return;
+    updateSyncStatus('syncing', 'Синхронизация...');
+    try {
+      const userId = currentUser.uid;
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const cloudData = userDoc.data();
+        if (cloudData.notes && window.saveNotes) localStorage.setItem('notes', JSON.stringify(cloudData.notes));
+        if (cloudData.atlas && window.saveAtlasItems) localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
+        if (cloudData.guides && window.saveGuides) localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
+        if (window.renderNotes) renderNotes();
+        if (window.renderAtlas) renderAtlas();
+        if (window.renderLibrary) renderLibrary();
+      }
+      await saveToCloud();
+      updateSyncStatus('success', 'Синхронизировано');
+      const lastSyncEl = getElement('last-sync');
+      if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
+    } catch (error) {
+      console.error('Ошибка синхронизации:', error);
+      updateSyncStatus('error', 'Ошибка синхронизации');
+    }
   }
-}
 
-function updateSyncStatus(status, text) {
-  const statusEl = getElement('sync-status');
-  if (!statusEl) return;
-  
-  const iconEl = statusEl.querySelector('.sync-icon');
-  const textEl = getElement('sync-text');
-  if (!iconEl || !textEl) return;
-  
-  if (status === 'syncing') {
-    iconEl.className = 'sync-icon';
-    iconEl.textContent = '🔄';
-  } else if (status === 'success') {
-    iconEl.className = 'sync-icon success';
-    iconEl.textContent = '☁️';
-  } else {
-    iconEl.className = 'sync-icon';
-    iconEl.textContent = '⚠️';
+  async function saveToCloud() {
+    if (!currentUser) return;
+    try {
+      const userId = currentUser.uid;
+      const data = {
+        notes: getNotes(),
+        atlas: getAtlasItems(),
+        guides: getGuides(),
+        updatedAt: serverTimestamp()
+      };
+      const userDocRef = doc(db, 'users', userId);
+      await setDoc(userDocRef, data, { merge: true });
+    } catch (error) {
+      console.error('Ошибка сохранения:', error);
+    }
   }
-  
-  textEl.textContent = text;
-}
 
-window.autoSaveToCloud = function() {
-  if (currentUser) saveToCloud();
-}
-</script> <!-- ✅ ЗАКРЫТЬ Firebase модуль -->
+  function updateSyncStatus(status, text) {
+    const statusEl = getElement('sync-status');
+    if (!statusEl) return;
+    const iconEl = statusEl.querySelector('.sync-icon');
+    const textEl = getElement('sync-text');
+    if (!iconEl || !textEl) return;
+    if (status === 'syncing') {
+      iconEl.className = 'sync-icon';
+      iconEl.textContent = '🔄';
+    } else if (status === 'success') {
+      iconEl.className = 'sync-icon success';
+      iconEl.textContent = '☁️';
+    } else {
+      iconEl.className = 'sync-icon';
+      iconEl.textContent = '⚠️';
+    }
+    textEl.textContent = text;
+  }
 
-<script>
+  window.autoSaveToCloud = function() {
+    if (currentUser) saveToCloud();
+  };
+</script>
 // ==================== ОСНОВНОЙ КОД ====================
 let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
 let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
