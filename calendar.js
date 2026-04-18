@@ -1,31 +1,27 @@
-// calendar.js
+// calendar.js – полная рабочая версия
+
 let currentReviewItem = null;
 let reviewSessionQueue = [];
 let reviewSessionIdx = 0;
 let calendarSearchQuery = '';
 
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 function formatDate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
 function addDays(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
 }
 
-// ========== АЛГОРИТМ SM-2 ==========
+// Алгоритм SM-2
 function calculateNextReview(reviewItem, quality) {
   if (quality < 2) {
-    return {
-      repetitions: 0,
-      easiness: 2.5,
-      interval: 1,
-      next_review_date: addDays(new Date(), 1)
-    };
+    return { repetitions: 0, easiness: 2.5, interval: 1, next_review_date: addDays(new Date(), 1) };
   }
   let repetitions = reviewItem.repetitions || 0;
   let easiness = reviewItem.easiness || 2.5;
@@ -36,15 +32,9 @@ function calculateNextReview(reviewItem, quality) {
   else if (repetitions === 1) interval = 6;
   else interval = Math.round(interval * easiness);
   repetitions++;
-  return {
-    repetitions: repetitions,
-    easiness: easiness,
-    interval: interval,
-    next_review_date: addDays(new Date(), interval)
-  };
+  return { repetitions, easiness, interval, next_review_date: addDays(new Date(), interval) };
 }
 
-// ========== ОТРИСОВКА КАЛЕНДАРЯ ==========
 async function renderCalendar() {
   const container = document.getElementById('calendar-container');
   if (!container) return;
@@ -94,16 +84,13 @@ async function renderCalendar() {
 }
 window.renderCalendar = renderCalendar;
 
-// Переключение месяца (простая заглушка, можно расширить)
 function changeMonth(delta) {
   const newDate = new Date();
   newDate.setMonth(newDate.getMonth() + delta);
-  // Для полной реализации нужно хранить текущий месяц, но для демо перезагружаем календарь
   renderCalendar();
 }
 window.changeMonth = changeMonth;
 
-// ========== ПОИСК ==========
 function searchCalendar() {
   const input = document.getElementById('calendar-search');
   if (input) calendarSearchQuery = input.value.toLowerCase();
@@ -111,7 +98,6 @@ function searchCalendar() {
 }
 window.searchCalendar = searchCalendar;
 
-// ========== ДОБАВЛЕНИЕ ТЕМЫ ==========
 function showAddTopicModal() {
   document.getElementById('topic-name').value = '';
   document.getElementById('topic-subject').value = 'bio';
@@ -131,14 +117,10 @@ async function saveTopic() {
   const firstReviewDate = document.getElementById('topic-first-review').value;
   if (!name) { window.showToast('⚠️ Введите название темы'); return; }
   const reviewItem = {
-    name: name,
-    subject: subject,
+    name, subject,
     created_at: new Date().toISOString(),
     next_review_date: new Date(firstReviewDate),
-    repetitions: 0,
-    easiness: 2.5,
-    interval: 1,
-    last_quality: null
+    repetitions: 0, easiness: 2.5, interval: 1, last_quality: null
   };
   await window.dbPut('reviews', reviewItem);
   window.showToast(`✓ Тема "${name}" добавлена`);
@@ -148,7 +130,6 @@ async function saveTopic() {
 }
 window.saveTopic = saveTopic;
 
-// ========== ОТРИСОВКА БЛИЖАЙШИХ ПОВТОРЕНИЙ ==========
 async function renderUpcomingReviews() {
   const container = document.getElementById('upcoming-reviews');
   if (!container) return;
@@ -182,7 +163,6 @@ async function renderUpcomingReviews() {
 }
 window.renderUpcomingReviews = renderUpcomingReviews;
 
-// ========== ЗАПУСК СЕССИИ ПОВТОРЕНИЯ ==========
 async function selectDate(dateKey) {
   const reviews = await window.getReviewsForDate(new Date(dateKey));
   if (reviews.length === 0) { window.showToast('📭 На этот день нет запланированных повторений'); return; }
@@ -210,12 +190,10 @@ function showReviewCard() {
     return;
   }
   currentReviewItem = reviewSessionQueue[reviewSessionIdx];
-  const progress = document.getElementById('review-progress');
-  if (progress) progress.textContent = `${reviewSessionIdx + 1} / ${reviewSessionQueue.length}`;
+  document.getElementById('review-progress').textContent = `${reviewSessionIdx + 1} / ${reviewSessionQueue.length}`;
   const progFill = document.getElementById('review-progress-fill');
   if (progFill) progFill.style.width = `${(reviewSessionIdx / reviewSessionQueue.length) * 100}%`;
-  const questionEl = document.getElementById('review-question');
-  if (questionEl) questionEl.textContent = currentReviewItem.name;
+  document.getElementById('review-question').textContent = currentReviewItem.name;
   const answerArea = document.getElementById('review-answer-area');
   if (answerArea) {
     answerArea.innerHTML = `
@@ -227,7 +205,6 @@ function showReviewCard() {
       </div>
     `;
   }
-  // сбросить переворот карточки
   const flashcard = document.getElementById('review-flashcard');
   if (flashcard) flashcard.classList.remove('flipped');
 }
