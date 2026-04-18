@@ -1,4 +1,5 @@
-// app.js
+// ==================== НАСТРОЙКИ И ИНИЦИАЛИЗАЦИЯ ====================
+
 // Настройка marked (если ещё не настроен)
 if (typeof marked !== 'undefined') {
   marked.setOptions({ breaks: true, gfm: true });
@@ -48,7 +49,7 @@ window.saveSettings = saveSettings;
 
 // Очистка всех данных
 function clearAllData() {
-  if (!confirm('Удалить все пособия, колоды, заметки и атлас? Отменить нельзя.')) return;
+  if (!confirm('Удалить все пособия, колоды, заметки, атлас и историю повторений? Отменить нельзя.')) return;
   localStorage.removeItem('bio_guides');
   localStorage.removeItem('notes');
   localStorage.removeItem('atlas');
@@ -58,27 +59,65 @@ function clearAllData() {
   window.dbDeleteRange('decks', '');
   window.dbDeleteRange('stats', '');
   window.dbDeleteRange('favorites', '');
+  window.dbDeleteRange('reviews', ''); // очищаем таблицу повторений
   // Перерисовка
   if (window.renderLibrary) window.renderLibrary();
   if (window.renderDecks) window.renderDecks();
   if (window.renderAtlas) window.renderAtlas();
   if (window.renderNotes) window.renderNotes();
+  if (window.renderCalendar) window.renderCalendar();
+  if (window.renderUpcomingReviews) window.renderUpcomingReviews();
   if (window.updateSettingsStats) window.updateSettingsStats();
   window.showToast('🗑 Все данные удалены');
 }
 window.clearAllData = clearAllData;
 
-// Инициализация приложения
+// ==================== НАВИГАЦИЯ (с поддержкой календаря) ====================
+function navTo(tab) {
+  document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('nav-' + tab);
+  if (btn) btn.classList.add('active');
+  
+  if (tab === 'library') {
+    window.showScreen('library-screen');
+    if (window.renderLibrary) window.renderLibrary();
+  } else if (tab === 'decks') {
+    window.showScreen('decks-screen');
+    if (window.renderDecks) window.renderDecks();
+  } else if (tab === 'atlas') {
+    window.showScreen('atlas-screen');
+    if (window.renderAtlas) window.renderAtlas();
+  } else if (tab === 'notes') {
+    window.showScreen('notes-screen');
+    if (window.renderNotes) window.renderNotes();
+  } else if (tab === 'calendar') {
+    window.showScreen('calendar-screen');
+    if (window.renderCalendar) {
+      window.renderCalendar();
+      if (window.renderUpcomingReviews) window.renderUpcomingReviews();
+    }
+  } else if (tab === 'settings') {
+    window.showScreen('settings-screen');
+    if (window.renderSettings) window.renderSettings();
+  }
+}
+window.navTo = navTo;
+
+// ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
 (async function init() {
   try {
     await window.openDB();
     console.log('✓ База данных инициализирована');
+    
+    // Первоначальный рендеринг всех разделов (кроме календаря, он не активен)
     if (window.renderLibrary) window.renderLibrary();
     if (window.renderDecks) await window.renderDecks();
     if (window.renderAtlas) window.renderAtlas();
     if (window.renderNotes) window.renderNotes();
-    if (window.navTo) window.navTo('library');
     if (window.updateSettingsStats) window.updateSettingsStats();
+    
+    // Запускаем с экрана библиотеки
+    if (window.navTo) window.navTo('library');
   } catch (error) {
     console.error('Ошибка инициализации:', error);
     window.showToast('⚠️ Ошибка инициализации');
@@ -87,22 +126,21 @@ window.clearAllData = clearAllData;
   }
 })();
 
-// Обработчики online/offline
+// ==================== ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ ====================
 window.addEventListener('online', () => {
   window.showToast('🟢 Соединение восстановлено');
   if (window.autoSaveToCloud) window.autoSaveToCloud();
 });
 window.addEventListener('offline', () => window.showToast('🔴 Нет соединения'));
 
-// Глобальная обработка ошибок
 window.addEventListener('error', (event) => console.error('Глобальная ошибка:', event.error));
 window.addEventListener('unhandledrejection', (event) => console.error('Необработанное отклонение:', event.reason));
 
-// Для match-screen перерисовка линий при ресайзе
+// Перерисовка линий в match-экране при изменении размера окна
 window.addEventListener('resize', () => {
   if (document.getElementById('match-screen')?.classList.contains('active') && window.drawLines) {
     window.drawLines();
   }
 });
 
-console.log('📚 Биолаб • Карточки • Заметки v3.0 (с авторизацией Google)');
+console.log('📚 Биолаб • Карточки • Заметки • Календарь повторений v3.0');
