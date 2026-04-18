@@ -674,6 +674,20 @@
     .home-greeting { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--peach-text); margin-bottom: 8px; opacity: 0.9; }
     .atlas-hero { padding: 36px 24px 20px; position: relative; z-index: 1; margin-bottom: 8px; }
     .atlas-hero .home-label { color: var(--sage-text); }
+    <div id="library-screen" class="screen active">
+  <div class="home-hero">...</div>
+  
+  <!-- НОВЫЙ БЛОК: поиск и кнопка -->
+  <div class="notes-header-row">
+    <div class="search-box">
+      <input type="text" class="search-input" id="library-search" placeholder="Поиск пособий..." oninput="searchLibrary()">
+    </div>
+    <button class="fab-header" onclick="openAddModal('guide')">＋</button>
+  </div>
+  
+  <div class="cats">...</div>
+  <div class="scroll">...</div>
+</div>
     
     .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 16px; }
     .hard-item { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 12px; }
