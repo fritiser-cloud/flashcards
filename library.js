@@ -1,6 +1,10 @@
 // ==================== БИБЛИОТЕКА ПОСОБИЙ ====================
 let currentCat = 'all';
 let currentGuideId = null;
+let currentAddType = 'guide';
+let ghTabLoaded = false;
+let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
+let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
 let librarySearchQuery = '';
 
 function searchLibrary() {
@@ -123,14 +127,193 @@ function deleteGuide(id) {
   renderLibrary();
   window.showToast('Пособие удалено');
 }
-// В самом конце library.js
+
+// ==================== МОДАЛЬНЫЕ ОКНА ИМПОРТА ====================
+function openAddModal(type) {
+  currentAddType = type;
+  ghTabLoaded = false;
+  const modalTitle = document.getElementById('modal-title');
+  if (modalTitle) modalTitle.textContent = type === 'guide' ? 'Добавить пособие' : 'Добавить колоду';
+  const modalSub = document.getElementById('modal-sub');
+  if (modalSub) modalSub.textContent = type === 'guide' ? 'Загрузи JSON с описанием пособия' : 'Загрузи JSON с карточками или паронимами';
+  const addModal = document.getElementById('add-modal');
+  if (addModal) addModal.classList.add('open');
+  document.querySelectorAll('.modal-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
+  const tabFile = document.getElementById('add-tab-file');
+  if (tabFile) tabFile.style.display = '';
+  const tabGithub = document.getElementById('add-tab-github');
+  if (tabGithub) tabGithub.style.display = 'none';
+  const loading = document.getElementById('gh-loading');
+  if (loading) loading.style.display = '';
+  const list = document.getElementById('gh-list');
+  if (list) list.innerHTML = '';
+  const error = document.getElementById('gh-error');
+  if (error) error.style.display = 'none';
+}
 window.openAddModal = openAddModal;
+
+function closeAddModal(e) {
+  if (!e || e.target === document.getElementById('add-modal')) {
+    const modal = document.getElementById('add-modal');
+    if (modal) modal.classList.remove('open');
+  }
+}
 window.closeAddModal = closeAddModal;
+
+function switchAddTab(tab, btn) {
+  document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const tabFile = document.getElementById('add-tab-file');
+  if (tabFile) tabFile.style.display = tab === 'file' ? '' : 'none';
+  const tabGithub = document.getElementById('add-tab-github');
+  if (tabGithub) tabGithub.style.display = tab === 'github' ? '' : 'none';
+  if (tab === 'github' && !ghTabLoaded) {
+    ghTabLoaded = true;
+    loadGithubList();
+  }
+}
 window.switchAddTab = switchAddTab;
+
+function triggerFileAdd() {
+  closeAddModal();
+  const fileInput = document.getElementById('file-input');
+  if (fileInput) fileInput.click();
+}
 window.triggerFileAdd = triggerFileAdd;
+
+async function handleFileAdd(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (currentAddType === 'guide') {
+      if (!data.name || !data.category) throw new Error('bad format');
+      const guides = window.getGuides ? window.getGuides() : [];
+      const existing = guides.findIndex(g => g.name === data.name);
+      if (existing >= 0) guides[existing] = data;
+      else guides.push({ ...data, id: Date.now() });
+      window.saveGuides(guides);
+      renderLibrary();
+    } else {
+      if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
+      const colors = ['#E8F4EE', '#FDF0E8', '#FEF9E7', '#EEF0FD', '#FDE8F0'];
+      const deck = {
+        name: data.name, icon: data.icon || '📚', type: data.type || 'flashcard',
+        color: data.color || colors[Math.floor(Math.random() * colors.length)],
+        cards: data.cards, createdAt: Date.now()
+      };
+      await window.dbPut('decks', deck);
+      if (window.renderDecks) window.renderDecks();
+    }
+    closeAddModal();
+    window.showToast(`✓ ${data.name} добавлено`);
+  } catch (e) {
+    window.showToast('⚠️ Ошибка: неверный формат файла');
+  }
+}
 window.handleFileAdd = handleFileAdd;
+
+async function loadGithubList() {
+  const loading = document.getElementById('gh-loading');
+  const errEl = document.getElementById('gh-error');
+  const list = document.getElementById('gh-list');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error(res.status);
+    const files = await res.json();
+    const jsonFiles = files.filter(f => f.name.endsWith('.json') && f.name !== 'manifest.json' && f.type === 'file');
+    if (loading) loading.style.display = 'none';
+    const filtered = [];
+    for (const f of jsonFiles) {
+      try {
+        const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${f.name}`;
+        const resp = await fetch(rawUrl);
+        const data = await resp.json();
+        if ((currentAddType === 'guide' && data.type === 'guide') ||
+            (currentAddType === 'deck' && (data.type === 'flashcard' || data.type === 'match'))) {
+          filtered.push({ ...f, data });
+        }
+      } catch (e) { /* skip */ }
+    }
+    if (filtered.length === 0) {
+      if (list) list.innerHTML = '<div class="gh-loading">Нет подходящих JSON файлов</div>';
+      return;
+    }
+    if (list) {
+      list.innerHTML = '';
+      for (const f of filtered) {
+        const existing = currentAddType === 'guide'
+          ? (window.getGuides ? window.getGuides().find(g => g.sourceFile === f.name) : null)
+          : (await window.dbGetAll('decks')).find(d => d.sourceFile === f.name);
+        const el = document.createElement('div');
+        el.className = 'gh-item' + (existing ? ' loaded' : '');
+        el.innerHTML = `
+          <div class="gh-item-icon">${existing ? '✓' : '📄'}</div>
+          <div class="gh-item-info">
+            <div class="gh-item-name">${window.escapeHtml(f.data.name || f.name)}</div>
+            <div class="gh-item-sub">${(f.size / 1024).toFixed(1)} КБ</div>
+          </div>
+          <div class="gh-item-btn">${existing ? 'Добавлено' : 'Добавить'}</div>`;
+        el.onclick = () => importFromGithub(f.data, f.name, existing);
+        list.appendChild(el);
+      }
+    }
+  } catch (e) {
+    if (loading) loading.style.display = 'none';
+    if (errEl) {
+      errEl.textContent = `Ошибка загрузки: ${e.message}`;
+      errEl.style.display = '';
+    }
+  }
+}
 window.loadGithubList = loadGithubList;
+
+async function importFromGithub(data, filename, alreadyExists) {
+  if (alreadyExists) return;
+  if (currentAddType === 'guide') {
+    const guides = window.getGuides ? window.getGuides() : [];
+    const existing = guides.findIndex(g => g.name === data.name);
+    if (existing >= 0) guides[existing] = { ...data, sourceFile: filename };
+    else guides.push({ ...data, id: Date.now(), sourceFile: filename });
+    window.saveGuides(guides);
+    renderLibrary();
+  } else {
+    const deck = { ...data, sourceFile: filename, createdAt: Date.now() };
+    await window.dbPut('decks', deck);
+    if (window.renderDecks) window.renderDecks();
+  }
+  closeAddModal();
+  window.showToast(`✓ ${data.name || filename} добавлено`);
+}
 window.importFromGithub = importFromGithub;
+
+function openSampleModal() {
+  closeAddModal();
+  const title = document.getElementById('sample-title');
+  const sub = document.getElementById('sample-sub');
+  const pre = document.getElementById('sample-pre');
+  if (currentAddType === 'guide') {
+    if (title) title.textContent = 'Формат guide.json';
+    if (sub) sub.textContent = 'Добавь файл с таким форматом в свой GitHub репозиторий:';
+    if (pre) pre.textContent = `{\n  "name": "Название пособия",\n  "type": "guide",\n  "category": "bio",\n  "icon": "🧬",\n  "color": "lavender",\n  "desc": "Краткое описание",\n  "tags": ["ЕГЭ 2026", "Задание 27"],\n  "chapters": [\n    { "title": "Глава 1", "tasks": 14 }\n  ],\n  "url": "https://ссылка-на-файл.pdf"\n}`;
+  } else {
+    if (title) title.textContent = 'Формат колоды';
+    if (sub) sub.textContent = 'Для flashcard (обычные карточки) или match (паронимы):';
+    if (pre) pre.textContent = `// Флеш-карточки\n{\n  "name": "Ударения ЕГЭ",\n  "type": "flashcard",\n  "icon": "🗣️",\n  "cards": [{"q": "вручит", "a": "вручИт"}]\n}\n\n// Паронимы (match)\n{\n  "name": "Паронимы ЕГЭ",\n  "type": "match",\n  "cards": [\n    {\n      "pairs": [\n        {"word": "Абонемент", "example": "...", "hint": "..."},\n        {"word": "Абонент", "example": "...", "hint": "..."}\n      ]\n    }\n  ]\n}`;
+  }
+  const sampleModal = document.getElementById('sample-modal');
+  if (sampleModal) sampleModal.classList.add('open');
+}
 window.openSampleModal = openSampleModal;
+
+function closeSampleModal(e) {
+  if (!e || e.target === document.getElementById('sample-modal')) {
+    const modal = document.getElementById('sample-modal');
+    if (modal) modal.classList.remove('open');
+  }
+}
 window.closeSampleModal = closeSampleModal;
-// Функции модальных окон (импорт) – они уже определены в вашем проекте, если нет – добавьте их из предыдущих версий
