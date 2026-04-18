@@ -1,71 +1,140 @@
 // ==================== АТЛАС ====================
+let currentAtlasId = null;
+let currentAtlasCategory = 'all';
+let atlasImageBase64 = null;
 
-let currentAtlasId = null, currentAtlasCategory = 'all', atlasImageBase64 = null;
-const CATEGORY_LABELS={'anatomy':'🫀 Анатомия','botany':'🌿 Ботаника','zoology':'🦋 Зоология','cells':'🔬 Клетки','ecology':'🌍 Экология'};
-
-function filterAtlas(category,btn){
-  currentAtlasCategory=category;
-  document.querySelectorAll('.atlas-cat-pill').forEach(p=>p.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  renderAtlas();
-}
-function renderAtlas(){
-  const items=window.getAtlasItems?.()||[]; const list=window.getElement('atlas-grid'); if(!list) return;
-  const filtered=currentAtlasCategory==='all'?items:items.filter(i=>i.category===currentAtlasCategory);
-  if(filtered.length===0){
-    list.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🧠</div><div class="empty-state-text">${items.length===0?'Атлас пуст':'Нет элементов в этой категории'}</div><div class="empty-state-sub">Добавьте элементы атласа с изображениями и описаниями</div></div>`;
+function renderAtlas() {
+  const items = getAtlasItems();
+  const grid = getElement('atlas-grid');
+  if (!grid) return;
+  let filtered = currentAtlasCategory === 'all' ? items : items.filter(i => i.category === currentAtlasCategory);
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🗺️</div><div class="empty-state-text">Атлас пуст</div><div class="empty-state-sub">Нажми + чтобы добавить первый элемент</div></div>`;
     return;
   }
-  list.innerHTML=''; const grid=document.createElement('div'); grid.className='atlas-grid';
-  filtered.forEach(item=>{
-    const card=document.createElement('div'); card.className='atlas-card';
-    card.innerHTML=`<div class="atlas-card-img">${item.image?`<img src="${item.image}" alt="${window.escapeHtml(item.title)}">`:'🖼️'}</div><div class="atlas-card-content"><div class="atlas-card-title">${window.escapeHtml(item.title)}</div><div class="atlas-card-category">${CATEGORY_LABELS[item.category]||'Другое'}</div></div>`;
-    card.onclick=()=>openAtlasItem(item.id);
+  grid.innerHTML = '';
+  const categoryLabels = { anatomy: '🫀 Анатомия', botany: '🌿 Ботаника', zoology: '🦋 Зоология', cells: '🔬 Клетки', ecology: '🌍 Экология' };
+  filtered.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'atlas-card';
+    card.innerHTML = `<div class="atlas-card-img">${item.image ? `<img src="${item.image}" alt="${escapeHtml(item.title)}">` : '🖼️'}</div><div class="atlas-card-content"><div class="atlas-card-title">${escapeHtml(item.title)}</div><div class="atlas-card-category">${categoryLabels[item.category]}</div></div>`;
+    card.onclick = () => openAtlasDetail(item.id);
     grid.appendChild(card);
   });
-  list.appendChild(grid);
 }
-function openAtlasItem(id){
-  const items=window.getAtlasItems?.()||[]; const item=items.find(i=>i.id===id); if(!item) return;
-  currentAtlasId=id;
-  const img=window.getElement('atlas-detail-image'); if(img) { if(item.image) img.src=item.image; else img.style.display='none'; }
-  const categorySpan=window.getElement('atlas-detail-category'); if(categorySpan) categorySpan.textContent=CATEGORY_LABELS[item.category]||'Другое';
-  const titleEl=window.getElement('atlas-detail-title'); if(titleEl) titleEl.textContent=item.title;
-  const descDiv=window.getElement('atlas-detail-desc'); if(descDiv){
-    try{ descDiv.innerHTML=typeof marked!=='undefined'?marked.parse(item.description||''):`<pre>${window.escapeHtml(item.description||'')}</pre>`; }
-    catch(e){ descDiv.innerHTML=`<pre>${window.escapeHtml(item.description||'')}</pre>`; }
-  }
-  window.showScreen('atlas-detail-screen');
-}
-function newAtlasItem(){ currentAtlasId=null; atlasImageBase64=null; window.getElement('atlas-title').value=''; window.getElement('atlas-category').value='anatomy'; window.getElement('atlas-description').value=''; window.getElement('atlas-image-preview').style.display='none'; window.showScreen('atlas-editor-screen'); }
-function createAtlasItem(){ newAtlasItem(); }
-function triggerAtlasImageUpload(){ document.getElementById('atlas-image-input')?.click(); }
-function handleAtlasImageUpload(event){
-  const file=event.target.files[0]; if(!file) return;
-  const reader=new FileReader(); reader.onload=e=>{ atlasImageBase64=e.target.result; const previewImg=window.getElement('atlas-preview-img'); if(previewImg) previewImg.src=atlasImageBase64; const previewDiv=window.getElement('atlas-image-preview'); if(previewDiv) previewDiv.style.display='block'; }; reader.readAsDataURL(file);
-}
-function saveAtlasItem(){
-  const title=window.getElement('atlas-title')?.value.trim()||''; const category=window.getElement('atlas-category')?.value||'anatomy'; const description=window.getElement('atlas-description')?.value||'';
-  if(!title){ window.showToast?.('⚠️ Введите название'); return; }
-  const items=window.getAtlasItems?.()||[];
-  if(currentAtlasId){
-    const index=items.findIndex(i=>i.id===currentAtlasId);
-    if(index!==-1){ items[index].title=title; items[index].category=category; items[index].description=description; if(atlasImageBase64) items[index].image=atlasImageBase64; items[index].updatedAt=Date.now(); }
-  } else {
-    items.push({id:Date.now().toString(),title,category,description,image:atlasImageBase64,createdAt:Date.now(),updatedAt:Date.now()});
-  }
-  window.saveAtlasItems?.(items); window.showToast?.('✓ Элемент сохранён'); window.showScreen('atlas-screen'); renderAtlas();
-}
-function editAtlasItem(){
-  if(!currentAtlasId) return; const items=window.getAtlasItems?.()||[]; const item=items.find(i=>i.id===currentAtlasId); if(!item) return;
-  window.getElement('atlas-title').value=item.title||''; window.getElement('atlas-category').value=item.category||'anatomy'; window.getElement('atlas-description').value=item.description||'';
-  if(item.image){ atlasImageBase64=item.image; const previewImg=window.getElement('atlas-preview-img'); if(previewImg) previewImg.src=item.image; const previewDiv=window.getElement('atlas-image-preview'); if(previewDiv) previewDiv.style.display='block'; }
-  else{ atlasImageBase64=null; const previewDiv=window.getElement('atlas-image-preview'); if(previewDiv) previewDiv.style.display='none'; }
-  window.showScreen('atlas-editor-screen');
-}
-function deleteAtlasItem(){ if(!currentAtlasId) return; if(!confirm('Удалить этот элемент из атласа?')) return; const items=window.getAtlasItems?.()||[]; const filtered=items.filter(i=>i.id!==currentAtlasId); window.saveAtlasItems?.(filtered); window.showToast?.('✓ Элемент удалён'); window.showScreen('atlas-screen'); renderAtlas(); }
-function closeAtlasEditor(){ window.showScreen('atlas-screen'); renderAtlas(); }
+window.renderAtlas = renderAtlas;
 
-window.filterAtlas=filterAtlas; window.renderAtlas=renderAtlas; window.newAtlasItem=newAtlasItem; window.createAtlasItem=createAtlasItem;
-window.triggerAtlasImageUpload=triggerAtlasImageUpload; window.handleAtlasImageUpload=handleAtlasImageUpload;
-window.saveAtlasItem=saveAtlasItem; window.editAtlasItem=editAtlasItem; window.deleteAtlasItem=deleteAtlasItem; window.closeAtlasEditor=closeAtlasEditor;
+function filterAtlas(category, btn) {
+  currentAtlasCategory = category;
+  document.querySelectorAll('.atlas-cat-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAtlas();
+}
+window.filterAtlas = filterAtlas;
+
+function openAtlasDetail(id) {
+  const items = getAtlasItems();
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  currentAtlasId = id;
+  const categoryLabels = { anatomy: '🫀 Анатомия', botany: '🌿 Ботаника', zoology: '🦋 Зоология', cells: '🔬 Клетки', ecology: '🌍 Экология' };
+  const imgEl = getElement('atlas-detail-image');
+  if (imgEl) { imgEl.src = item.image || ''; imgEl.style.display = item.image ? 'block' : 'none'; }
+  getElement('atlas-detail-category').textContent = categoryLabels[item.category];
+  getElement('atlas-detail-title').textContent = item.title;
+  getElement('atlas-detail-desc').innerHTML = marked.parse(item.description || '');
+  showScreen('atlas-detail-screen');
+}
+window.openAtlasDetail = openAtlasDetail;
+
+function createAtlasItem() {
+  currentAtlasId = null;
+  atlasImageBase64 = null;
+  getElement('atlas-title').value = '';
+  getElement('atlas-category').value = 'anatomy';
+  getElement('atlas-description').value = '';
+  getElement('atlas-image-preview').style.display = 'none';
+  showScreen('atlas-editor-screen');
+}
+window.createAtlasItem = createAtlasItem;
+
+function triggerAtlasImageUpload() {
+  getElement('atlas-image-input')?.click();
+}
+window.triggerAtlasImageUpload = triggerAtlasImageUpload;
+
+function handleAtlasImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    atlasImageBase64 = e.target.result;
+    getElement('atlas-preview-img').src = atlasImageBase64;
+    getElement('atlas-image-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+window.handleAtlasImageUpload = handleAtlasImageUpload;
+
+function saveAtlasItem() {
+  const title = getElement('atlas-title')?.value.trim() || '';
+  const category = getElement('atlas-category')?.value || 'anatomy';
+  const description = getElement('atlas-description')?.value || '';
+  if (!title) { showToast('⚠️ Введите название'); return; }
+  const items = getAtlasItems();
+  if (currentAtlasId) {
+    const index = items.findIndex(i => i.id === currentAtlasId);
+    if (index !== -1) {
+      items[index].title = title;
+      items[index].category = category;
+      items[index].description = description;
+      if (atlasImageBase64) items[index].image = atlasImageBase64;
+      items[index].updatedAt = Date.now();
+    }
+  } else {
+    items.push({ id: Date.now().toString(), title, category, description, image: atlasImageBase64, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+  saveAtlasItems(items);
+  showToast('✓ Элемент сохранён');
+  showScreen('atlas-screen');
+  renderAtlas();
+}
+window.saveAtlasItem = saveAtlasItem;
+
+function editAtlasItem() {
+  if (!currentAtlasId) return;
+  const items = getAtlasItems();
+  const item = items.find(i => i.id === currentAtlasId);
+  if (!item) return;
+  getElement('atlas-title').value = item.title || '';
+  getElement('atlas-category').value = item.category || 'anatomy';
+  getElement('atlas-description').value = item.description || '';
+  if (item.image) {
+    atlasImageBase64 = item.image;
+    getElement('atlas-preview-img').src = item.image;
+    getElement('atlas-image-preview').style.display = 'block';
+  } else {
+    atlasImageBase64 = null;
+    getElement('atlas-image-preview').style.display = 'none';
+  }
+  showScreen('atlas-editor-screen');
+}
+window.editAtlasItem = editAtlasItem;
+
+function deleteAtlasItem() {
+  if (!currentAtlasId) return;
+  if (!confirm('Удалить этот элемент из атласа?')) return;
+  const items = getAtlasItems();
+  const filtered = items.filter(i => i.id !== currentAtlasId);
+  saveAtlasItems(filtered);
+  showToast('✓ Элемент удалён');
+  showScreen('atlas-screen');
+  renderAtlas();
+}
+window.deleteAtlasItem = deleteAtlasItem;
+
+function closeAtlasEditor() {
+  showScreen('atlas-screen');
+  renderAtlas();
+}
+window.closeAtlasEditor = closeAtlasEditor;
