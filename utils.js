@@ -21,6 +21,8 @@ function showScreen(screenId) {
     document.querySelectorAll('.bottom-nav-btn')[2]?.classList.add('active');
   } else if (screenId === 'notes-screen') {
     document.querySelectorAll('.bottom-nav-btn')[3]?.classList.add('active');
+  } else if (screenId === 'settings-screen') {
+    document.querySelectorAll('.bottom-nav-btn')[4]?.classList.add('active');
   }
 }
 
@@ -38,6 +40,9 @@ function navTo(screen) {
   } else if (screen === 'notes') {
     showScreen('notes-screen');
     if (window.renderNotes) renderNotes();
+  } else if (screen === 'settings') {
+    showScreen('settings-screen');
+    if (window.updateSettingsStats) window.updateSettingsStats();
   }
 }
 
@@ -61,7 +66,7 @@ function showToast(message) {
   }, 2500);
 }
 
-// Экспорт для использования в других модулях
+// Экспорт
 window.getElement = getElement;
 window.showScreen = showScreen;
 window.navTo = navTo;
