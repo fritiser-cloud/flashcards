@@ -156,7 +156,7 @@
       position: sticky; bottom: 0; z-index: 10;
     }
     .bottom-nav.hidden {
-      display: none;
+      display: none !important;
     }
     .bottom-nav-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -536,6 +536,171 @@
     .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
     .empty-state-text { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
     .empty-state-sub { font-size: 13px; line-height: 1.5; }
+    
+    .note-image-item {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+    }
+    .note-image-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .note-image-delete {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+    .note-image-delete:hover {
+      opacity: 1;
+    }
+    .note-image-number {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* ----- АТЛАС ----- */
+    .atlas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      padding: 0;
+    }
+    .atlas-card {
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: var(--shadow);
+    }
+    .atlas-card:active {
+      transform: scale(0.97);
+    }
+    .atlas-card-img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      border-bottom: 1.5px solid var(--border);
+    }
+    .atlas-card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .atlas-card-content {
+      padding: 12px;
+    }
+    .atlas-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .atlas-card-category {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text3);
+    }
+    
+    /* Детали атласа */
+    .atlas-detail-img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .atlas-detail-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .atlas-detail-category {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: var(--lavender);
+      color: var(--lavender-text);
+      margin-bottom: 16px;
+    }
+    .atlas-detail-desc {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text2);
+    }
+    .atlas-categories {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 12px 20px;
+      scrollbar-width: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .atlas-categories::-webkit-scrollbar { display: none; }
+    .atlas-cat-pill {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border-radius: 16px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .atlas-cat-pill.active {
+      background: var(--sage-deep);
+      color: #fff;
+      border-color: var(--sage-deep);
+    }
 
     /* Анимации */
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
@@ -806,6 +971,9 @@
       <button class="editor-btn" onclick="togglePreview()">
         <span id="preview-toggle-text">👁 Превью</span>
       </button>
+      <button class="editor-btn" onclick="triggerNoteImageUpload()">
+        🖼️ Картинка
+      </button>
       <select class="folder-select" id="note-folder">
         <option value="work">💼 Работа</option>
         <option value="study">📚 Учёба</option>
@@ -816,6 +984,12 @@
     </div>
     
     <div class="editor-content">
+      <!-- Галерея изображений -->
+      <div id="note-images-gallery" style="display:none; margin-bottom:16px">
+        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text3); margin-bottom:8px">Изображения</div>
+        <div id="note-images-container" style="display:flex; gap:8px; flex-wrap:wrap"></div>
+      </div>
+      
       <textarea class="editor-textarea" id="note-content" placeholder="Начни писать свою заметку...
 
 Поддерживается Markdown:
@@ -827,11 +1001,112 @@
 1. нумерованный список
 `код`
 > цитата
+
+После загрузки изображения можно вставить в текст используя синтаксис:
+![описание](image:0)
+где 0 - номер изображения
 "></textarea>
       <div class="editor-preview markdown-body" id="note-preview" style="display:none"></div>
     </div>
   </div>
 </div>
+
+<!-- АТЛАС -->
+<div id="atlas-screen" class="screen">
+  <div class="nav">
+    <div style="width:40px"></div>
+    <div class="nav-title">Атлас</div>
+    <button class="nav-btn" onclick="createAtlasItem()">+</button>
+  </div>
+  
+  <div class="atlas-categories">
+    <div class="atlas-cat-pill active" onclick="filterAtlas('all', this)">
+      🗺️ Все
+    </div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('anatomy', this)">
+      🫀 Анатомия
+    </div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('botany', this)">
+      🌿 Ботаника
+    </div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('zoology', this)">
+      🦋 Зоология
+    </div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('cells', this)">
+      🔬 Клетки
+    </div>
+    <div class="atlas-cat-pill" onclick="filterAtlas('ecology', this)">
+      🌍 Экология
+    </div>
+  </div>
+  
+  <div class="scroll">
+    <div class="atlas-grid" id="atlas-grid"></div>
+  </div>
+</div>
+
+<!-- ДЕТАЛИ АТЛАСА -->
+<div id="atlas-detail-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('atlas-screen')">←</button>
+    <div class="nav-title">Атлас</div>
+    <button class="nav-btn" onclick="deleteAtlasItem()">🗑</button>
+  </div>
+  
+  <div class="reader-content">
+    <img id="atlas-detail-image" class="atlas-detail-img" src="" alt="">
+    <div id="atlas-detail-category" class="atlas-detail-category"></div>
+    <div id="atlas-detail-title" class="atlas-detail-title"></div>
+    <div id="atlas-detail-desc" class="atlas-detail-desc markdown-body"></div>
+  </div>
+</div>
+
+<!-- РЕДАКТОР АТЛАСА -->
+<div id="atlas-editor-screen" class="screen">
+  <div class="note-editor">
+    <div class="nav">
+      <button class="nav-btn" onclick="closeAtlasEditor()">←</button>
+      <div class="nav-title">Новый элемент</div>
+      <button class="nav-btn" onclick="saveAtlasItem()">✓</button>
+    </div>
+    
+    <input type="text" class="editor-title-input" id="atlas-title" placeholder="Название (например: Строение сердца)">
+    
+    <div class="editor-toolbar">
+      <select class="folder-select" id="atlas-category">
+        <option value="anatomy">🫀 Анатомия</option>
+        <option value="botany">🌿 Ботаника</option>
+        <option value="zoology">🦋 Зоология</option>
+        <option value="cells">🔬 Клетки</option>
+        <option value="ecology">🌍 Экология</option>
+      </select>
+      <button class="editor-btn" onclick="triggerAtlasImageUpload()">
+        🖼️ Загрузить картинку
+      </button>
+    </div>
+    
+    <div class="editor-content">
+      <div id="atlas-image-preview" style="display:none; margin-bottom:16px">
+        <img id="atlas-preview-img" style="width:100%; max-height:300px; object-fit:contain; border-radius:var(--radius-sm); border:1.5px solid var(--border)">
+      </div>
+      
+      <textarea class="editor-textarea" id="atlas-description" placeholder="Описание с поддержкой Markdown...
+
+Например:
+**Сердце** — полый мышечный орган.
+
+Отделы:
+- Правое предсердие
+- Правый желудочек
+- Левое предсердие
+- Левый желудочек
+"></textarea>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="atlas-image-input" accept="image/*" style="display:none" onchange="handleAtlasImageUpload(event)">
+<input type="file" id="note-image-input" accept="image/*" style="display:none" onchange="handleNoteImageUpload(event)">
 
 <!-- НАСТРОЙКИ -->
 <div id="settings-screen" class="screen">
@@ -868,6 +1143,10 @@
         <div style="font-weight:700;color:var(--accent)" id="settings-deck-count">0</div>
       </div>
       <div class="settings-row">
+        <div><div class="settings-row-label">Элементов в атласе</div></div>
+        <div style="font-weight:700;color:var(--sage-deep)" id="settings-atlas-count">0</div>
+      </div>
+      <div class="settings-row">
         <div><div class="settings-row-label">Заметок создано</div></div>
         <div style="font-weight:700;color:var(--sky-deep)" id="settings-notes-count">0</div>
       </div>
@@ -883,6 +1162,9 @@
   </button>
   <button class="bottom-nav-btn" id="nav-decks" onclick="navTo('decks')">
     <span class="icon">📇</span><span class="label">Карточки</span>
+  </button>
+  <button class="bottom-nav-btn" id="nav-atlas" onclick="navTo('atlas')">
+    <span class="icon">🗺️</span><span class="label">Атлас</span>
   </button>
   <button class="bottom-nav-btn" id="nav-notes" onclick="navTo('notes')">
     <span class="icon">📝</span><span class="label">Заметки</span>
@@ -1050,15 +1332,19 @@ function showScreen(id) {
   if (el) el.classList.add('active');
   window.scrollTo(0, 0);
   
-  // Скрываем нижнюю навигацию для экранов с контентом (пособия, карточки, редактор заметок)
+  // Скрываем нижнюю навигацию для экранов с контентом (пособия, карточки, редактор заметок, атлас)
   const bottomNav = document.querySelector('.bottom-nav');
+  if (!bottomNav) return;
+  
   const hideNavScreens = [
     'guide-detail-screen', 
     'flashcard-screen', 
     'match-screen', 
     'results-screen',
     'errors-screen',
-    'note-editor-screen'
+    'note-editor-screen',
+    'atlas-detail-screen',
+    'atlas-editor-screen'
   ];
   
   if (hideNavScreens.includes(id)) {
@@ -1073,6 +1359,7 @@ function navTo(tab) {
   if (btn) btn.classList.add('active');
   if (tab === 'library') { showScreen('library-screen'); renderLibrary(); }
   else if (tab === 'decks') { showScreen('decks-screen'); renderDecks(); }
+  else if (tab === 'atlas') { showScreen('atlas-screen'); renderAtlas(); }
   else if (tab === 'notes') { showScreen('notes-screen'); renderNotes(); }
   else if (tab === 'settings') { showScreen('settings-screen'); renderSettings(); }
 }
@@ -1857,6 +2144,7 @@ function renderSettings() {
   document.getElementById('gh-user-input').value = GITHUB_USER;
   document.getElementById('gh-repo-input').value = GITHUB_REPO;
   document.getElementById('settings-guide-count').textContent = getGuides().length;
+  document.getElementById('settings-atlas-count').textContent = getAtlasItems().length;
   document.getElementById('settings-notes-count').textContent = getNotes().length;
   dbGetAll('decks').then(decks => {
     document.getElementById('settings-deck-count').textContent = decks.length;
@@ -2002,6 +2290,7 @@ function createNote() {
     title: '',
     content: '',
     folder: 'personal',
+    images: [],  // Массив для хранения изображений
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -2017,9 +2306,15 @@ function openNoteEditor(noteId) {
   const note = notes.find(n => n.id === noteId);
   if (!note) return;
   
+  // Инициализация массива изображений если его нет
+  if (!note.images) note.images = [];
+  
   document.getElementById('note-title').value = note.title;
   document.getElementById('note-content').value = note.content;
   document.getElementById('note-folder').value = note.folder;
+  
+  // Отображение изображений
+  renderNoteImages(note.images);
   
   isPreviewMode = false;
   document.getElementById('note-preview').style.display = 'none';
@@ -2071,6 +2366,73 @@ function deleteNote() {
   renderNotes();
 }
 
+// Отображение галереи изображений
+function renderNoteImages(images) {
+  const gallery = document.getElementById('note-images-gallery');
+  const container = document.getElementById('note-images-container');
+  
+  if (!images || images.length === 0) {
+    gallery.style.display = 'none';
+    return;
+  }
+  
+  gallery.style.display = 'block';
+  container.innerHTML = '';
+  
+  images.forEach((img, index) => {
+    const item = document.createElement('div');
+    item.className = 'note-image-item';
+    item.innerHTML = `
+      <img src="${img}" alt="Image ${index}">
+      <div class="note-image-number">${index}</div>
+      <button class="note-image-delete" onclick="deleteNoteImage(${index})">✕</button>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// Загрузка изображения
+function triggerNoteImageUpload() {
+  document.getElementById('note-image-input').click();
+}
+
+function handleNoteImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const notes = getNotes();
+    const note = notes.find(n => n.id === currentNoteId);
+    if (!note) return;
+    
+    if (!note.images) note.images = [];
+    note.images.push(e.target.result);
+    saveNotes(notes);
+    renderNoteImages(note.images);
+    
+    showToast(`✓ Изображение добавлено (номер ${note.images.length - 1})`);
+  };
+  reader.readAsDataURL(file);
+  
+  // Сброс input чтобы можно было загрузить тот же файл повторно
+  event.target.value = '';
+}
+
+// Удаление изображения
+function deleteNoteImage(index) {
+  if (!confirm('Удалить это изображение?')) return;
+  
+  const notes = getNotes();
+  const note = notes.find(n => n.id === currentNoteId);
+  if (!note || !note.images) return;
+  
+  note.images.splice(index, 1);
+  saveNotes(notes);
+  renderNoteImages(note.images);
+  showToast('✓ Изображение удалено');
+}
+
 // Переключение превью
 function togglePreview() {
   isPreviewMode = !isPreviewMode;
@@ -2079,7 +2441,18 @@ function togglePreview() {
   const toggleText = document.getElementById('preview-toggle-text');
   
   if (isPreviewMode) {
-    const markdown = content.value;
+    const notes = getNotes();
+    const note = notes.find(n => n.id === currentNoteId);
+    let markdown = content.value;
+    
+    // Заменяем image:N на реальные base64 изображения
+    if (note && note.images) {
+      markdown = markdown.replace(/!\[([^\]]*)\]\(image:(\d+)\)/g, (match, alt, index) => {
+        const img = note.images[parseInt(index)];
+        return img ? `![${alt}](${img})` : match;
+      });
+    }
+    
     preview.innerHTML = marked.parse(markdown);
     content.style.display = 'none';
     preview.style.display = 'block';
@@ -2089,6 +2462,195 @@ function togglePreview() {
     preview.style.display = 'none';
     toggleText.textContent = '👁 Превью';
   }
+}
+
+// ==================== АТЛАС ====================
+let currentAtlasId = null;
+let currentAtlasCategory = 'all';
+let atlasImageBase64 = null;
+
+// Получение элементов атласа
+function getAtlasItems() {
+  const items = localStorage.getItem('atlas');
+  return items ? JSON.parse(items) : [];
+}
+
+// Сохранение атласа
+function saveAtlasItems(items) {
+  localStorage.setItem('atlas', JSON.stringify(items));
+}
+
+// Рендеринг атласа
+function renderAtlas() {
+  const items = getAtlasItems();
+  const grid = document.getElementById('atlas-grid');
+  if (!grid) return;
+  
+  let filtered = currentAtlasCategory === 'all' ? items : items.filter(i => i.category === currentAtlasCategory);
+  
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <div class="empty-state-icon">🗺️</div>
+        <div class="empty-state-text">Атлас пуст</div>
+        <div class="empty-state-sub">Нажми + чтобы добавить первый элемент</div>
+      </div>`;
+    return;
+  }
+  
+  grid.innerHTML = '';
+  filtered.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'atlas-card';
+    
+    const categoryLabels = {
+      anatomy: '🫀 Анатомия',
+      botany: '🌿 Ботаника',
+      zoology: '🦋 Зоология',
+      cells: '🔬 Клетки',
+      ecology: '🌍 Экология'
+    };
+    
+    card.innerHTML = `
+      <div class="atlas-card-img">
+        ${item.image ? `<img src="${item.image}" alt="${item.title}">` : '🖼️'}
+      </div>
+      <div class="atlas-card-content">
+        <div class="atlas-card-title">${item.title}</div>
+        <div class="atlas-card-category">${categoryLabels[item.category]}</div>
+      </div>
+    `;
+    
+    card.onclick = () => openAtlasDetail(item.id);
+    grid.appendChild(card);
+  });
+}
+
+// Фильтрация по категории
+function filterAtlas(category, btn) {
+  currentAtlasCategory = category;
+  document.querySelectorAll('.atlas-cat-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAtlas();
+}
+
+// Открытие детального просмотра
+function openAtlasDetail(id) {
+  const items = getAtlasItems();
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  
+  currentAtlasId = id;
+  
+  const categoryLabels = {
+    anatomy: '🫀 Анатомия',
+    botany: '🌿 Ботаника',
+    zoology: '🦋 Зоология',
+    cells: '🔬 Клетки',
+    ecology: '🌍 Экология'
+  };
+  
+  document.getElementById('atlas-detail-image').src = item.image || '';
+  document.getElementById('atlas-detail-image').style.display = item.image ? 'block' : 'none';
+  document.getElementById('atlas-detail-category').textContent = categoryLabels[item.category];
+  document.getElementById('atlas-detail-title').textContent = item.title;
+  document.getElementById('atlas-detail-desc').innerHTML = marked.parse(item.description || '');
+  
+  showScreen('atlas-detail-screen');
+}
+
+// Создание нового элемента
+function createAtlasItem() {
+  currentAtlasId = null;
+  atlasImageBase64 = null;
+  document.getElementById('atlas-title').value = '';
+  document.getElementById('atlas-category').value = 'anatomy';
+  document.getElementById('atlas-description').value = '';
+  document.getElementById('atlas-image-preview').style.display = 'none';
+  showScreen('atlas-editor-screen');
+}
+
+// Загрузка изображения
+function triggerAtlasImageUpload() {
+  document.getElementById('atlas-image-input').click();
+}
+
+function handleAtlasImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    atlasImageBase64 = e.target.result;
+    document.getElementById('atlas-preview-img').src = atlasImageBase64;
+    document.getElementById('atlas-image-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+// Сохранение элемента
+function saveAtlasItem() {
+  const title = document.getElementById('atlas-title').value.trim();
+  const category = document.getElementById('atlas-category').value;
+  const description = document.getElementById('atlas-description').value;
+  
+  if (!title) {
+    showToast('⚠️ Введите название');
+    return;
+  }
+  
+  const items = getAtlasItems();
+  
+  if (currentAtlasId) {
+    // Редактирование
+    const index = items.findIndex(i => i.id === currentAtlasId);
+    if (index !== -1) {
+      items[index].title = title;
+      items[index].category = category;
+      items[index].description = description;
+      if (atlasImageBase64) {
+        items[index].image = atlasImageBase64;
+      }
+      items[index].updatedAt = Date.now();
+    }
+  } else {
+    // Создание
+    const newItem = {
+      id: Date.now().toString(),
+      title,
+      category,
+      description,
+      image: atlasImageBase64,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    items.push(newItem);
+  }
+  
+  saveAtlasItems(items);
+  showToast('✓ Элемент сохранён');
+  showScreen('atlas-screen');
+  renderAtlas();
+}
+
+// Удаление элемента
+function deleteAtlasItem() {
+  if (!currentAtlasId) return;
+  if (!confirm('Удалить этот элемент из атласа?')) return;
+  
+  const items = getAtlasItems();
+  const filtered = items.filter(i => i.id !== currentAtlasId);
+  saveAtlasItems(filtered);
+  
+  showToast('✓ Элемент удалён');
+  showScreen('atlas-screen');
+  renderAtlas();
+}
+
+// Закрытие редактора
+function closeAtlasEditor() {
+  showScreen('atlas-screen');
+  renderAtlas();
 }
 
 // ==================== ИНИЦИАЛИЗАЦИЯ ====================
