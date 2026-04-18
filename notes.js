@@ -2,6 +2,8 @@
 
 let currentNoteId = null;
 let isPreviewMode = false;
+let currentNotesFilter = 'all';
+let notesSearchQuery = '';
 
 function formatTimeAgo(date) {
   const now = new Date();
@@ -26,8 +28,19 @@ function renderNotes() {
   const list = window.getElement('notes-list');
   if (!list) return;
   
-  // Сортировка по дате обновления
-  const sorted = [...notes].sort((a, b) => b.updatedAt - a.updatedAt);
+  let filtered = notes;
+  if (currentNotesFilter !== 'all') {
+    filtered = filtered.filter(n => n.tag === currentNotesFilter);
+  }
+  if (notesSearchQuery) {
+    const q = notesSearchQuery.toLowerCase();
+    filtered = filtered.filter(n => 
+      (n.title || '').toLowerCase().includes(q) || 
+      (n.content || '').toLowerCase().includes(q)
+    );
+  }
+  
+  const sorted = [...filtered].sort((a, b) => b.updatedAt - a.updatedAt);
   
   if (sorted.length === 0) {
     list.innerHTML = `<div class="empty-state">
@@ -42,47 +55,35 @@ function renderNotes() {
   
   sorted.forEach(note => {
     const card = document.createElement('div');
-    card.style.cssText = 'background: var(--surface); border-radius: var(--radius); padding: 20px 24px; border: 1.5px solid var(--border); box-shadow: var(--shadow); cursor: pointer; transition: all 0.2s; margin-bottom: 16px;';
-    
-    const preview = note.content.replace(/[#*`>\-\[\]]/g, '').trim().substring(0, 120);
+    card.className = 'note-card';
+    const preview = (note.content || '').replace(/[#*`>\-\[\]]/g, '').trim().substring(0, 120);
     const date = new Date(note.updatedAt);
     const timeAgo = formatTimeAgo(date);
     
-    // Определяем цвет тега
-    const tagColors = {
-      'bio': { bg: 'var(--sage)', color: 'var(--sage-text)' },
-      'ru': { bg: 'var(--peach)', color: 'var(--peach-text)' },
-      'phys': { bg: 'var(--sky)', color: 'var(--sky-text)' },
-      'personal': { bg: 'var(--lavender)', color: 'var(--lavender-text)' }
+    const folderNames = {
+      'work': '💼 Работа',
+      'study': '📚 Учёба',
+      'personal': '✨ Личное',
+      'ideas': '💡 Идеи'
     };
-    
-    const tagColor = tagColors[note.tag] || { bg: 'var(--surface2)', color: 'var(--text3)' };
+    const folderName = folderNames[note.tag] || '📋 Без папки';
     
     card.innerHTML = `
-      <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px;">
-        <div style="font-weight: 700; font-size: 17px; flex: 1; line-height: 1.4;">
-          ${window.escapeHtml(note.title) || 'Без названия'}
-        </div>
-        <div style="font-size: 13px; color: var(--text3); white-space: nowrap; margin-left: 12px;">
-          ${timeAgo}
-        </div>
+      <div class="note-header">
+        <div class="note-title">${window.escapeHtml(note.title) || 'Без названия'}</div>
+        <div class="note-date">${timeAgo}</div>
       </div>
-      <div style="font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 12px;">
-        ${window.escapeHtml(preview) || 'Пустая заметка'}${preview.length >= 120 ? '...' : ''}
-      </div>
-      ${note.tag ? `
-        <div style="display: inline-block; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: ${tagColor.bg}; color: ${tagColor.color};">
-          ${{'bio': '🧬 Биология', 'ru': '📖 Русский', 'phys': '⚛️ Физика', 'personal': '💭 Личное'}[note.tag] || note.tag}
-        </div>
-      ` : ''}
+      <div class="note-preview">${window.escapeHtml(preview) || 'Пустая заметка'}${preview.length >= 120 ? '...' : ''}</div>
+      <div class="note-folder">${folderName}</div>
     `;
     
     card.onclick = () => openNote(note.id);
-    card.onmouseenter = () => card.style.transform = 'translateY(-2px)';
-    card.onmouseleave = () => card.style.transform = 'translateY(0)';
-    
     list.appendChild(card);
   });
+}
+
+function createNote() {
+  newNote();
 }
 
 function newNote() {
@@ -91,7 +92,7 @@ function newNote() {
     id: Date.now().toString(),
     title: '',
     content: '',
-    tag: '',
+    tag: 'study',
     images: [],
     createdAt: Date.now(),
     updatedAt: Date.now()
@@ -101,24 +102,21 @@ function newNote() {
   
   currentNoteId = newNote.id;
   
-  // Открываем редактор
   const titleInput = window.getElement('note-title');
   if (titleInput) titleInput.value = '';
   
   const contentInput = window.getElement('note-content');
   if (contentInput) contentInput.value = '';
   
-  const tagSelect = window.getElement('note-tag');
-  if (tagSelect) tagSelect.value = '';
+  const folderSelect = window.getElement('note-folder');
+  if (folderSelect) folderSelect.value = 'study';
   
   const imagesContainer = window.getElement('note-images-container');
   if (imagesContainer) imagesContainer.innerHTML = '';
   
-  // Скрыть превью
   isPreviewMode = false;
-  const previewDiv = window.getElement('note-preview-content');
+  const previewDiv = window.getElement('note-preview');
   if (previewDiv) previewDiv.style.display = 'none';
-  
   const contentDiv = window.getElement('note-content');
   if (contentDiv) contentDiv.style.display = 'block';
   
@@ -137,7 +135,6 @@ function openNote(noteId) {
   
   contentDiv.innerHTML = '';
   
-  // Заголовок
   const header = document.createElement('div');
   header.style.cssText = 'margin-bottom: 24px;';
   
@@ -146,7 +143,6 @@ function openNote(noteId) {
   title.textContent = note.title || 'Без названия';
   header.appendChild(title);
   
-  // Дата и тег
   const meta = document.createElement('div');
   meta.style.cssText = 'display: flex; align-items: center; gap: 12px; flex-wrap: wrap;';
   
@@ -157,30 +153,26 @@ function openNote(noteId) {
   meta.appendChild(dateSpan);
   
   if (note.tag) {
-    const tagColors = {
-      'bio': { bg: 'var(--sage)', color: 'var(--sage-text)' },
-      'ru': { bg: 'var(--peach)', color: 'var(--peach-text)' },
-      'phys': { bg: 'var(--sky)', color: 'var(--sky-text)' },
-      'personal': { bg: 'var(--lavender)', color: 'var(--lavender-text)' }
+    const folderNames = {
+      'work': '💼 Работа',
+      'study': '📚 Учёба',
+      'personal': '✨ Личное',
+      'ideas': '💡 Идеи'
     };
-    const tagColor = tagColors[note.tag] || { bg: 'var(--surface2)', color: 'var(--text3)' };
-    
-    const tagDiv = document.createElement('div');
-    tagDiv.style.cssText = `font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: ${tagColor.bg}; color: ${tagColor.color};`;
-    tagDiv.textContent = {'bio': '🧬 Биология', 'ru': '📖 Русский', 'phys': '⚛️ Физика', 'personal': '💭 Личное'}[note.tag] || note.tag;
-    meta.appendChild(tagDiv);
+    const folderDiv = document.createElement('div');
+    folderDiv.style.cssText = 'font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: var(--lavender); color: var(--lavender-text);';
+    folderDiv.textContent = folderNames[note.tag] || '📋 Без папки';
+    meta.appendChild(folderDiv);
   }
   
   header.appendChild(meta);
   contentDiv.appendChild(header);
   
-  // Контент
   if (note.content) {
     const contentParsed = document.createElement('div');
     contentParsed.style.cssText = 'font-size: 16px; line-height: 1.8; color: var(--text);';
     
     try {
-      // Заменяем ссылки на изображения
       let markdown = note.content;
       if (note.images && note.images.length > 0) {
         markdown = markdown.replace(/!\[([^\]]*)\]\(image:(\d+)\)/g, (match, alt, index) => {
@@ -217,16 +209,14 @@ function editNote() {
   const contentInput = window.getElement('note-content');
   if (contentInput) contentInput.value = note.content || '';
   
-  const tagSelect = window.getElement('note-tag');
-  if (tagSelect) tagSelect.value = note.tag || '';
+  const folderSelect = window.getElement('note-folder');
+  if (folderSelect) folderSelect.value = note.tag || 'study';
   
   renderNoteImages(note.images || []);
   
-  // Скрыть превью
   isPreviewMode = false;
-  const previewDiv = window.getElement('note-preview-content');
+  const previewDiv = window.getElement('note-preview');
   if (previewDiv) previewDiv.style.display = 'none';
-  
   const contentDiv = window.getElement('note-content');
   if (contentDiv) contentDiv.style.display = 'block';
   
@@ -242,7 +232,7 @@ function saveNote() {
   
   const title = window.getElement('note-title')?.value.trim() || '';
   const content = window.getElement('note-content')?.value || '';
-  const tag = window.getElement('note-tag')?.value || '';
+  const tag = window.getElement('note-folder')?.value || 'study';
   
   notes[noteIndex].title = title || 'Без названия';
   notes[noteIndex].content = content;
@@ -273,19 +263,18 @@ function closeNoteEditor() {
   renderNotes();
 }
 
-function toggleNotePreview() {
+function togglePreview() {
   isPreviewMode = !isPreviewMode;
   
   const contentInput = window.getElement('note-content');
-  const previewDiv = window.getElement('note-preview-content');
-  const previewBtn = window.getElement('note-preview-btn');
+  const previewDiv = window.getElement('note-preview');
+  const previewBtn = document.getElementById('preview-toggle-text');
   
   if (isPreviewMode) {
     const notes = window.getNotes ? window.getNotes() : [];
     const note = notes.find(n => n.id === currentNoteId);
     let markdown = contentInput?.value || '';
     
-    // Заменяем ссылки на изображения
     if (note && note.images) {
       markdown = markdown.replace(/!\[([^\]]*)\]\(image:(\d+)\)/g, (match, alt, index) => {
         const img = note.images[parseInt(index)];
@@ -307,23 +296,52 @@ function toggleNotePreview() {
     }
     
     if (contentInput) contentInput.style.display = 'none';
-    if (previewBtn) previewBtn.textContent = '✏️';
+    if (previewBtn) previewBtn.textContent = '✏️ Редактировать';
   } else {
     if (contentInput) contentInput.style.display = 'block';
     if (previewDiv) previewDiv.style.display = 'none';
-    if (previewBtn) previewBtn.textContent = '👁';
+    if (previewBtn) previewBtn.textContent = '👁 Превью';
   }
+}
+
+function triggerNoteImageUpload() {
+  document.getElementById('note-image-input')?.click();
+}
+
+function handleNoteImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const notes = window.getNotes ? window.getNotes() : [];
+    const note = notes.find(n => n.id === currentNoteId);
+    if (!note) {
+      if (window.showToast) window.showToast('⚠️ Сначала сохраните заметку');
+      return;
+    }
+    if (!note.images) note.images = [];
+    note.images.push(e.target.result);
+    if (window.saveNotes) window.saveNotes(notes);
+    renderNoteImages(note.images);
+    if (window.showToast) window.showToast('✓ Изображение добавлено');
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
 }
 
 function renderNoteImages(images) {
   const container = window.getElement('note-images-container');
+  const galleryDiv = window.getElement('note-images-gallery');
   if (!container) return;
   
   if (!images || images.length === 0) {
+    if (galleryDiv) galleryDiv.style.display = 'none';
     container.innerHTML = '';
     return;
   }
   
+  if (galleryDiv) galleryDiv.style.display = 'block';
   container.innerHTML = '';
   
   const gallery = document.createElement('div');
@@ -331,16 +349,12 @@ function renderNoteImages(images) {
   
   images.forEach((img, index) => {
     const item = document.createElement('div');
-    item.style.cssText = 'position: relative; width: 90px; height: 90px; border-radius: var(--radius-sm); overflow: hidden; border: 1.5px solid var(--border); background: var(--surface2);';
+    item.className = 'note-image-item';
     
     item.innerHTML = `
-      <img src="${img}" alt="Image ${index}" style="width: 100%; height: 100%; object-fit: cover;">
-      <div style="position: absolute; top: 6px; left: 6px; background: var(--text); color: white; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 12px;">
-        ${index}
-      </div>
-      <button onclick="deleteNoteImage(${index})" style="position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: none; background: var(--red); color: white; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700;">
-        ✕
-      </button>
+      <img src="${img}" alt="Image ${index}">
+      <div class="note-image-number">${index}</div>
+      <button class="note-image-delete" onclick="deleteNoteImage(${index})">✕</button>
     `;
     
     gallery.appendChild(item);
@@ -363,14 +377,33 @@ function deleteNoteImage(index) {
   if (window.showToast) window.showToast('✓ Изображение удалено');
 }
 
+function searchNotes() {
+  const input = window.getElement('notes-search');
+  if (input) notesSearchQuery = input.value;
+  renderNotes();
+}
+
+function filterNotesByFolder(folder, btn) {
+  currentNotesFilter = folder;
+  const pills = document.querySelectorAll('.folder-pill');
+  pills.forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderNotes();
+}
+
 // Экспорт
 window.renderNotes = renderNotes;
+window.createNote = createNote;
 window.newNote = newNote;
 window.openNote = openNote;
 window.editNote = editNote;
 window.saveNote = saveNote;
 window.deleteNote = deleteNote;
 window.closeNoteEditor = closeNoteEditor;
-window.toggleNotePreview = toggleNotePreview;
+window.togglePreview = togglePreview;
+window.triggerNoteImageUpload = triggerNoteImageUpload;
+window.handleNoteImageUpload = handleNoteImageUpload;
 window.renderNoteImages = renderNoteImages;
 window.deleteNoteImage = deleteNoteImage;
+window.searchNotes = searchNotes;
+window.filterNotesByFolder = filterNotesByFolder;
