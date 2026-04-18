@@ -605,33 +605,34 @@
     }
     .atlas-card-img {
       width: 100%;
-      aspect-ratio: 1;
-      object-fit: cover;
+      min-height: 160px;
+      object-fit: contain;
       background: var(--surface2);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 48px;
       border-bottom: 1.5px solid var(--border);
+      padding: 12px;
     }
     .atlas-card-img img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
     }
     .atlas-card-content {
       padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     .atlas-card-title {
       font-size: 13px;
       font-weight: 600;
       color: var(--text);
-      margin-bottom: 4px;
-      line-height: 1.3;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      line-height: 1.4;
+      word-break: break-word;
+      white-space: pre-wrap;
     }
     .atlas-card-category {
       font-size: 10px;
@@ -744,6 +745,77 @@
     #deck-detail-screen .scroll {
       padding: 20px;
       gap: 16px;
+    }
+    
+    /* ----- АДАПТАЦИЯ ДЛЯ ДЕСКТОПА ----- */
+    @media (min-width: 768px) {
+      /* Центрирование контента */
+      .screen {
+        max-width: 800px;
+        margin: 0 auto;
+        box-shadow: 0 0 40px rgba(0,0,0,0.05);
+      }
+      
+      body {
+        background: #F0F0ED;
+      }
+      
+      .scroll, .reader-content, .editor-content {
+        max-width: 100%;
+        padding-left: 40px;
+        padding-right: 40px;
+      }
+      
+      .nav, .cats, .search-box, .folder-pills, .atlas-categories {
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      
+      .bottom-nav {
+        max-width: 800px;
+        margin: 0 auto;
+        border-radius: var(--radius) var(--radius) 0 0;
+      }
+      
+      /* Атлас - полное изображение без обрезки */
+      .atlas-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+      }
+      
+      .atlas-card-img {
+        aspect-ratio: auto;
+        min-height: 160px;
+        padding: 12px;
+      }
+      
+      .atlas-card-img img {
+        object-fit: contain;
+      }
+      
+      .note-editor, .flashcard-container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+    }
+    
+    /* Исправление для атласа - картинка полностью + текст снизу */
+    .atlas-card {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .atlas-card-img {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface2);
+    }
+    
+    .atlas-card-title, .atlas-card-category {
+      white-space: normal;
+      word-break: break-word;
     }
   </style>
 </head>
@@ -926,7 +998,6 @@
 <!-- ЗАМЕТКИ -->
 <div id="notes-screen" class="screen">
   <div class="nav">
-    <div style="width:40px"></div>
     <div class="nav-title">Заметки</div>
     <button class="nav-btn" onclick="createNote()">+</button>
   </div>
@@ -1016,7 +1087,6 @@
 <!-- АТЛАС -->
 <div id="atlas-screen" class="screen">
   <div class="nav">
-    <div style="width:40px"></div>
     <div class="nav-title">Атлас</div>
     <button class="nav-btn" onclick="createAtlasItem()">+</button>
   </div>
@@ -1052,7 +1122,10 @@
   <div class="nav">
     <button class="nav-btn" onclick="showScreen('atlas-screen')">←</button>
     <div class="nav-title">Атлас</div>
-    <button class="nav-btn" onclick="deleteAtlasItem()">🗑</button>
+    <div style="display:flex; gap:8px">
+      <button class="nav-btn" onclick="editAtlasItem()">✏️</button>
+      <button class="nav-btn" onclick="deleteAtlasItem()">🗑</button>
+    </div>
   </div>
   
   <div class="reader-content">
@@ -2635,6 +2708,32 @@ function saveAtlasItem() {
   showToast('✓ Элемент сохранён');
   showScreen('atlas-screen');
   renderAtlas();
+}
+
+// Редактирование элемента
+function editAtlasItem() {
+  if (!currentAtlasId) return;
+  
+  const items = getAtlasItems();
+  const item = items.find(i => i.id === currentAtlasId);
+  if (!item) return;
+  
+  // Заполняем форму данными
+  document.getElementById('atlas-title').value = item.title || '';
+  document.getElementById('atlas-category').value = item.category || 'anatomy';
+  document.getElementById('atlas-description').value = item.description || '';
+  
+  // Показываем превью изображения если есть
+  if (item.image) {
+    atlasImageBase64 = item.image;
+    document.getElementById('atlas-preview-img').src = item.image;
+    document.getElementById('atlas-image-preview').style.display = 'block';
+  } else {
+    atlasImageBase64 = null;
+    document.getElementById('atlas-image-preview').style.display = 'none';
+  }
+  
+  showScreen('atlas-editor-screen');
 }
 
 // Удаление элемента
