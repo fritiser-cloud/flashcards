@@ -11,6 +11,10 @@
   <title>Биолаб • Карточки • Заметки</title>
   <!-- Markdown парсер -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore-compat.js"></script>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -298,7 +302,7 @@
     .results-btns { width: 100%; display: flex; flex-direction: column; gap: 10px; }
 
     /* Notes screen */
-    #notes-screen { background: var(--bg); }
+    #errors-screen { background: var(--bg); }
     .notes-empty { text-align: center; padding: 60px 24px; }
     .notes-empty-icon { font-size: 48px; margin-bottom: 12px; }
     .notes-empty-text { font-size: 15px; color: var(--text3); font-weight: 500; line-height: 1.5; }
@@ -1702,12 +1706,7 @@
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
 
 <script>
-<script type="module">
-// ==================== FIREBASE КОНФИГУРАЦИЯ ====================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-
+// ==================== FIREBASE ИНИЦИАЛИЗАЦИЯ ====================
 const firebaseConfig = {
   apiKey: "AIzaSyAlGPZkNsKMbfezIVwmky4EeXDUOJ-sUpw",
   authDomain: "biolab-app-dc4df.firebaseapp.com",
@@ -1717,157 +1716,19 @@ const firebaseConfig = {
   appId: "1:1070438650586:web:0e77c4a873412a8be60be3"
 };
 
-// Инициализация Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 let currentUser = null;
 
-// Слушаем изменения состояния авторизации
-onAuthStateChanged(auth, (user) => {
+auth.onAuthStateChanged((user) => {
   currentUser = user;
   updateAuthUI(user);
   if (user) {
-    // Автоматическая синхронизация при входе
     syncAllData();
   }
 });
 
-// ==================== АВТОРИЗАЦИЯ ====================
-function updateAuthUI(user) {
-  const loggedIn = document.getElementById('auth-logged-in');
-  const loggedOut = document.getElementById('auth-logged-out');
-  
-  if (user) {
-    loggedIn.style.display = 'block';
-    loggedOut.style.display = 'none';
-    document.getElementById('user-name').textContent = user.displayName || 'Пользователь';
-    document.getElementById('user-email').textContent = user.email;
-    document.getElementById('user-avatar').src = user.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="32" fill="%239575CD"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="28" font-family="sans-serif">👤</text></svg>';
-  } else {
-    loggedIn.style.display = 'none';
-    loggedOut.style.display = 'block';
-  }
-}
-
-window.signInWithGoogle = async function() {
-  try {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-    showToast('✓ Успешный вход!');
-  } catch (error) {
-    console.error('Ошибка входа:', error);
-    showToast('⚠️ Ошибка входа: ' + error.message);
-  }
-}
-
-window.signOut = async function() {
-  if (!confirm('Выйти из аккаунта? Локальные данные сохранятся.')) return;
-  try {
-    await firebaseSignOut(auth);
-    showToast('✓ Вы вышли из аккаунта');
-  } catch (error) {
-    console.error('Ошибка выхода:', error);
-    showToast('⚠️ Ошибка выхода');
-  }
-}
-
-// ==================== СИНХРОНИЗАЦИЯ ДАННЫХ ====================
-async function syncAllData() {
-  if (!currentUser) return;
-  
-  updateSyncStatus('syncing', 'Синхронизация...');
-  
-  try {
-    const userId = currentUser.uid;
-    const userDocRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
-    
-    if (userDoc.exists()) {
-      // Загружаем данные с сервера
-      const cloudData = userDoc.data();
-      
-      // Заметки
-      if (cloudData.notes) {
-        localStorage.setItem('notes', JSON.stringify(cloudData.notes));
-      }
-      
-      // Атлас
-      if (cloudData.atlas) {
-        localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
-      }
-      
-      // Пособия
-      if (cloudData.guides) {
-        localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
-      }
-      
-      // Обновляем UI
-      if (window.renderNotes) renderNotes();
-      if (window.renderAtlas) renderAtlas();
-      if (window.renderLibrary) renderLibrary();
-    }
-    
-    // Сохраняем локальные данные на сервер
-    await saveToCloud();
-    
-    updateSyncStatus('success', 'Все данные синхронизированы');
-    document.getElementById('last-sync').textContent = new Date().toLocaleTimeString('ru-RU');
-  } catch (error) {
-    console.error('Ошибка синхронизации:', error);
-    updateSyncStatus('error', 'Ошибка синхронизации');
-  }
-}
-
-async function saveToCloud() {
-  if (!currentUser) return;
-  
-  try {
-    const userId = currentUser.uid;
-    const data = {
-      notes: window.getNotes ? getNotes() : [],
-      atlas: window.getAtlasItems ? getAtlasItems() : [],
-      guides: window.getGuides ? getGuides() : [],
-      updatedAt: serverTimestamp()
-    };
-    
-    const userDocRef = doc(db, 'users', userId);
-    await setDoc(userDocRef, data, { merge: true });
-  } catch (error) {
-    console.error('Ошибка сохранения:', error);
-  }
-}
-
-function updateSyncStatus(status, text) {
-  const statusEl = document.getElementById('sync-status');
-  if (!statusEl) return;
-  
-  const iconEl = statusEl.querySelector('.sync-icon');
-  const textEl = document.getElementById('sync-text');
-  
-  if (status === 'syncing') {
-    iconEl.className = 'sync-icon';
-    iconEl.textContent = '🔄';
-  } else if (status === 'success') {
-    iconEl.className = 'sync-icon success';
-    iconEl.textContent = '☁️';
-  } else if (status === 'error') {
-    iconEl.className = 'sync-icon';
-    iconEl.textContent = '⚠️';
-  }
-  
-  textEl.textContent = text;
-}
-
-// Автосохранение на сервер при изменениях
-window.autoSaveToCloud = function() {
-  if (currentUser) {
-    saveToCloud();
-  }
-}
-</script>
-
-<script>
 // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
 let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
@@ -1877,7 +1738,6 @@ let currentDeckId = null;
 let currentCat = 'all';
 let ghTabLoaded = false;
 
-// Состояние изучения
 let studyQueue = [], studyIdx = 0, sessionKnown = 0, sessionErrors = 0, isFlipped = false, isErrorsMode = false, isFavMode = false;
 let sessionErrorCards = [];
 let matchSets = [], matchSetIdx = 0, matchSessionCorrect = 0, matchSessionWrong = 0;
@@ -1885,13 +1745,12 @@ let matchSelected = { left: null, right: null };
 let matchConnections = [];
 let matchChecked = false;
 
-// Проверка загрузки marked
 if (typeof marked === 'undefined') {
   console.warn('marked не загружен, используется простой рендеринг');
   window.marked = { parse: (txt) => '<pre>' + txt.replace(/</g, '&lt;') + '</pre>' };
 }
 
-// ==================== ХРАНИЛИЩЕ ПОСОБИЙ (localStorage) ====================
+// ==================== ХРАНИЛИЩЕ ПОСОБИЙ ====================
 function getGuides() {
   try { return JSON.parse(localStorage.getItem('bio_guides') || '[]'); } catch { return []; }
 }
@@ -1968,6 +1827,129 @@ function dbDeleteRange(store, prefix) {
   });
 }
 
+// ==================== ЗАМЕТКИ ====================
+function getNotes() {
+  const notes = localStorage.getItem('notes');
+  return notes ? JSON.parse(notes) : [];
+}
+function saveNotes(notes) {
+  localStorage.setItem('notes', JSON.stringify(notes));
+  autoSaveToCloud();
+}
+
+// ==================== АТЛАС ====================
+function getAtlasItems() {
+  const items = localStorage.getItem('atlas');
+  return items ? JSON.parse(items) : [];
+}
+function saveAtlasItems(items) {
+  localStorage.setItem('atlas', JSON.stringify(items));
+  autoSaveToCloud();
+}
+
+// ==================== АВТОРИЗАЦИЯ ====================
+function updateAuthUI(user) {
+  const loggedIn = document.getElementById('auth-logged-in');
+  const loggedOut = document.getElementById('auth-logged-out');
+  if (user) {
+    if(loggedIn) loggedIn.style.display = 'block';
+    if(loggedOut) loggedOut.style.display = 'none';
+    const nameEl = document.getElementById('user-name');
+    if(nameEl) nameEl.textContent = user.displayName || 'Пользователь';
+    const emailEl = document.getElementById('user-email');
+    if(emailEl) emailEl.textContent = user.email;
+    const avatarEl = document.getElementById('user-avatar');
+    if(avatarEl) avatarEl.src = user.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="32" fill="%239575CD"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="28" font-family="sans-serif">👤</text></svg>';
+  } else {
+    if(loggedIn) loggedIn.style.display = 'none';
+    if(loggedOut) loggedOut.style.display = 'block';
+  }
+}
+
+window.signInWithGoogle = async function() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    showToast('✓ Успешный вход!');
+  } catch (error) {
+    console.error('Ошибка входа:', error);
+    showToast('⚠️ Ошибка входа: ' + error.message);
+  }
+}
+
+window.signOut = async function() {
+  if (!confirm('Выйти из аккаунта? Локальные данные сохранятся.')) return;
+  try {
+    await auth.signOut();
+    showToast('✓ Вы вышли из аккаунта');
+  } catch (error) {
+    console.error('Ошибка выхода:', error);
+    showToast('⚠️ Ошибка выхода');
+  }
+}
+
+// ==================== СИНХРОНИЗАЦИЯ ====================
+async function syncAllData() {
+  if (!currentUser) return;
+  updateSyncStatus('syncing', 'Синхронизация...');
+  try {
+    const userId = currentUser.uid;
+    const userDocRef = db.collection('users').doc(userId);
+    const userDoc = await userDocRef.get();
+    if (userDoc.exists) {
+      const cloudData = userDoc.data();
+      if (cloudData.notes) localStorage.setItem('notes', JSON.stringify(cloudData.notes));
+      if (cloudData.atlas) localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
+      if (cloudData.guides) localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
+      if (window.renderNotes) renderNotes();
+      if (window.renderAtlas) renderAtlas();
+      if (window.renderLibrary) renderLibrary();
+    }
+    await saveToCloud();
+    updateSyncStatus('success', 'Все данные синхронизированы');
+    const lastSyncEl = document.getElementById('last-sync');
+    if(lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
+  } catch (error) {
+    console.error('Ошибка синхронизации:', error);
+    updateSyncStatus('error', 'Ошибка синхронизации');
+  }
+}
+
+async function saveToCloud() {
+  if (!currentUser) return;
+  try {
+    const userId = currentUser.uid;
+    const data = {
+      notes: getNotes(),
+      atlas: getAtlasItems(),
+      guides: getGuides(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await db.collection('users').doc(userId).set(data, { merge: true });
+  } catch (error) {
+    console.error('Ошибка сохранения:', error);
+  }
+}
+
+function updateSyncStatus(status, text) {
+  const statusEl = document.getElementById('sync-status');
+  if (!statusEl) return;
+  const iconEl = statusEl.querySelector('.sync-icon');
+  const textEl = document.getElementById('sync-text');
+  if (status === 'syncing') {
+    if(iconEl) { iconEl.className = 'sync-icon'; iconEl.textContent = '🔄'; }
+  } else if (status === 'success') {
+    if(iconEl) { iconEl.className = 'sync-icon success'; iconEl.textContent = '☁️'; }
+  } else if (status === 'error') {
+    if(iconEl) { iconEl.className = 'sync-icon'; iconEl.textContent = '⚠️'; }
+  }
+  if(textEl) textEl.textContent = text;
+}
+
+window.autoSaveToCloud = function() {
+  if (currentUser) saveToCloud();
+}
+
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 function plural(n, one, few, many) {
   if (n % 10 === 1 && n % 100 !== 11) return one;
@@ -1987,22 +1969,9 @@ function showScreen(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
   window.scrollTo(0, 0);
-  
-  // Скрываем нижнюю навигацию для экранов с контентом (пособия, карточки, редактор заметок, атлас)
   const bottomNav = document.querySelector('.bottom-nav');
   if (!bottomNav) return;
-  
-  const hideNavScreens = [
-    'guide-detail-screen', 
-    'flashcard-screen', 
-    'match-screen', 
-    'results-screen',
-    'errors-screen',
-    'note-editor-screen',
-    'atlas-detail-screen',
-    'atlas-editor-screen'
-  ];
-  
+  const hideNavScreens = ['guide-detail-screen', 'study-screen', 'match-screen', 'results-screen', 'errors-screen', 'note-editor-screen', 'atlas-detail-screen', 'atlas-editor-screen'];
   if (hideNavScreens.includes(id)) {
     bottomNav.classList.add('hidden');
   } else {
@@ -2089,7 +2058,6 @@ function openGuide(id) {
     chapEl.innerHTML = '';
   }
 
-  // Рендерим Markdown-контент
   const mdContainer = document.getElementById('guide-markdown-content');
   const actionsDiv = document.getElementById('guide-action-buttons');
   try {
@@ -2509,7 +2477,7 @@ function showMatchResults() {
   showScreen('results-screen');
 }
 
-// ==================== РЕЗУЛЬТАТЫ И ЗАМЕТКИ ====================
+// ==================== РЕЗУЛЬТАТЫ И ОШИБКИ ====================
 function showResults() {
   const total = sessionKnown + sessionErrors;
   const pct = total ? Math.round(sessionKnown / total * 100) : 0;
@@ -2814,78 +2782,50 @@ function saveSettings() {
   showToast('✓ Настройки сохранены');
 }
 function clearAllData() {
-  if (!confirm('Удалить все пособия и колоды?')) return;
+  if (!confirm('Удалить все пособия, колоды, заметки и атлас?')) return;
   localStorage.removeItem('bio_guides');
+  localStorage.removeItem('notes');
+  localStorage.removeItem('atlas');
   dbDeleteRange('decks', '');
   dbDeleteRange('stats', '');
   dbDeleteRange('favorites', '');
   renderLibrary();
   renderDecks();
+  renderNotes();
+  renderAtlas();
   showToast('Все данные удалены');
 }
 
-// ==================== ЗАМЕТКИ ====================
+// ==================== ЗАМЕТКИ (UI) ====================
 let currentNoteId = null;
 let currentNoteFolder = 'all';
 let isPreviewMode = false;
 
-// Получение заметок из localStorage
-function getNotes() {
-  const notes = localStorage.getItem('notes');
-  return notes ? JSON.parse(notes) : [];
-}
-
-// Сохранение заметок в localStorage
-function saveNotes(notes) {
-  localStorage.setItem('notes', JSON.stringify(notes));
-  autoSaveToCloud();
-}
-
-// Рендеринг списка заметок
 function renderNotes() {
   const notes = getNotes();
   const list = document.getElementById('notes-list');
   if (!list) return;
-  
   const searchQuery = document.getElementById('notes-search')?.value.toLowerCase() || '';
   let filtered = currentNoteFolder === 'all' ? notes : notes.filter(n => n.folder === currentNoteFolder);
-  
   if (searchQuery) {
     filtered = filtered.filter(n => 
       n.title.toLowerCase().includes(searchQuery) || 
       n.content.toLowerCase().includes(searchQuery)
     );
   }
-  
-  // Сортировка по дате изменения (новые первые)
   filtered.sort((a, b) => b.updatedAt - a.updatedAt);
-  
   if (filtered.length === 0) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📝</div>
-        <div class="empty-state-text">Нет заметок</div>
-        <div class="empty-state-sub">Нажми + чтобы создать первую заметку</div>
-      </div>`;
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📝</div><div class="empty-state-text">Нет заметок</div><div class="empty-state-sub">Нажми + чтобы создать первую заметку</div></div>`;
     return;
   }
-  
   list.innerHTML = '';
   filtered.forEach(note => {
     const card = document.createElement('div');
     card.className = `note-card ${note.folder}`;
-    
-    const folderLabels = {
-      work: '💼 Работа',
-      study: '📚 Учёба',
-      personal: '✨ Личное',
-      ideas: '💡 Идеи'
-    };
-    
+    const folderLabels = { work: '💼 Работа', study: '📚 Учёба', personal: '✨ Личное', ideas: '💡 Идеи' };
     const preview = note.content.replace(/[#*`>\-\[\]]/g, '').trim().substring(0, 150);
     const date = new Date(note.updatedAt);
     const timeAgo = formatTimeAgo(date);
-    
     card.innerHTML = `
       <div class="note-header">
         <div class="note-title">${note.title || 'Без названия'}</div>
@@ -2894,32 +2834,27 @@ function renderNotes() {
       <div class="note-preview">${preview || 'Пустая заметка'}</div>
       <div class="note-folder ${note.folder}">${folderLabels[note.folder]}</div>
     `;
-    
     card.onclick = () => openNoteEditor(note.id);
     list.appendChild(card);
   });
 }
 
-// Форматирование времени
 function formatTimeAgo(date) {
   const now = new Date();
   const diff = now - date;
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  
   if (minutes < 1) return 'только что';
   if (minutes < 60) return `${minutes} мин назад`;
   if (hours < 24) return `${hours} ч назад`;
   if (days < 7) return `${days} дн назад`;
-  
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
   return `${day}.${month}.${year}`;
 }
 
-// Фильтрация по папке
 function filterNotesByFolder(folder, btn) {
   currentNoteFolder = folder;
   document.querySelectorAll('.folder-pill').forEach(b => b.classList.remove('active'));
@@ -2927,12 +2862,8 @@ function filterNotesByFolder(folder, btn) {
   renderNotes();
 }
 
-// Поиск заметок
-function searchNotes() {
-  renderNotes();
-}
+function searchNotes() { renderNotes(); }
 
-// Создание новой заметки
 function createNote() {
   const notes = getNotes();
   const newNote = {
@@ -2940,7 +2871,7 @@ function createNote() {
     title: '',
     content: '',
     folder: 'personal',
-    images: [],  // Массив для хранения изображений
+    images: [],
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -2949,160 +2880,120 @@ function createNote() {
   openNoteEditor(newNote.id);
 }
 
-// Открытие редактора заметки
 function openNoteEditor(noteId) {
   currentNoteId = noteId;
   const notes = getNotes();
   const note = notes.find(n => n.id === noteId);
   if (!note) return;
-  
-  // Инициализация массива изображений если его нет
   if (!note.images) note.images = [];
-  
   document.getElementById('note-title').value = note.title;
   document.getElementById('note-content').value = note.content;
   document.getElementById('note-folder').value = note.folder;
-  
-  // Отображение изображений
   renderNoteImages(note.images);
-  
   isPreviewMode = false;
   document.getElementById('note-preview').style.display = 'none';
   document.getElementById('note-content').style.display = 'block';
   document.getElementById('preview-toggle-text').textContent = '👁 Превью';
-  
   showScreen('note-editor-screen');
 }
 
-// Закрытие редактора
 function closeNoteEditor() {
   saveNote();
   showScreen('notes-screen');
   renderNotes();
 }
 
-// Сохранение заметки
 function saveNote() {
   if (!currentNoteId) return;
-  
   const notes = getNotes();
   const noteIndex = notes.findIndex(n => n.id === currentNoteId);
   if (noteIndex === -1) return;
-  
   const title = document.getElementById('note-title').value.trim();
   const content = document.getElementById('note-content').value;
   const folder = document.getElementById('note-folder').value;
-  
   notes[noteIndex].title = title || 'Без названия';
   notes[noteIndex].content = content;
   notes[noteIndex].folder = folder;
   notes[noteIndex].updatedAt = Date.now();
-  
   saveNotes(notes);
   showToast('✓ Заметка сохранена');
 }
 
-// Удаление заметки
 function deleteNote() {
   if (!currentNoteId) return;
   if (!confirm('Удалить эту заметку?')) return;
-  
   const notes = getNotes();
   const filtered = notes.filter(n => n.id !== currentNoteId);
   saveNotes(filtered);
-  
   showToast('✓ Заметка удалена');
   showScreen('notes-screen');
   renderNotes();
 }
 
-// Отображение галереи изображений
 function renderNoteImages(images) {
   const gallery = document.getElementById('note-images-gallery');
   const container = document.getElementById('note-images-container');
-  
+  if (!gallery || !container) return;
   if (!images || images.length === 0) {
     gallery.style.display = 'none';
     return;
   }
-  
   gallery.style.display = 'block';
   container.innerHTML = '';
-  
   images.forEach((img, index) => {
     const item = document.createElement('div');
     item.className = 'note-image-item';
-    item.innerHTML = `
-      <img src="${img}" alt="Image ${index}">
-      <div class="note-image-number">${index}</div>
-      <button class="note-image-delete" onclick="deleteNoteImage(${index})">✕</button>
-    `;
+    item.innerHTML = `<img src="${img}" alt="Image ${index}"><div class="note-image-number">${index}</div><button class="note-image-delete" onclick="deleteNoteImage(${index})">✕</button>`;
     container.appendChild(item);
   });
 }
 
-// Загрузка изображения
-function triggerNoteImageUpload() {
-  document.getElementById('note-image-input').click();
-}
+function triggerNoteImageUpload() { document.getElementById('note-image-input').click(); }
 
 function handleNoteImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  
   const reader = new FileReader();
   reader.onload = function(e) {
     const notes = getNotes();
     const note = notes.find(n => n.id === currentNoteId);
     if (!note) return;
-    
     if (!note.images) note.images = [];
     note.images.push(e.target.result);
     saveNotes(notes);
     renderNoteImages(note.images);
-    
     showToast(`✓ Изображение добавлено (номер ${note.images.length - 1})`);
   };
   reader.readAsDataURL(file);
-  
-  // Сброс input чтобы можно было загрузить тот же файл повторно
   event.target.value = '';
 }
 
-// Удаление изображения
 function deleteNoteImage(index) {
   if (!confirm('Удалить это изображение?')) return;
-  
   const notes = getNotes();
   const note = notes.find(n => n.id === currentNoteId);
   if (!note || !note.images) return;
-  
   note.images.splice(index, 1);
   saveNotes(notes);
   renderNoteImages(note.images);
   showToast('✓ Изображение удалено');
 }
 
-// Переключение превью
 function togglePreview() {
   isPreviewMode = !isPreviewMode;
   const content = document.getElementById('note-content');
   const preview = document.getElementById('note-preview');
   const toggleText = document.getElementById('preview-toggle-text');
-  
   if (isPreviewMode) {
     const notes = getNotes();
     const note = notes.find(n => n.id === currentNoteId);
     let markdown = content.value;
-    
-    // Заменяем image:N на реальные base64 изображения
     if (note && note.images) {
       markdown = markdown.replace(/!\[([^\]]*)\]\(image:(\d+)\)/g, (match, alt, index) => {
         const img = note.images[parseInt(index)];
         return img ? `![${alt}](${img})` : match;
       });
     }
-    
     preview.innerHTML = marked.parse(markdown);
     content.style.display = 'none';
     preview.style.display = 'block';
@@ -3119,65 +3010,26 @@ let currentAtlasId = null;
 let currentAtlasCategory = 'all';
 let atlasImageBase64 = null;
 
-// Получение элементов атласа
-function getAtlasItems() {
-  const items = localStorage.getItem('atlas');
-  return items ? JSON.parse(items) : [];
-}
-
-// Сохранение атласа
-function saveAtlasItems(items) {
-  localStorage.setItem('atlas', JSON.stringify(items));
-  autoSaveToCloud();
-}
-
-// Рендеринг атласа
 function renderAtlas() {
   const items = getAtlasItems();
   const grid = document.getElementById('atlas-grid');
   if (!grid) return;
-  
   let filtered = currentAtlasCategory === 'all' ? items : items.filter(i => i.category === currentAtlasCategory);
-  
   if (filtered.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state" style="grid-column: 1 / -1;">
-        <div class="empty-state-icon">🗺️</div>
-        <div class="empty-state-text">Атлас пуст</div>
-        <div class="empty-state-sub">Нажми + чтобы добавить первый элемент</div>
-      </div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🗺️</div><div class="empty-state-text">Атлас пуст</div><div class="empty-state-sub">Нажми + чтобы добавить первый элемент</div></div>`;
     return;
   }
-  
   grid.innerHTML = '';
   filtered.forEach(item => {
     const card = document.createElement('div');
     card.className = 'atlas-card';
-    
-    const categoryLabels = {
-      anatomy: '🫀 Анатомия',
-      botany: '🌿 Ботаника',
-      zoology: '🦋 Зоология',
-      cells: '🔬 Клетки',
-      ecology: '🌍 Экология'
-    };
-    
-    card.innerHTML = `
-      <div class="atlas-card-img">
-        ${item.image ? `<img src="${item.image}" alt="${item.title}">` : '🖼️'}
-      </div>
-      <div class="atlas-card-content">
-        <div class="atlas-card-title">${item.title}</div>
-        <div class="atlas-card-category">${categoryLabels[item.category]}</div>
-      </div>
-    `;
-    
+    const categoryLabels = { anatomy: '🫀 Анатомия', botany: '🌿 Ботаника', zoology: '🦋 Зоология', cells: '🔬 Клетки', ecology: '🌍 Экология' };
+    card.innerHTML = `<div class="atlas-card-img">${item.image ? `<img src="${item.image}" alt="${item.title}">` : '🖼️'}</div><div class="atlas-card-content"><div class="atlas-card-title">${item.title}</div><div class="atlas-card-category">${categoryLabels[item.category]}</div></div>`;
     card.onclick = () => openAtlasDetail(item.id);
     grid.appendChild(card);
   });
 }
 
-// Фильтрация по категории
 function filterAtlas(category, btn) {
   currentAtlasCategory = category;
   document.querySelectorAll('.atlas-cat-pill').forEach(b => b.classList.remove('active'));
@@ -3185,32 +3037,20 @@ function filterAtlas(category, btn) {
   renderAtlas();
 }
 
-// Открытие детального просмотра
 function openAtlasDetail(id) {
   const items = getAtlasItems();
   const item = items.find(i => i.id === id);
   if (!item) return;
-  
   currentAtlasId = id;
-  
-  const categoryLabels = {
-    anatomy: '🫀 Анатомия',
-    botany: '🌿 Ботаника',
-    zoology: '🦋 Зоология',
-    cells: '🔬 Клетки',
-    ecology: '🌍 Экология'
-  };
-  
+  const categoryLabels = { anatomy: '🫀 Анатомия', botany: '🌿 Ботаника', zoology: '🦋 Зоология', cells: '🔬 Клетки', ecology: '🌍 Экология' };
   document.getElementById('atlas-detail-image').src = item.image || '';
   document.getElementById('atlas-detail-image').style.display = item.image ? 'block' : 'none';
   document.getElementById('atlas-detail-category').textContent = categoryLabels[item.category];
   document.getElementById('atlas-detail-title').textContent = item.title;
   document.getElementById('atlas-detail-desc').innerHTML = marked.parse(item.description || '');
-  
   showScreen('atlas-detail-screen');
 }
 
-// Создание нового элемента
 function createAtlasItem() {
   currentAtlasId = null;
   atlasImageBase64 = null;
@@ -3221,15 +3061,11 @@ function createAtlasItem() {
   showScreen('atlas-editor-screen');
 }
 
-// Загрузка изображения
-function triggerAtlasImageUpload() {
-  document.getElementById('atlas-image-input').click();
-}
+function triggerAtlasImageUpload() { document.getElementById('atlas-image-input').click(); }
 
 function handleAtlasImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  
   const reader = new FileReader();
   reader.onload = function(e) {
     atlasImageBase64 = e.target.result;
@@ -3239,33 +3075,22 @@ function handleAtlasImageUpload(event) {
   reader.readAsDataURL(file);
 }
 
-// Сохранение элемента
 function saveAtlasItem() {
   const title = document.getElementById('atlas-title').value.trim();
   const category = document.getElementById('atlas-category').value;
   const description = document.getElementById('atlas-description').value;
-  
-  if (!title) {
-    showToast('⚠️ Введите название');
-    return;
-  }
-  
+  if (!title) { showToast('⚠️ Введите название'); return; }
   const items = getAtlasItems();
-  
   if (currentAtlasId) {
-    // Редактирование
     const index = items.findIndex(i => i.id === currentAtlasId);
     if (index !== -1) {
       items[index].title = title;
       items[index].category = category;
       items[index].description = description;
-      if (atlasImageBase64) {
-        items[index].image = atlasImageBase64;
-      }
+      if (atlasImageBase64) items[index].image = atlasImageBase64;
       items[index].updatedAt = Date.now();
     }
   } else {
-    // Создание
     const newItem = {
       id: Date.now().toString(),
       title,
@@ -3277,27 +3102,20 @@ function saveAtlasItem() {
     };
     items.push(newItem);
   }
-  
   saveAtlasItems(items);
   showToast('✓ Элемент сохранён');
   showScreen('atlas-screen');
   renderAtlas();
 }
 
-// Редактирование элемента
 function editAtlasItem() {
   if (!currentAtlasId) return;
-  
   const items = getAtlasItems();
   const item = items.find(i => i.id === currentAtlasId);
   if (!item) return;
-  
-  // Заполняем форму данными
   document.getElementById('atlas-title').value = item.title || '';
   document.getElementById('atlas-category').value = item.category || 'anatomy';
   document.getElementById('atlas-description').value = item.description || '';
-  
-  // Показываем превью изображения если есть
   if (item.image) {
     atlasImageBase64 = item.image;
     document.getElementById('atlas-preview-img').src = item.image;
@@ -3306,28 +3124,85 @@ function editAtlasItem() {
     atlasImageBase64 = null;
     document.getElementById('atlas-image-preview').style.display = 'none';
   }
-  
   showScreen('atlas-editor-screen');
 }
 
-// Удаление элемента
 function deleteAtlasItem() {
   if (!currentAtlasId) return;
   if (!confirm('Удалить этот элемент из атласа?')) return;
-  
   const items = getAtlasItems();
   const filtered = items.filter(i => i.id !== currentAtlasId);
   saveAtlasItems(filtered);
-  
   showToast('✓ Элемент удалён');
   showScreen('atlas-screen');
   renderAtlas();
 }
 
-// Закрытие редактора
 function closeAtlasEditor() {
   showScreen('atlas-screen');
   renderAtlas();
+}
+
+// ==================== ВСТАВКА ИЗОБРАЖЕНИЙ ====================
+document.addEventListener('DOMContentLoaded', () => {
+  const noteContent = document.getElementById('note-content');
+  if (noteContent) noteContent.addEventListener('paste', handleNotePaste);
+  const atlasEditor = document.getElementById('atlas-editor-screen');
+  if (atlasEditor) atlasEditor.addEventListener('paste', handleAtlasPaste);
+});
+
+function handleNotePaste(e) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      e.preventDefault();
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const notes = getNotes();
+        const note = notes.find(n => n.id === currentNoteId);
+        if (!note) return;
+        if (!note.images) note.images = [];
+        note.images.push(event.target.result);
+        saveNotes(notes);
+        renderNoteImages(note.images);
+        const imageIndex = note.images.length - 1;
+        showToast(`✓ Изображение вставлено (номер ${imageIndex})`);
+        const textarea = document.getElementById('note-content');
+        const cursorPos = textarea.selectionStart;
+        const textBefore = textarea.value.substring(0, cursorPos);
+        const textAfter = textarea.value.substring(cursorPos);
+        const imageMarkdown = `![Изображение](image:${imageIndex})`;
+        textarea.value = textBefore + imageMarkdown + textAfter;
+        textarea.selectionStart = textarea.selectionEnd = cursorPos + imageMarkdown.length;
+        textarea.focus();
+      };
+      reader.readAsDataURL(blob);
+      break;
+    }
+  }
+}
+
+function handleAtlasPaste(e) {
+  if (!document.getElementById('atlas-editor-screen').classList.contains('active')) return;
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      e.preventDefault();
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        atlasImageBase64 = event.target.result;
+        document.getElementById('atlas-preview-img').src = atlasImageBase64;
+        document.getElementById('atlas-image-preview').style.display = 'block';
+        showToast('✓ Изображение вставлено из буфера');
+      };
+      reader.readAsDataURL(blob);
+      break;
+    }
+  }
 }
 
 // ==================== ИНИЦИАЛИЗАЦИЯ ====================
@@ -3343,89 +3218,6 @@ openDB().then(() => {
 window.addEventListener('resize', () => {
   if (document.getElementById('match-screen')?.classList.contains('active')) drawLines();
 });
-
-// ==================== ВСТАВКА ИЗОБРАЖЕНИЙ ИЗ БУФЕРА ====================
-// Обработчик для заметок
-document.addEventListener('DOMContentLoaded', () => {
-  // Для заметок
-  const noteContent = document.getElementById('note-content');
-  if (noteContent) {
-    noteContent.addEventListener('paste', handleNotePaste);
-  }
-  
-  // Для атласа - слушаем на весь экран редактора
-  const atlasEditor = document.getElementById('atlas-editor-screen');
-  if (atlasEditor) {
-    atlasEditor.addEventListener('paste', handleAtlasPaste);
-  }
-});
-
-function handleNotePaste(e) {
-  const items = e.clipboardData?.items;
-  if (!items) return;
-  
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf('image') !== -1) {
-      e.preventDefault();
-      const blob = items[i].getAsFile();
-      const reader = new FileReader();
-      
-      reader.onload = function(event) {
-        const notes = getNotes();
-        const note = notes.find(n => n.id === currentNoteId);
-        if (!note) return;
-        
-        if (!note.images) note.images = [];
-        note.images.push(event.target.result);
-        saveNotes(notes);
-        renderNoteImages(note.images);
-        
-        const imageIndex = note.images.length - 1;
-        showToast(`✓ Изображение вставлено (номер ${imageIndex})`);
-        
-        // Вставляем markdown синтаксис в текущую позицию курсора
-        const textarea = document.getElementById('note-content');
-        const cursorPos = textarea.selectionStart;
-        const textBefore = textarea.value.substring(0, cursorPos);
-        const textAfter = textarea.value.substring(cursorPos);
-        const imageMarkdown = `![Изображение](image:${imageIndex})`;
-        
-        textarea.value = textBefore + imageMarkdown + textAfter;
-        textarea.selectionStart = textarea.selectionEnd = cursorPos + imageMarkdown.length;
-        textarea.focus();
-      };
-      
-      reader.readAsDataURL(blob);
-      break;
-    }
-  }
-}
-
-function handleAtlasPaste(e) {
-  // Только если фокус на экране редактора атласа
-  if (!document.getElementById('atlas-editor-screen').classList.contains('active')) return;
-  
-  const items = e.clipboardData?.items;
-  if (!items) return;
-  
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf('image') !== -1) {
-      e.preventDefault();
-      const blob = items[i].getAsFile();
-      const reader = new FileReader();
-      
-      reader.onload = function(event) {
-        atlasImageBase64 = event.target.result;
-        document.getElementById('atlas-preview-img').src = atlasImageBase64;
-        document.getElementById('atlas-image-preview').style.display = 'block';
-        showToast('✓ Изображение вставлено из буфера');
-      };
-      
-      reader.readAsDataURL(blob);
-      break;
-    }
-  }
-}
 </script>
 </body>
 </html>
