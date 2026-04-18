@@ -65,13 +65,11 @@ async function startCardStudy(deckId) {
     const deck = await window.dbGet('decks', deckId);
     if (!deck) return;
     
-    // Проверяем тип колоды
     if (deck.type === 'match') {
       startMatch(deckId);
       return;
     }
     
-    // Обычные карточки
     studyQueue = deck.cards.map((card, idx) => ({ ...card, idx }));
     studyQueue = studyQueue.sort(() => Math.random() - 0.5);
     studyIdx = 0;
@@ -81,7 +79,7 @@ async function startCardStudy(deckId) {
     const titleEl = window.getElement('deck-name-title');
     if (titleEl) titleEl.textContent = deck.name;
     
-    window.showScreen('card-screen');
+    window.showScreen('study-screen');
     showCard();
   } catch (error) {
     console.error('Ошибка запуска карточек:', error);
@@ -97,7 +95,6 @@ function showCard() {
   
   const card = studyQueue[studyIdx];
   
-  // Обновление прогресса
   const progressNum = window.getElement('progress-num');
   const progressTotal = window.getElement('progress-total');
   const progressFill = window.getElement('progress-fill');
@@ -106,19 +103,16 @@ function showCard() {
   if (progressTotal) progressTotal.textContent = studyQueue.length;
   if (progressFill) progressFill.style.width = `${(studyIdx / studyQueue.length) * 100}%`;
   
-  // Обновление карточки
   const frontEl = window.getElement('card-front');
   const backEl = window.getElement('card-back');
   
   if (frontEl) frontEl.textContent = card.q || 'Вопрос';
   if (backEl) backEl.textContent = card.a || 'Ответ';
   
-  // Сброс состояния
   isFlipped = false;
   const cardInner = window.getElement('card-inner');
   if (cardInner) cardInner.classList.remove('flipped');
   
-  // Показываем кнопки
   const controls = window.getElement('card-controls');
   if (controls) controls.style.display = 'flex';
   
@@ -128,7 +122,6 @@ function showCard() {
   const completion = window.getElement('completion-screen');
   if (completion) completion.style.display = 'none';
   
-  // Обновление статистики
   updateSessionStats();
 }
 
@@ -149,6 +142,11 @@ function answerCard(correct) {
   updateSessionStats();
   studyIdx++;
   showCard();
+}
+
+// Алиасы для study-экрана
+function markCard(correct) {
+  answerCard(correct);
 }
 
 function updateSessionStats() {
@@ -199,6 +197,15 @@ function exitCards() {
   renderDecks();
 }
 
+function exitStudy() {
+  exitCards();
+}
+
+function toggleFavorite() {
+  // Заглушка, можно реализовать позже
+  if (window.showToast) window.showToast('⭐ Функция избранного в разработке');
+}
+
 // ========== СОПОСТАВЛЕНИЕ (ПАРОНИМЫ) ==========
 let matchSets = [];
 let matchSetIdx = 0;
@@ -235,11 +242,9 @@ function renderMatchSet() {
   const set = matchSets[matchSetIdx];
   const pairs = set.pairs || [];
   
-  // Обновление прогресса
   const progressInfo = window.getElement('match-progress-info');
   if (progressInfo) progressInfo.textContent = `Блок ${matchSetIdx + 1} из ${matchSets.length}`;
   
-  // Очистка
   matchSelected = { left: null, right: null };
   matchConnections = [];
   matchChecked = false;
@@ -249,7 +254,6 @@ function renderMatchSet() {
   
   grid.innerHTML = '';
   
-  // Левая колонка (слова)
   const leftCol = document.createElement('div');
   leftCol.className = 'match-column';
   pairs.forEach((pair, idx) => {
@@ -262,7 +266,6 @@ function renderMatchSet() {
     leftCol.appendChild(chip);
   });
   
-  // Правая колонка (примеры, перемешанные)
   const rightItems = [...pairs].sort(() => Math.random() - 0.5);
   const rightCol = document.createElement('div');
   rightCol.className = 'match-column';
@@ -285,7 +288,6 @@ function renderMatchSet() {
 function selectChip(side, idx, chip, originalIdx) {
   if (matchChecked) return;
   
-  // Снять выделение с других
   const chips = document.querySelectorAll(`.match-chip[data-side="${side}"]`);
   chips.forEach(c => c.classList.remove('selected'));
   
@@ -307,7 +309,6 @@ function selectChip(side, idx, chip, originalIdx) {
     chip.classList.add('selected');
   }
   
-  // Если выбраны обе стороны - соединить
   if (matchSelected.left !== null && matchSelected.right !== null) {
     connectPair();
   }
@@ -320,7 +321,6 @@ function connectPair() {
     rightOriginal: matchSelected.rightOriginal
   });
   
-  // Снять выделение
   document.querySelectorAll('.match-chip.selected').forEach(c => c.classList.remove('selected'));
   matchSelected = { left: null, right: null };
   
@@ -371,12 +371,22 @@ function exitMatch() {
   renderDecks();
 }
 
+function skipMatchSet() {
+  matchSetIdx++;
+  renderMatchSet();
+}
+
+function checkMatch() {
+  // Заглушка, можно реализовать проверку соединений
+  if (window.showToast) window.showToast('🔍 Проверка в разработке');
+}
+
 function showMatchCompletion() {
   const completion = window.getElement('match-completion');
   if (completion) completion.style.display = 'flex';
 }
 
-// Подключение клика по карточке для переворота
+// Подключение клика по карточке
 document.addEventListener('DOMContentLoaded', () => {
   const flashcard = window.getElement('flashcard');
   if (flashcard) {
@@ -388,8 +398,13 @@ document.addEventListener('DOMContentLoaded', () => {
 window.renderDecks = renderDecks;
 window.startCardStudy = startCardStudy;
 window.answerCard = answerCard;
+window.markCard = markCard;
 window.restartDeck = restartDeck;
 window.exitCards = exitCards;
+window.exitStudy = exitStudy;
+window.toggleFavorite = toggleFavorite;
 window.startMatch = startMatch;
 window.restartMatch = restartMatch;
 window.exitMatch = exitMatch;
+window.skipMatchSet = skipMatchSet;
+window.checkMatch = checkMatch;
