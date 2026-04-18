@@ -703,6 +703,20 @@
       .atlas-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
       .atlas-card-img { min-height: 200px; padding: 20px; }
       .note-editor, .flashcard-container { max-width: 1200px; margin: 0 auto; }
+      /* Для экрана редактора заметок — ширина как у основных экранов */
+#note-editor-screen .note-editor {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+#note-editor-screen .editor-content,
+#note-editor-screen .editor-toolbar,
+#note-editor-screen .editor-title-input {
+  max-width: 100%;
+}
+
+
     }
     .atlas-card { display: flex; flex-direction: column; }
     .atlas-card-img { display: flex; align-items: center; justify-content: center; background: var(--surface2); }
