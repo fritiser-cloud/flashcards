@@ -315,10 +315,7 @@ function closeSampleModal(e) {
     const modal = document.getElementById('sample-modal');
     if (modal) modal.classList.remove('open');
   }
-}
-window.closeSampleModal = closeSampleModal;
-// Экспорт в глобальную область
-window.openAddModal = openAddModal;
+  window.openAddModal = openAddModal;
 window.closeAddModal = closeAddModal;
 window.switchAddTab = switchAddTab;
 window.triggerFileAdd = triggerFileAdd;
@@ -326,4 +323,7 @@ window.handleFileAdd = handleFileAdd;
 window.loadGithubList = loadGithubList;
 window.importFromGithub = importFromGithub;
 window.openSampleModal = openSampleModal;
+window.closeSampleModal = closeSampleModal;
+
+}
 window.closeSampleModal = closeSampleModal;
