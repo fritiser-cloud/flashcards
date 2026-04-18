@@ -1,13 +1,12 @@
-// ==================== НАСТРОЙКИ И ИНИЦИАЛИЗАЦИЯ ====================
+// ==================== НАСТРОЙКИ ИНИЦИАЛИЗАЦИИ ====================
 
-// Настройка marked (если ещё не настроен)
 if (typeof marked !== 'undefined') {
   marked.setOptions({ breaks: true, gfm: true });
 } else {
   window.marked = { parse: (txt) => '<pre>' + (window.escapeHtml ? window.escapeHtml(txt) : txt) + '</pre>' };
 }
 
-// Функция для обновления статистики на экране настроек
+// ==================== СТАТИСТИКА И НАСТРОЙКИ ====================
 function updateSettingsStats() {
   const guides = window.getGuides ? window.getGuides() : [];
   const notes = window.getNotes ? window.getNotes() : [];
@@ -27,7 +26,6 @@ function updateSettingsStats() {
 }
 window.updateSettingsStats = updateSettingsStats;
 
-// Функция для рендеринга экрана настроек (вызывается при переходе)
 function renderSettings() {
   const ghUserInput = document.getElementById('gh-user-input');
   const ghRepoInput = document.getElementById('gh-repo-input');
@@ -37,7 +35,6 @@ function renderSettings() {
 }
 window.renderSettings = renderSettings;
 
-// Сохранение настроек GitHub
 function saveSettings() {
   const ghUser = document.getElementById('gh-user-input')?.value.trim() || 'fritiser-cloud';
   const ghRepo = document.getElementById('gh-repo-input')?.value.trim() || 'flashcards';
@@ -47,7 +44,6 @@ function saveSettings() {
 }
 window.saveSettings = saveSettings;
 
-// Очистка всех данных
 function clearAllData() {
   if (!confirm('Удалить все пособия, колоды, заметки, атлас и историю повторений? Отменить нельзя.')) return;
   localStorage.removeItem('bio_guides');
@@ -55,12 +51,10 @@ function clearAllData() {
   localStorage.removeItem('atlas');
   localStorage.removeItem('gh_user');
   localStorage.removeItem('gh_repo');
-  // Очистка IndexedDB
   window.dbDeleteRange('decks', '');
   window.dbDeleteRange('stats', '');
   window.dbDeleteRange('favorites', '');
-  window.dbDeleteRange('reviews', ''); // очищаем таблицу повторений
-  // Перерисовка
+  window.dbDeleteRange('reviews', '');
   if (window.renderLibrary) window.renderLibrary();
   if (window.renderDecks) window.renderDecks();
   if (window.renderAtlas) window.renderAtlas();
@@ -72,7 +66,7 @@ function clearAllData() {
 }
 window.clearAllData = clearAllData;
 
-// ==================== НАВИГАЦИЯ (с поддержкой календаря) ====================
+// ==================== НАВИГАЦИЯ (С ПОДДЕРЖКОЙ КАЛЕНДАРЯ) ====================
 function navTo(tab) {
   document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('nav-' + tab);
@@ -95,6 +89,9 @@ function navTo(tab) {
     if (window.renderCalendar) {
       window.renderCalendar();
       if (window.renderUpcomingReviews) window.renderUpcomingReviews();
+    } else {
+      console.warn('renderCalendar не определён. Проверьте загрузку calendar.js');
+      window.showToast('⚠️ Ошибка загрузки календаря');
     }
   } else if (tab === 'settings') {
     window.showScreen('settings-screen');
@@ -103,20 +100,30 @@ function navTo(tab) {
 }
 window.navTo = navTo;
 
-// ==================== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ====================
+// Дублирующий обработчик для кнопки календаря (на случай, если navTo не сработает)
+document.addEventListener('DOMContentLoaded', () => {
+  const calendarBtn = document.getElementById('nav-calendar');
+  if (calendarBtn && !calendarBtn.hasAttribute('data-bound')) {
+    calendarBtn.setAttribute('data-bound', 'true');
+    calendarBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      navTo('calendar');
+    });
+  }
+});
+
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
 (async function init() {
   try {
     await window.openDB();
     console.log('✓ База данных инициализирована');
     
-    // Первоначальный рендеринг всех разделов (кроме календаря, он не активен)
     if (window.renderLibrary) window.renderLibrary();
     if (window.renderDecks) await window.renderDecks();
     if (window.renderAtlas) window.renderAtlas();
     if (window.renderNotes) window.renderNotes();
     if (window.updateSettingsStats) window.updateSettingsStats();
     
-    // Запускаем с экрана библиотеки
     if (window.navTo) window.navTo('library');
   } catch (error) {
     console.error('Ошибка инициализации:', error);
@@ -132,11 +139,8 @@ window.addEventListener('online', () => {
   if (window.autoSaveToCloud) window.autoSaveToCloud();
 });
 window.addEventListener('offline', () => window.showToast('🔴 Нет соединения'));
-
 window.addEventListener('error', (event) => console.error('Глобальная ошибка:', event.error));
 window.addEventListener('unhandledrejection', (event) => console.error('Необработанное отклонение:', event.reason));
-
-// Перерисовка линий в match-экране при изменении размера окна
 window.addEventListener('resize', () => {
   if (document.getElementById('match-screen')?.classList.contains('active') && window.drawLines) {
     window.drawLines();
