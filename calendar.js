@@ -1,9 +1,13 @@
-// calendar.js – полная рабочая версия
+// calendar.js – исправленная версия с навигацией по месяцам и корректной сеткой
 
 let currentReviewItem = null;
 let reviewSessionQueue = [];
 let reviewSessionIdx = 0;
 let calendarSearchQuery = '';
+
+// Текущий отображаемый месяц и год
+let currentDisplayMonth = new Date().getMonth();
+let currentDisplayYear = new Date().getFullYear();
 
 function formatDate(date) {
   const year = date.getFullYear();
@@ -18,7 +22,6 @@ function addDays(date, days) {
   return result;
 }
 
-// Алгоритм SM-2
 function calculateNextReview(reviewItem, quality) {
   if (quality < 2) {
     return { repetitions: 0, easiness: 2.5, interval: 1, next_review_date: addDays(new Date(), 1) };
@@ -38,19 +41,23 @@ function calculateNextReview(reviewItem, quality) {
 async function renderCalendar() {
   const container = document.getElementById('calendar-container');
   if (!container) return;
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+  
+  const firstDayOfMonth = new Date(currentDisplayYear, currentDisplayMonth, 1);
+  const lastDayOfMonth = new Date(currentDisplayYear, currentDisplayMonth + 1, 0);
+  
+  // Определяем первый день сетки (понедельник)
   let startDate = new Date(firstDayOfMonth);
-  startDate.setDate(startDate.getDate() - startDate.getDay());
-  let endDate = new Date(lastDayOfMonth);
-  endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+  const startDayOfWeek = startDate.getDay(); // 0 = воскресенье, 1 = понедельник...
+  const offset = (startDayOfWeek === 0) ? -6 : -(startDayOfWeek - 1);
+  startDate.setDate(startDate.getDate() + offset);
+  
+  // Последний день сетки (6 недель)
+  let endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 41);
   
   let html = `<div class="calendar-header">
                 <button class="calendar-nav" onclick="changeMonth(-1)">←</button>
-                <h2>${today.toLocaleString('ru', { month: 'long', year: 'numeric' })}</h2>
+                <h2>${new Date(currentDisplayYear, currentDisplayMonth).toLocaleString('ru', { month: 'long', year: 'numeric' })}</h2>
                 <button class="calendar-nav" onclick="changeMonth(1)">→</button>
               </div>
               <div class="calendar-weekdays">
@@ -66,13 +73,19 @@ async function renderCalendar() {
     reviewMap.get(dateKey).push(review);
   });
   
+  const today = new Date();
+  const todayKey = formatDate(today);
   let currentDate = new Date(startDate);
+  
   while (currentDate <= endDate) {
     const dateKey = formatDate(currentDate);
-    const isToday = formatDate(today) === dateKey;
+    const isToday = (dateKey === todayKey);
+    const isCurrentMonth = (currentDate.getMonth() === currentDisplayMonth && currentDate.getFullYear() === currentDisplayYear);
     const hasReviews = reviewMap.has(dateKey);
     const reviewCount = hasReviews ? reviewMap.get(dateKey).length : 0;
-    html += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasReviews ? 'has-reviews' : ''}" 
+    const extraClass = !isCurrentMonth ? 'other-month' : '';
+    
+    html += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasReviews ? 'has-reviews' : ''} ${extraClass}" 
                   data-date="${dateKey}" onclick="window.selectDate('${dateKey}')">
               <span class="day-number">${currentDate.getDate()}</span>
               ${hasReviews ? `<span class="review-badge">${reviewCount}</span>` : ''}
@@ -85,8 +98,17 @@ async function renderCalendar() {
 window.renderCalendar = renderCalendar;
 
 function changeMonth(delta) {
-  const newDate = new Date();
-  newDate.setMonth(newDate.getMonth() + delta);
+  let newMonth = currentDisplayMonth + delta;
+  let newYear = currentDisplayYear;
+  if (newMonth < 0) {
+    newMonth = 11;
+    newYear--;
+  } else if (newMonth > 11) {
+    newMonth = 0;
+    newYear++;
+  }
+  currentDisplayMonth = newMonth;
+  currentDisplayYear = newYear;
   renderCalendar();
 }
 window.changeMonth = changeMonth;
@@ -106,7 +128,8 @@ function showAddTopicModal() {
 }
 window.showAddTopicModal = showAddTopicModal;
 
-function closeTopicModal() {
+function closeTopicModal(e) {
+  if (e && e.target !== e.currentTarget) return;
   document.getElementById('topic-modal').classList.remove('open');
 }
 window.closeTopicModal = closeTopicModal;
