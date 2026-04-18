@@ -66,17 +66,14 @@ function openGuide(id) {
   const guide = guides.find(g => g.id === id);
   if (!guide) return;
   
-  // Установка заголовка
   const titleEl = window.getElement('guide-title');
   if (titleEl) titleEl.textContent = guide.name;
   
-  // Основной контент
   const contentDiv = window.getElement('guide-content');
   if (!contentDiv) return;
   
   contentDiv.innerHTML = '';
   
-  // Заголовок пособия
   const header = document.createElement('div');
   header.innerHTML = `
     <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 12px;">
@@ -90,7 +87,6 @@ function openGuide(id) {
     </p>
   `;
   
-  // Теги
   if (guide.tags && guide.tags.length) {
     const tagsDiv = document.createElement('div');
     tagsDiv.className = 'card-tags';
@@ -103,7 +99,6 @@ function openGuide(id) {
   
   contentDiv.appendChild(header);
   
-  // Markdown контент
   if (guide.content) {
     const mdDiv = document.createElement('div');
     mdDiv.style.cssText = 'margin-top: 32px; line-height: 1.8;';
@@ -115,14 +110,12 @@ function openGuide(id) {
         mdDiv.innerHTML = '<pre>' + escapeHtml(guide.content) + '</pre>';
       }
     } catch (e) {
-      console.warn('Ошибка рендеринга Markdown:', e);
       mdDiv.innerHTML = '<pre>' + escapeHtml(guide.content) + '</pre>';
     }
     
     contentDiv.appendChild(mdDiv);
   }
   
-  // Кнопка ссылки если есть URL
   if (guide.url) {
     const btnDiv = document.createElement('div');
     btnDiv.style.cssText = 'margin-top: 24px;';
@@ -146,7 +139,6 @@ function addGuideToDecks() {
     return;
   }
   
-  // Конвертируем пособие в колоду и добавляем через IndexedDB
   const deck = {
     id: Date.now(),
     name: guide.name,
@@ -193,7 +185,6 @@ function openAddModal(type) {
   const addModal = window.getElement('add-modal');
   if (addModal) addModal.classList.add('open');
   
-  // Сброс табов
   document.querySelectorAll('.modal-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
   const tabFile = window.getElement('add-tab-file');
   if (tabFile) tabFile.style.display = '';
@@ -397,7 +388,7 @@ function closeSampleModal(e) {
   }
 }
 
-// Экспорт функций
+// Экспорт
 window.filterLibrary = filterLibrary;
 window.filterCat = filterCat;
 window.renderLibrary = renderLibrary;
@@ -413,3 +404,5 @@ window.importFromGithub = importFromGithub;
 window.openSampleModal = openSampleModal;
 window.closeSampleModal = closeSampleModal;
 window.escapeHtml = escapeHtml;
+// Алиас для атласа
+window.createAtlasItem = window.newAtlasItem; // будет определён в atlas.js, но резерв
