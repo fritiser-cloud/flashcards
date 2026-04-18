@@ -1705,8 +1705,92 @@
 <div class="toast" id="toast"></div>
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
 
+<!-- ✅ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (ДО FIREBASE) -->
 <script>
-// ==================== FIREBASE ИНИЦИАЛИЗАЦИЯ ====================
+// Утилита для экранирования HTML (защита от XSS)
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Безопасное получение элемента
+function getElement(id) {
+  const el = document.getElementById(id);
+  if (!el) console.warn(`Element #${id} not found`);
+  return el;
+}
+
+// Функции для localStorage (должны быть ДО Firebase)
+function getNotes() {
+  try { 
+    return JSON.parse(localStorage.getItem('notes') || '[]'); 
+  } catch { 
+    return []; 
+  }
+}
+
+function getAtlasItems() {
+  try { 
+    return JSON.parse(localStorage.getItem('atlas') || '[]'); 
+  } catch { 
+    return []; 
+  }
+}
+
+function getGuides() {
+  try { 
+    return JSON.parse(localStorage.getItem('bio_guides') || '[]'); 
+  } catch { 
+    return []; 
+  }
+}
+
+function saveNotes(notes) {
+  try {
+    localStorage.setItem('notes', JSON.stringify(notes));
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' && window.showToast) {
+      showToast('⚠️ Недостаточно места');
+    }
+  }
+}
+
+function saveAtlasItems(items) {
+  try {
+    localStorage.setItem('atlas', JSON.stringify(items));
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' && window.showToast) {
+      showToast('⚠️ Недостаточно места');
+    }
+  }
+}
+
+function saveGuides(guides) {
+  try {
+    localStorage.setItem('bio_guides', JSON.stringify(guides));
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' && window.showToast) {
+      showToast('⚠️ Недостаточно места');
+    }
+  }
+}
+</script>
+
+<!-- ✅ FIREBASE МОДУЛЬ -->
+<script type="module">
+// ==================== FIREBASE КОНФИГУРАЦИЯ ====================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyAlGPZkNsKMbfezIVwmky4EeXDUOJ-sUpw",
   authDomain: "biolab-app-dc4df.firebaseapp.com",
@@ -1716,20 +1800,149 @@ const firebaseConfig = {
   appId: "1:1070438650586:web:0e77c4a873412a8be60be3"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const firestoreDB = firebase.firestore();  // <-- переименовано!
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 let currentUser = null;
 
-auth.onAuthStateChanged((user) => {
+onAuthStateChanged(auth, (user) => {
   currentUser = user;
   updateAuthUI(user);
-  if (user) {
-    syncAllData();
-  }
+  if (user) syncAllData();
 });
 
-// ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
+function updateAuthUI(user) {
+  const loggedIn = getElement('auth-logged-in');
+  const loggedOut = getElement('auth-logged-out');
+  
+  if (!loggedIn || !loggedOut) return;
+  
+  if (user) {
+    loggedIn.style.display = 'block';
+    loggedOut.style.display = 'none';
+    const nameEl = getElement('user-name');
+    const emailEl = getElement('user-email');
+    const avatarEl = getElement('user-avatar');
+    
+    if (nameEl) nameEl.textContent = user.displayName || 'Пользователь';
+    if (emailEl) emailEl.textContent = user.email;
+    if (avatarEl) avatarEl.src = user.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="32" fill="%239575CD"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="28">👤</text></svg>';
+  } else {
+    loggedIn.style.display = 'none';
+    loggedOut.style.display = 'block';
+  }
+}
+
+window.signInWithGoogle = async function() {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+    if (window.showToast) showToast('✓ Успешный вход!');
+  } catch (error) {
+    console.error('Ошибка входа:', error);
+    if (window.showToast) showToast('⚠️ Ошибка входа');
+  }
+}
+
+window.signOut = async function() {
+  if (!confirm('Выйти из аккаунта?')) return;
+  try {
+    await firebaseSignOut(auth);
+    if (window.showToast) showToast('✓ Вы вышли');
+  } catch (error) {
+    console.error('Ошибка выхода:', error);
+  }
+}
+
+async function syncAllData() {
+  if (!currentUser) return;
+  
+  updateSyncStatus('syncing', 'Синхронизация...');
+  
+  try {
+    const userId = currentUser.uid;
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      const cloudData = userDoc.data();
+      
+      if (cloudData.notes && window.saveNotes) {
+        localStorage.setItem('notes', JSON.stringify(cloudData.notes));
+      }
+      
+      if (cloudData.atlas && window.saveAtlasItems) {
+        localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
+      }
+      
+      if (cloudData.guides && window.saveGuides) {
+        localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
+      }
+      
+      if (window.renderNotes) renderNotes();
+      if (window.renderAtlas) renderAtlas();
+      if (window.renderLibrary) renderLibrary();
+    }
+    
+    await saveToCloud();
+    
+    updateSyncStatus('success', 'Синхронизировано');
+    const lastSyncEl = getElement('last-sync');
+    if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
+  } catch (error) {
+    console.error('Ошибка синхронизации:', error);
+    updateSyncStatus('error', 'Ошибка синхронизации');
+  }
+}
+
+async function saveToCloud() {
+  if (!currentUser) return;
+  
+  try {
+    const userId = currentUser.uid;
+    const data = {
+      notes: getNotes(),
+      atlas: getAtlasItems(),
+      guides: getGuides(),
+      updatedAt: serverTimestamp()
+    };
+    
+    const userDocRef = doc(db, 'users', userId);
+    await setDoc(userDocRef, data, { merge: true });
+  } catch (error) {
+    console.error('Ошибка сохранения:', error);
+  }
+}
+
+function updateSyncStatus(status, text) {
+  const statusEl = getElement('sync-status');
+  if (!statusEl) return;
+  
+  const iconEl = statusEl.querySelector('.sync-icon');
+  const textEl = getElement('sync-text');
+  if (!iconEl || !textEl) return;
+  
+  if (status === 'syncing') {
+    iconEl.className = 'sync-icon';
+    iconEl.textContent = '🔄';
+  } else if (status === 'success') {
+    iconEl.className = 'sync-icon success';
+    iconEl.textContent = '☁️';
+  } else {
+    iconEl.className = 'sync-icon';
+    iconEl.textContent = '⚠️';
+  }
+  
+  textEl.textContent = text;
+}
+
+window.autoSaveToCloud = function() {
+  if (currentUser) saveToCloud();
+}
+</script> <!-- ✅ ЗАКРЫТЬ Firebase модуль -->
+
+<script>
+// ==================== ОСНОВНОЙ КОД ====================
 let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
 let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
 let currentAddType = 'guide';
@@ -1750,25 +1963,17 @@ if (typeof marked === 'undefined') {
   window.marked = { parse: (txt) => '<pre>' + txt.replace(/</g, '&lt;') + '</pre>' };
 }
 
-// ==================== ХРАНИЛИЩЕ ПОСОБИЙ ====================
-function getGuides() {
-  try { return JSON.parse(localStorage.getItem('bio_guides') || '[]'); } catch { return []; }
-}
-function saveGuides(guides) { localStorage.setItem('bio_guides', JSON.stringify(guides)); }
-function addGuide(guide) {
-  const guides = getGuides();
-  const existing = guides.findIndex(g => g.name === guide.name);
-  if (existing >= 0) guides[existing] = guide;
-  else guides.push({ ...guide, id: Date.now() });
-  saveGuides(guides);
-}
-function removeGuide(id) { saveGuides(getGuides().filter(g => g.id !== id)); }
-
 // ==================== INDEXEDDB ====================
 const DB_NAME = 'flashcards_db', DB_VER = 2;
 let db;
+let dbPromise;
+
 function openDB() {
-  return new Promise((res, rej) => {
+  if (dbPromise) return dbPromise;
+  
+  dbPromise = new Promise((res, rej) => {
+    if (db) return res(db);
+    
     const req = indexedDB.open(DB_NAME, DB_VER);
     req.onupgradeneeded = e => {
       const d = e.target.result;
@@ -1779,175 +1984,126 @@ function openDB() {
     req.onsuccess = e => { db = e.target.result; res(db); };
     req.onerror = () => rej(req.error);
   });
+  
+  return dbPromise;
 }
+
 function dbGet(store, key) {
-  return new Promise((r, j) => {
-    if (!db) { r(null); return; }
-    const q = db.transaction(store, 'readonly').objectStore(store).get(key);
-    q.onsuccess = () => r(q.result); q.onerror = () => j(q.error);
-  });
-}
-function dbGetAll(store) {
-  return new Promise((r, j) => {
-    if (!db) { r([]); return; }
-    const q = db.transaction(store, 'readonly').objectStore(store).getAll();
-    q.onsuccess = () => r(q.result); q.onerror = () => j(q.error);
-  });
-}
-function dbPut(store, value) {
-  return new Promise((r, j) => {
-    if (!db) { r(); return; }
-    const q = db.transaction(store, 'readwrite').objectStore(store).put(value);
-    q.onsuccess = () => r(q.result); q.onerror = () => j(q.error);
-  });
-}
-function dbDelete(store, key) {
-  return new Promise((r, j) => {
-    if (!db) { r(); return; }
-    const q = db.transaction(store, 'readwrite').objectStore(store).delete(key);
-    q.onsuccess = () => r(); q.onerror = () => j(q.error);
-  });
-}
-function dbGetRange(store, prefix) {
-  return new Promise((r, j) => {
-    if (!db) { r([]); return; }
-    const range = IDBKeyRange.bound(prefix + '_', prefix + '_\uffff');
-    const q = db.transaction(store, 'readonly').objectStore(store).getAll(range);
-    q.onsuccess = () => r(q.result); q.onerror = () => j(q.error);
-  });
-}
-function dbDeleteRange(store, prefix) {
-  return new Promise((r, j) => {
-    if (!db) { r(); return; }
-    const os = db.transaction(store, 'readwrite').objectStore(store);
-    const range = IDBKeyRange.bound(prefix + '_', prefix + '_\uffff');
-    const req = os.openCursor(range);
-    req.onsuccess = e => { const c = e.target.result; if (c) { c.delete(); c.continue(); } else r(); };
-    req.onerror = () => j(req.error);
-  });
-}
-
-// ==================== ЗАМЕТКИ ====================
-function getNotes() {
-  const notes = localStorage.getItem('notes');
-  return notes ? JSON.parse(notes) : [];
-}
-function saveNotes(notes) {
-  localStorage.setItem('notes', JSON.stringify(notes));
-  autoSaveToCloud();
-}
-
-// ==================== АТЛАС ====================
-function getAtlasItems() {
-  const items = localStorage.getItem('atlas');
-  return items ? JSON.parse(items) : [];
-}
-function saveAtlasItems(items) {
-  localStorage.setItem('atlas', JSON.stringify(items));
-  autoSaveToCloud();
-}
-
-// ==================== АВТОРИЗАЦИЯ ====================
-function updateAuthUI(user) {
-  const loggedIn = document.getElementById('auth-logged-in');
-  const loggedOut = document.getElementById('auth-logged-out');
-  if (user) {
-    if(loggedIn) loggedIn.style.display = 'block';
-    if(loggedOut) loggedOut.style.display = 'none';
-    const nameEl = document.getElementById('user-name');
-    if(nameEl) nameEl.textContent = user.displayName || 'Пользователь';
-    const emailEl = document.getElementById('user-email');
-    if(emailEl) emailEl.textContent = user.email;
-    const avatarEl = document.getElementById('user-avatar');
-    if(avatarEl) avatarEl.src = user.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="32" fill="%239575CD"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="28" font-family="sans-serif">👤</text></svg>';
-  } else {
-    if(loggedIn) loggedIn.style.display = 'none';
-    if(loggedOut) loggedOut.style.display = 'block';
-  }
-}
-
-window.signInWithGoogle = async function() {
-  try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
-    showToast('✓ Успешный вход!');
-  } catch (error) {
-    console.error('Ошибка входа:', error);
-    showToast('⚠️ Ошибка входа: ' + error.message);
-  }
-}
-
-window.signOut = async function() {
-  if (!confirm('Выйти из аккаунта? Локальные данные сохранятся.')) return;
-  try {
-    await auth.signOut();
-    showToast('✓ Вы вышли из аккаунта');
-  } catch (error) {
-    console.error('Ошибка выхода:', error);
-    showToast('⚠️ Ошибка выхода');
-  }
-}
-
-// ==================== СИНХРОНИЗАЦИЯ ====================
-async function syncAllData() {
-  if (!currentUser) return;
-  updateSyncStatus('syncing', 'Синхронизация...');
-  try {
-    const userId = currentUser.uid;
-    const userDocRef = firestoreDB.collection('users').doc(userId);
-    const userDoc = await userDocRef.get();
-    if (userDoc.exists) {
-      const cloudData = userDoc.data();
-      if (cloudData.notes) localStorage.setItem('notes', JSON.stringify(cloudData.notes));
-      if (cloudData.atlas) localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
-      if (cloudData.guides) localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
-      if (window.renderNotes) renderNotes();
-      if (window.renderAtlas) renderAtlas();
-      if (window.renderLibrary) renderLibrary();
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized. Call openDB() first.'));
+      return;
     }
-    await saveToCloud();
-    updateSyncStatus('success', 'Все данные синхронизированы');
-    const lastSyncEl = document.getElementById('last-sync');
-    if(lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
-  } catch (error) {
-    console.error('Ошибка синхронизации:', error);
-    updateSyncStatus('error', 'Ошибка синхронизации');
-  }
+    
+    try {
+      const transaction = db.transaction(store, 'readonly');
+      const objectStore = transaction.objectStore(store);
+      const request = objectStore.get(key);
+      
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
-async function saveToCloud() {
-  if (!currentUser) return;
-  try {
-    const userId = currentUser.uid;
-    const data = {
-      notes: getNotes(),
-      atlas: getAtlasItems(),
-      guides: getGuides(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    await firestoreDB.collection('users').doc(userId).set(data, { merge: true });
-  } catch (error) {
-    console.error('Ошибка сохранения:', error);
-  }
+function dbGetAll(store) {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+    
+    try {
+      const request = db.transaction(store, 'readonly').objectStore(store).getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
-function updateSyncStatus(status, text) {
-  const statusEl = document.getElementById('sync-status');
-  if (!statusEl) return;
-  const iconEl = statusEl.querySelector('.sync-icon');
-  const textEl = document.getElementById('sync-text');
-  if (status === 'syncing') {
-    if(iconEl) { iconEl.className = 'sync-icon'; iconEl.textContent = '🔄'; }
-  } else if (status === 'success') {
-    if(iconEl) { iconEl.className = 'sync-icon success'; iconEl.textContent = '☁️'; }
-  } else if (status === 'error') {
-    if(iconEl) { iconEl.className = 'sync-icon'; iconEl.textContent = '⚠️'; }
-  }
-  if(textEl) textEl.textContent = text;
+function dbPut(store, value) {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+    
+    try {
+      const request = db.transaction(store, 'readwrite').objectStore(store).put(value);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
-window.autoSaveToCloud = function() {
-  if (currentUser) saveToCloud();
+function dbDelete(store, key) {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+    
+    try {
+      const request = db.transaction(store, 'readwrite').objectStore(store).delete(key);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function dbGetRange(store, prefix) {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+    
+    try {
+      const range = IDBKeyRange.bound(prefix + '_', prefix + '_\uffff');
+      const request = db.transaction(store, 'readonly').objectStore(store).getAll(range);
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function dbDeleteRange(store, prefix) {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+    
+    try {
+      const transaction = db.transaction(store, 'readwrite');
+      const objectStore = transaction.objectStore(store);
+      const range = IDBKeyRange.bound(prefix + '_', prefix + '_\uffff');
+      const request = objectStore.openCursor(range);
+      
+      request.onsuccess = e => {
+        const cursor = e.target.result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        } else {
+          resolve();
+        }
+      };
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
@@ -1956,21 +2112,25 @@ function plural(n, one, few, many) {
   if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return few;
   return many;
 }
+
 let toastTimer;
 function showToast(msg) {
-  const t = document.getElementById('toast');
+  const t = getElement('toast');
   if (!t) return;
   t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const el = document.getElementById(id);
+  const el = getElement(id);
   if (el) el.classList.add('active');
   window.scrollTo(0, 0);
+  
   const bottomNav = document.querySelector('.bottom-nav');
   if (!bottomNav) return;
+  
   const hideNavScreens = ['guide-detail-screen', 'study-screen', 'match-screen', 'results-screen', 'errors-screen', 'note-editor-screen', 'atlas-detail-screen', 'atlas-editor-screen'];
   if (hideNavScreens.includes(id)) {
     bottomNav.classList.add('hidden');
@@ -1978,10 +2138,12 @@ function showScreen(id) {
     bottomNav.classList.remove('hidden');
   }
 }
+
 function navTo(tab) {
   document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('nav-' + tab);
+  const btn = getElement('nav-' + tab);
   if (btn) btn.classList.add('active');
+  
   if (tab === 'library') { showScreen('library-screen'); renderLibrary(); }
   else if (tab === 'decks') { showScreen('decks-screen'); renderDecks(); }
   else if (tab === 'atlas') { showScreen('atlas-screen'); renderAtlas(); }
@@ -1996,103 +2158,126 @@ function filterCat(cat, btn) {
   btn.classList.add('active');
   renderLibrary();
 }
+
 function renderLibrary() {
   const guides = getGuides();
-  const list = document.getElementById('guides-list');
+  const list = getElement('guides-list');
   if (!list) return;
+  
   const filtered = currentCat === 'all' ? guides : guides.filter(g => g.category === currentCat);
+  
   if (filtered.length === 0) {
-    list.innerHTML = `<div class="empty"><div class="empty-icon">📚</div><div class="empty-text">${guides.length === 0 ? 'Библиотека пуста.<br>Нажми + чтобы добавить пособие' : 'Нет пособий в этой категории'}</div></div>`;
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📚</div><div class="empty-text">${guides.length === 0 ? 'Библиотека пуста' : 'Нет пособий в этой категории'}</div></div>`;
     return;
   }
+  
   list.innerHTML = '';
+  
   filtered.forEach(guide => {
     const card = document.createElement('div');
     card.className = `guide-card ${guide.category || 'bio'}`;
+    
     const tags = (guide.tags || []).map((t, i) => {
       const cls = ['', 'sage', 'peach', 'sky'][i % 4];
-      return `<span class="card-tag ${cls}">${t}</span>`;
+      return `<span class="card-tag ${cls}">${escapeHtml(t)}</span>`;
     }).join('');
+    
     card.innerHTML = `
       <div class="card-emoji">${guide.icon || '📖'}</div>
-      <div class="card-title">${guide.name}</div>
-      <div class="card-sub">${guide.desc || ''}</div>
+      <div class="card-title">${escapeHtml(guide.name)}</div>
+      <div class="card-sub">${escapeHtml(guide.desc || '')}</div>
       <div class="card-tags">${tags}</div>
       <div class="card-arrow">›</div>`;
+    
     card.onclick = () => openGuide(guide.id);
     list.appendChild(card);
   });
 }
+
 function openGuide(id) {
   currentGuideId = id;
   const guide = getGuides().find(g => g.id === id);
   if (!guide) return;
-  document.getElementById('guide-detail-title').textContent = guide.name;
-  document.getElementById('guide-name').textContent = guide.name;
-  document.getElementById('guide-category-label').textContent = { bio: '🧬 Биология', ru: '✍️ Русский язык', phys: '⚗️ Химия / Физика' }[guide.category] || '📖 Пособие';
-  document.getElementById('guide-desc').textContent = guide.desc || '';
-  document.getElementById('guide-delete-btn').onclick = () => deleteGuide(id);
-  document.getElementById('guide-tags').innerHTML = (guide.tags || []).map((t, i) => `<span class="card-tag ${['', 'sage', 'peach', 'sky'][i % 4]}">${t}</span>`).join('');
+  
+  const titleEl = getElement('guide-detail-title');
+  if (titleEl) titleEl.textContent = guide.name;
+  const nameEl = getElement('guide-name');
+  if (nameEl) nameEl.textContent = guide.name;
+  const catLabel = getElement('guide-category-label');
+  if (catLabel) catLabel.textContent = { bio: '🧬 Биология', ru: '✍️ Русский язык', phys: '⚗️ Химия / Физика' }[guide.category] || '📖 Пособие';
+  const descEl = getElement('guide-desc');
+  if (descEl) descEl.textContent = guide.desc || '';
+  
+  const deleteBtn = getElement('guide-delete-btn');
+  if (deleteBtn) deleteBtn.onclick = () => deleteGuide(id);
+  
+  const tagsEl = getElement('guide-tags');
+  if (tagsEl) tagsEl.innerHTML = (guide.tags || []).map((t, i) => `<span class="card-tag ${['', 'sage', 'peach', 'sky'][i % 4]}">${escapeHtml(t)}</span>`).join('');
+  
   const chapters = guide.chapters || [];
-  const statsEl = document.getElementById('guide-stats');
-  const chapEl = document.getElementById('guide-chapters-list');
+  const statsEl = getElement('guide-stats');
+  const chapEl = getElement('guide-chapters-list');
+  
   if (chapters.length) {
-    statsEl.style.display = '';
-    document.getElementById('stat-chapters').textContent = chapters.length;
-    document.getElementById('stat-tasks').textContent = chapters.reduce((s, c) => s + (c.tasks || 0), 0);
-    chapEl.innerHTML = '';
-    chapters.forEach((ch, i) => {
-      const item = document.createElement('div');
-      item.className = 'chapter-item';
-      item.innerHTML = `
-        <div class="chapter-num">${i + 1}</div>
-        <div class="chapter-info">
-          <div class="chapter-name">${ch.title}</div>
-          <div class="chapter-tasks">${ch.tasks ? ch.tasks + ' задач' : 'Теория'}</div>
-        </div>
-        <div class="chapter-arrow">›</div>`;
-      chapEl.appendChild(item);
-    });
+    if (statsEl) statsEl.style.display = '';
+    const chaptersCount = getElement('stat-chapters');
+    if (chaptersCount) chaptersCount.textContent = chapters.length;
+    const tasksCount = getElement('stat-tasks');
+    if (tasksCount) tasksCount.textContent = chapters.reduce((s, c) => s + (c.tasks || 0), 0);
+    
+    if (chapEl) {
+      chapEl.innerHTML = '';
+      chapters.forEach((ch, i) => {
+        const item = document.createElement('div');
+        item.className = 'chapter-item';
+        item.innerHTML = `
+          <div class="chapter-num">${i + 1}</div>
+          <div class="chapter-info">
+            <div class="chapter-name">${escapeHtml(ch.title)}</div>
+            <div class="chapter-tasks">${ch.tasks ? ch.tasks + ' задач' : 'Теория'}</div>
+          </div>
+          <div class="chapter-arrow">›</div>`;
+        chapEl.appendChild(item);
+      });
+    }
   } else {
-    statsEl.style.display = 'none';
-    chapEl.innerHTML = '';
+    if (statsEl) statsEl.style.display = 'none';
+    if (chapEl) chapEl.innerHTML = '';
   }
 
-  const mdContainer = document.getElementById('guide-markdown-content');
-  const actionsDiv = document.getElementById('guide-action-buttons');
-  try {
-    if (guide.content) {
-      mdContainer.innerHTML = marked.parse(guide.content);
+  const mdContainer = getElement('guide-markdown-content');
+  const actionsDiv = getElement('guide-action-buttons');
+  
+  if (mdContainer && actionsDiv) {
+    try {
+      if (guide.content) {
+        mdContainer.innerHTML = marked.parse(guide.content);
+        mdContainer.style.display = 'block';
+        actionsDiv.innerHTML = guide.url ? `<button class="btn btn-secondary" onclick="openGuideUrl()">🔗 Открыть оригинал</button>` : '';
+      } else {
+        mdContainer.style.display = 'none';
+        actionsDiv.innerHTML = guide.url ? `<button class="btn btn-primary" onclick="openGuideUrl()">📖 Открыть пособие</button>` : '';
+      }
+    } catch (e) {
+      console.warn('Ошибка рендеринга Markdown:', e);
+      mdContainer.innerHTML = '<pre>' + escapeHtml(guide.content || '') + '</pre>';
       mdContainer.style.display = 'block';
-      if (guide.url) {
-        actionsDiv.innerHTML = `<button class="btn btn-secondary" onclick="openGuideUrl()">🔗 Открыть оригинал</button>`;
-      } else {
-        actionsDiv.innerHTML = '';
-      }
-    } else {
-      mdContainer.style.display = 'none';
-      if (guide.url) {
-        actionsDiv.innerHTML = `<button class="btn btn-primary" onclick="openGuideUrl()">📖 Открыть пособие</button>`;
-      } else {
-        actionsDiv.innerHTML = '';
-      }
     }
-  } catch (e) {
-    console.warn('Ошибка рендеринга Markdown:', e);
-    mdContainer.innerHTML = '<pre>' + (guide.content || '').replace(/</g, '&lt;') + '</pre>';
-    mdContainer.style.display = 'block';
   }
 
   showScreen('guide-detail-screen');
 }
+
 function openGuideUrl() {
   const guide = getGuides().find(g => g.id === currentGuideId);
   if (guide?.url) window.open(guide.url, '_blank');
   else showToast('URL пособия не указан');
 }
+
 function deleteGuide(id) {
   if (!confirm('Удалить пособие?')) return;
-  removeGuide(id);
+  const guides = getGuides().filter(g => g.id !== id);
+  saveGuides(guides);
   showScreen('library-screen');
   renderLibrary();
   showToast('Пособие удалено');
@@ -2100,108 +2285,155 @@ function deleteGuide(id) {
 
 // ==================== КОЛОДЫ (КАРТОЧКИ) ====================
 async function renderDecks() {
-  const decks = await dbGetAll('decks');
-  const allStats = await dbGetAll('stats');
-  const list = document.getElementById('decks-list');
-  const sub = document.getElementById('decks-sub');
-  if (!list) return;
-  if (!decks.length) {
-    sub.textContent = 'Загрузи колоду через +';
-    list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Нет колод.<br>Нажми + чтобы добавить</div></div>`;
-    return;
-  }
-  sub.textContent = `${decks.length} ${plural(decks.length, 'колода', 'колоды', 'колод')}`;
-  list.innerHTML = '';
-  for (const deck of decks) {
-    const isMatch = deck.type === 'match';
-    const total = deck.cards.length;
-    let pct = 0;
-    if (!isMatch) {
-      const deckStats = allStats.filter(s => s.id.startsWith(deck.id + '_'));
-      const mastered = deckStats.filter(s => (s.known || 0) > 0 && (s.errors || 0) === 0).length;
-      pct = total ? Math.round(mastered / total * 100) : 0;
+  try {
+    const decks = await dbGetAll('decks');
+    const allStats = await dbGetAll('stats');
+    const list = getElement('decks-list');
+    const sub = getElement('decks-sub');
+    if (!list) return;
+    
+    if (!decks.length) {
+      if (sub) sub.textContent = 'Загрузи колоду через +';
+      list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Нет колод.<br>Нажми + чтобы добавить</div></div>`;
+      return;
     }
-    const el = document.createElement('div');
-    el.className = 'deck-item';
-    el.innerHTML = `
-      <div class="deck-icon" style="background:${deck.color || '#E8F4EE'}">${deck.icon || '📚'}</div>
-      <div class="deck-info">
-        <div class="deck-name">${deck.name}</div>
-        <div class="deck-meta">${total} ${isMatch ? 'блоков' : 'карточек'}${!isMatch ? ' · ' + pct + '% освоено' : ''}</div>
-        ${!isMatch ? `<div class="deck-progress"><div class="deck-progress-fill" style="width:${pct}%"></div></div>` : ''}
-      </div>
-      <span class="deck-type-badge ${isMatch ? 'match' : ''}">${isMatch ? '🔗 Паронимы' : '📋 Карточки'}</span>
-      <div class="deck-arrow">›</div>`;
-    el.onclick = () => openDeck(deck.id);
-    list.appendChild(el);
+    
+    if (sub) sub.textContent = `${decks.length} ${plural(decks.length, 'колода', 'колоды', 'колод')}`;
+    list.innerHTML = '';
+    
+    for (const deck of decks) {
+      const isMatch = deck.type === 'match';
+      const total = deck.cards.length;
+      let pct = 0;
+      
+      if (!isMatch) {
+        const deckStats = allStats.filter(s => s.id.startsWith(deck.id + '_'));
+        const mastered = deckStats.filter(s => (s.known || 0) > 0 && (s.errors || 0) === 0).length;
+        pct = total ? Math.round(mastered / total * 100) : 0;
+      }
+      
+      const el = document.createElement('div');
+      el.className = 'deck-item';
+      el.innerHTML = `
+        <div class="deck-icon" style="background:${deck.color || '#E8F4EE'}">${deck.icon || '📚'}</div>
+        <div class="deck-info">
+          <div class="deck-name">${escapeHtml(deck.name)}</div>
+          <div class="deck-meta">${total} ${isMatch ? 'блоков' : 'карточек'}${!isMatch ? ' · ' + pct + '% освоено' : ''}</div>
+          ${!isMatch ? `<div class="deck-progress"><div class="deck-progress-fill" style="width:${pct}%"></div></div>` : ''}
+        </div>
+        <span class="deck-type-badge ${isMatch ? 'match' : ''}">${isMatch ? '🔗 Паронимы' : '📋 Карточки'}</span>
+        <div class="deck-arrow">›</div>`;
+      el.onclick = () => openDeck(deck.id);
+      list.appendChild(el);
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки колод:', error);
+    const list = getElement('decks-list');
+    if (list) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Ошибка загрузки данных</div></div>';
+    }
   }
 }
+
 async function openDeck(deckId) {
-  currentDeckId = deckId;
-  const deck = await dbGet('decks', deckId);
-  if (!deck) return;
-  const isMatch = deck.type === 'match';
-  document.getElementById('deck-detail-icon').textContent = deck.icon || '📚';
-  document.getElementById('deck-detail-name').textContent = deck.name;
-  document.getElementById('deck-detail-nav-title').textContent = deck.name;
-  document.getElementById('deck-detail-sub').textContent = `${deck.cards.length} ${isMatch ? 'блоков паронимов' : 'карточек'}`;
-  document.getElementById('deck-delete-btn').onclick = () => deleteDeck(deckId);
-  const actionsEl = document.getElementById('deck-actions');
-  const statsRow = document.getElementById('deck-stats-row');
-  const hardSection = document.getElementById('hard-section');
-  if (isMatch) {
-    statsRow.style.display = 'none';
-    hardSection.style.display = 'none';
-    actionsEl.innerHTML = `
-      <button class="btn btn-primary" onclick="startMatch(${deckId})">▶ Начать тренировку</button>
-      <button class="btn btn-secondary" onclick="deleteDeck(${deckId})">🗑 Удалить колоду</button>`;
-  } else {
-    statsRow.style.display = 'grid';
-    hardSection.style.display = 'block';
-    const allStats = await dbGetRange('stats', String(deckId));
-    const known = allStats.reduce((a, s) => a + (s.known || 0), 0);
-    const errors = allStats.reduce((a, s) => a + (s.errors || 0), 0);
-    const errorCards = allStats.filter(s => (s.errors || 0) > 0);
-    document.getElementById('deck-known').textContent = known;
-    document.getElementById('deck-errors').textContent = errors;
-    const favs = await dbGetRange('favorites', String(deckId));
-    const favCount = favs.length;
-    actionsEl.innerHTML = `
-      <button class="btn btn-primary" id="btn-study-all">▶ Учить все</button>
-      <button class="btn btn-fav" id="btn-study-fav">⭐ Избранное <span id="fav-count">${favCount ? '('+favCount+')' : ''}</span></button>
-      <button class="btn btn-danger" id="btn-study-errors" ${errorCards.length ? '' : 'disabled'}>⚡ Отработать ошибки</button>
-      <button class="btn btn-notes" id="btn-notes-deck">📋 Конспект ошибок</button>
-      <button class="btn btn-secondary" id="btn-reset">↺ Сбросить прогресс</button>`;
-    document.getElementById('btn-study-all').onclick = () => startStudy(deckId, false, false);
-    document.getElementById('btn-study-fav').onclick = () => startStudy(deckId, false, true);
-    document.getElementById('btn-study-errors').onclick = () => startStudy(deckId, true, false);
-    document.getElementById('btn-reset').onclick = () => resetDeck(deckId);
-    document.getElementById('btn-notes-deck').onclick = () => openNotesDeck(deckId);
-    const hardList = document.getElementById('hard-list');
-    const sorted = allStats.filter(s => (s.errors || 0) > 0).sort((a, b) => (b.errors || 0) - (a.errors || 0)).slice(0, 5);
-    if (sorted.length === 0) {
-      hardList.innerHTML = `<div class="empty" style="padding:20px"><div class="empty-text">Ошибок пока нет 🎉</div></div>`;
+  try {
+    currentDeckId = deckId;
+    const deck = await dbGet('decks', deckId);
+    if (!deck) return;
+    
+    const isMatch = deck.type === 'match';
+    const iconEl = getElement('deck-detail-icon');
+    if (iconEl) iconEl.textContent = deck.icon || '📚';
+    const nameEl = getElement('deck-detail-name');
+    if (nameEl) nameEl.textContent = deck.name;
+    const navTitle = getElement('deck-detail-nav-title');
+    if (navTitle) navTitle.textContent = deck.name;
+    const subEl = getElement('deck-detail-sub');
+    if (subEl) subEl.textContent = `${deck.cards.length} ${isMatch ? 'блоков паронимов' : 'карточек'}`;
+    
+    const deleteBtn = getElement('deck-delete-btn');
+    if (deleteBtn) deleteBtn.onclick = () => deleteDeck(deckId);
+    
+    const actionsEl = getElement('deck-actions');
+    const statsRow = getElement('deck-stats-row');
+    const hardSection = getElement('hard-section');
+    
+    if (isMatch) {
+      if (statsRow) statsRow.style.display = 'none';
+      if (hardSection) hardSection.style.display = 'none';
+      if (actionsEl) actionsEl.innerHTML = `
+        <button class="btn btn-primary" onclick="startMatch(${deckId})">▶ Начать тренировку</button>
+        <button class="btn btn-secondary" onclick="deleteDeck(${deckId})">🗑 Удалить колоду</button>`;
     } else {
-      hardList.innerHTML = '';
-      sorted.forEach((s, i) => {
-        const idx = parseInt(s.id.split('_')[1]);
-        const card = deck.cards[idx];
-        if (!card) return;
-        const el = document.createElement('div');
-        el.className = 'hard-item';
-        el.innerHTML = `<div class="hard-rank">${i+1}</div><div class="hard-info"><div class="hard-q">${card.q}</div><div class="hard-stat">${s.known||0} верно · ${s.errors||0} ошибок</div></div><div class="hard-badge">${s.errors} ✕</div>`;
-        hardList.appendChild(el);
-      });
+      if (statsRow) statsRow.style.display = 'grid';
+      if (hardSection) hardSection.style.display = 'block';
+      
+      const allStats = await dbGetRange('stats', String(deckId));
+      const known = allStats.reduce((a, s) => a + (s.known || 0), 0);
+      const errors = allStats.reduce((a, s) => a + (s.errors || 0), 0);
+      const errorCards = allStats.filter(s => (s.errors || 0) > 0);
+      
+      const knownEl = getElement('deck-known');
+      if (knownEl) knownEl.textContent = known;
+      const errorsEl = getElement('deck-errors');
+      if (errorsEl) errorsEl.textContent = errors;
+      
+      const favs = await dbGetRange('favorites', String(deckId));
+      const favCount = favs.length;
+      
+      if (actionsEl) actionsEl.innerHTML = `
+        <button class="btn btn-primary" id="btn-study-all">▶ Учить все</button>
+        <button class="btn btn-fav" id="btn-study-fav">⭐ Избранное <span id="fav-count">${favCount ? '('+favCount+')' : ''}</span></button>
+        <button class="btn btn-danger" id="btn-study-errors" ${errorCards.length ? '' : 'disabled'}>⚡ Отработать ошибки</button>
+        <button class="btn btn-notes" id="btn-notes-deck">📋 Конспект ошибок</button>
+        <button class="btn btn-secondary" id="btn-reset">↺ Сбросить прогресс</button>`;
+      
+      const studyAll = getElement('btn-study-all');
+      if (studyAll) studyAll.onclick = () => startStudy(deckId, false, false);
+      const studyFav = getElement('btn-study-fav');
+      if (studyFav) studyFav.onclick = () => startStudy(deckId, false, true);
+      const studyErrors = getElement('btn-study-errors');
+      if (studyErrors) studyErrors.onclick = () => startStudy(deckId, true, false);
+      const resetBtn = getElement('btn-reset');
+      if (resetBtn) resetBtn.onclick = () => resetDeck(deckId);
+      const notesBtn = getElement('btn-notes-deck');
+      if (notesBtn) notesBtn.onclick = () => openNotesDeck(deckId);
+      
+      const hardList = getElement('hard-list');
+      const sorted = allStats.filter(s => (s.errors || 0) > 0).sort((a, b) => (b.errors || 0) - (a.errors || 0)).slice(0, 5);
+      
+      if (hardList) {
+        if (sorted.length === 0) {
+          hardList.innerHTML = `<div class="empty" style="padding:20px"><div class="empty-text">Ошибок пока нет 🎉</div></div>`;
+        } else {
+          hardList.innerHTML = '';
+          sorted.forEach((s, i) => {
+            const idx = parseInt(s.id.split('_')[1]);
+            const card = deck.cards[idx];
+            if (!card) return;
+            const el = document.createElement('div');
+            el.className = 'hard-item';
+            el.innerHTML = `<div class="hard-rank">${i+1}</div><div class="hard-info"><div class="hard-q">${escapeHtml(card.q)}</div><div class="hard-stat">${s.known||0} верно · ${s.errors||0} ошибок</div></div><div class="hard-badge">${s.errors} ✕</div>`;
+            hardList.appendChild(el);
+          });
+        }
+      }
     }
+    
+    showScreen('deck-detail-screen');
+  } catch (error) {
+    console.error('Ошибка открытия колоды:', error);
+    showToast('⚠️ Ошибка загрузки колоды');
   }
-  showScreen('deck-detail-screen');
 }
+
 async function resetDeck(deckId) {
   if (!confirm('Сбросить прогресс этой колоды?')) return;
   await dbDeleteRange('stats', String(deckId));
   await openDeck(deckId);
   showToast('Прогресс сброшен');
 }
+
 async function deleteDeck(deckId) {
   if (!confirm('Удалить колоду?')) return;
   await dbDelete('decks', deckId);
@@ -2219,6 +2451,7 @@ async function startStudy(deckId, errorsOnly, favOnly) {
   isFavMode = favOnly;
   const deck = await dbGet('decks', deckId);
   const allStats = await dbGetRange('stats', String(deckId));
+  
   let indices;
   if (favOnly) {
     const favs = await dbGetRange('favorites', String(deckId));
@@ -2228,71 +2461,107 @@ async function startStudy(deckId, errorsOnly, favOnly) {
   } else {
     indices = deck.cards.map((_, i) => i);
   }
+  
   indices = indices.sort(() => Math.random() - 0.5);
   studyQueue = indices.map(i => ({ ...deck.cards[i], idx: i }));
   studyIdx = 0; sessionKnown = 0; sessionErrors = 0; sessionErrorCards = [];
-  document.getElementById('study-deck-name').textContent = (favOnly ? '⭐ ' : '') + deck.name;
+  
+  const nameEl = getElement('study-deck-name');
+  if (nameEl) nameEl.textContent = (favOnly ? '⭐ ' : '') + deck.name;
+  
   showScreen('study-screen');
   showCard();
 }
+
 function showCard() {
   if (studyIdx >= studyQueue.length) { showResults(); return; }
   const card = studyQueue[studyIdx];
-  document.getElementById('study-prog').style.width = (studyIdx / studyQueue.length * 100) + '%';
-  document.getElementById('study-counter').textContent = `${studyIdx + 1} / ${studyQueue.length}`;
-  document.getElementById('fc-question').textContent = card.q;
-  document.getElementById('fc-answer').textContent = card.a;
+  
+  const progEl = getElement('study-prog');
+  if (progEl) progEl.style.width = (studyIdx / studyQueue.length * 100) + '%';
+  const counterEl = getElement('study-counter');
+  if (counterEl) counterEl.textContent = `${studyIdx + 1} / ${studyQueue.length}`;
+  const questionEl = getElement('fc-question');
+  if (questionEl) questionEl.textContent = card.q;
+  const answerEl = getElement('fc-answer');
+  if (answerEl) answerEl.textContent = card.a;
+  
   isFlipped = false;
-  document.getElementById('flashcard').classList.remove('flipped');
-  document.getElementById('study-actions').style.visibility = 'hidden';
+  const flashcard = getElement('flashcard');
+  if (flashcard) flashcard.classList.remove('flipped');
+  const actionsEl = getElement('study-actions');
+  if (actionsEl) actionsEl.style.visibility = 'hidden';
+  
   updateFavBtn();
 }
+
 function flipCard() {
   if (isFlipped) return;
   isFlipped = true;
-  document.getElementById('flashcard').classList.add('flipped');
-  setTimeout(() => document.getElementById('study-actions').style.visibility = 'visible', 300);
+  const flashcard = getElement('flashcard');
+  if (flashcard) flashcard.classList.add('flipped');
+  setTimeout(() => {
+    const actionsEl = getElement('study-actions');
+    if (actionsEl) actionsEl.style.visibility = 'visible';
+  }, 300);
 }
+
 async function markCard(known) {
   const card = studyQueue[studyIdx];
   const statId = `${currentDeckId}_${card.idx}`;
   let stat = await dbGet('stats', statId) || { id: statId, known: 0, errors: 0 };
-  if (known) { stat.known = (stat.known || 0) + 1; sessionKnown++; }
-  else { stat.errors = (stat.errors || 0) + 1; sessionErrors++; sessionErrorCards.push({ q: card.q, a: card.a }); }
+  
+  if (known) {
+    stat.known = (stat.known || 0) + 1;
+    sessionKnown++;
+  } else {
+    stat.errors = (stat.errors || 0) + 1;
+    sessionErrors++;
+    sessionErrorCards.push({ q: card.q, a: card.a });
+  }
+  
   await dbPut('stats', stat);
   studyIdx++;
   showCard();
 }
+
 function exitStudy() { openDeck(currentDeckId); }
+
 async function updateFavBtn() {
   if (studyIdx >= studyQueue.length) return;
   const card = studyQueue[studyIdx];
   const favId = `${currentDeckId}_${card.idx}`;
   const existing = await dbGet('favorites', favId);
-  const btn = document.getElementById('fav-btn');
+  const btn = getElement('fav-btn');
   if (btn) {
     btn.textContent = existing ? '★' : '☆';
     btn.classList.toggle('active', !!existing);
   }
 }
+
 async function toggleFavorite() {
   if (studyIdx >= studyQueue.length) return;
   const card = studyQueue[studyIdx];
   const favId = `${currentDeckId}_${card.idx}`;
   const existing = await dbGet('favorites', favId);
-  const btn = document.getElementById('fav-btn');
+  const btn = getElement('fav-btn');
+  
   if (existing) {
     await dbDelete('favorites', favId);
-    btn.textContent = '☆';
-    btn.classList.remove('active');
+    if (btn) {
+      btn.textContent = '☆';
+      btn.classList.remove('active');
+    }
     showToast('Убрано из избранного');
     if (isFavMode) { studyIdx++; showCard(); }
   } else {
     await dbPut('favorites', { id: favId });
-    btn.textContent = '★';
-    btn.classList.add('active');
-    btn.classList.add('pop');
-    setTimeout(() => btn.classList.remove('pop'), 200);
+    if (btn) {
+      btn.textContent = '★';
+      btn.classList.add('active');
+      btn.classList.add('pop');
+      setTimeout(() => btn.classList.remove('pop'), 200);
+    }
     showToast('Добавлено в избранное ⭐');
   }
 }
@@ -2305,32 +2574,55 @@ async function startMatch(deckId) {
   matchSetIdx = 0;
   matchSessionCorrect = 0;
   matchSessionWrong = 0;
-  document.getElementById('match-deck-name').textContent = deck.name;
+  
+  const nameEl = getElement('match-deck-name');
+  if (nameEl) nameEl.textContent = deck.name;
+  
   showScreen('match-screen');
   renderMatchSet();
 }
+
 function renderMatchSet() {
   if (matchSetIdx >= matchSets.length) { showMatchResults(); return; }
+  
   const set = matchSets[matchSetIdx];
   const pairs = set.pairs;
   const total = matchSets.length;
-  document.getElementById('match-prog').style.width = (matchSetIdx / total * 100) + '%';
-  document.getElementById('match-counter').textContent = `${matchSetIdx + 1} / ${total}`;
-  document.getElementById('match-set-title').textContent = `Соедини слова с примерами`;
-  document.getElementById('match-result-bar').className = 'match-result-bar';
-  document.getElementById('match-hints').innerHTML = '';
-  document.getElementById('btn-check').disabled = true;
-  document.getElementById('btn-check').textContent = 'Проверить';
-  document.getElementById('btn-check').onclick = checkMatch;
-  document.getElementById('match-svg').innerHTML = '';
+  
+  const progEl = getElement('match-prog');
+  if (progEl) progEl.style.width = (matchSetIdx / total * 100) + '%';
+  const counterEl = getElement('match-counter');
+  if (counterEl) counterEl.textContent = `${matchSetIdx + 1} / ${total}`;
+  const titleEl = getElement('match-set-title');
+  if (titleEl) titleEl.textContent = `Соедини слова с примерами`;
+  
+  const resultBar = getElement('match-result-bar');
+  if (resultBar) resultBar.className = 'match-result-bar';
+  const hintsEl = getElement('match-hints');
+  if (hintsEl) hintsEl.innerHTML = '';
+  
+  const checkBtn = getElement('btn-check');
+  if (checkBtn) {
+    checkBtn.disabled = true;
+    checkBtn.textContent = 'Проверить';
+    checkBtn.onclick = checkMatch;
+  }
+  
+  const svg = getElement('match-svg');
+  if (svg) svg.innerHTML = '';
+  
   matchSelected = { left: null, right: null };
   matchConnections = [];
   matchChecked = false;
+  
   const leftItems = pairs.map((p, i) => ({ ...p, idx: i }));
   const rightItems = [...pairs].map((p, i) => ({ ...p, idx: i })).sort(() => Math.random() - 0.5);
-  const leftCol = document.getElementById('match-col-left');
-  const rightCol = document.getElementById('match-col-right');
-  leftCol.innerHTML = ''; rightCol.innerHTML = '';
+  
+  const leftCol = getElement('match-col-left');
+  const rightCol = getElement('match-col-right');
+  if (leftCol) leftCol.innerHTML = '';
+  if (rightCol) rightCol.innerHTML = '';
+  
   leftItems.forEach((item, i) => {
     const el = document.createElement('div');
     el.className = 'match-chip';
@@ -2338,8 +2630,9 @@ function renderMatchSet() {
     el.dataset.idx = i;
     el.dataset.side = 'left';
     el.onclick = () => onChipClick('left', i, el);
-    leftCol.appendChild(el);
+    if (leftCol) leftCol.appendChild(el);
   });
+  
   rightItems.forEach((item, i) => {
     const el = document.createElement('div');
     el.className = 'match-chip';
@@ -2348,12 +2641,14 @@ function renderMatchSet() {
     el.dataset.displayIdx = i;
     el.dataset.side = 'right';
     el.onclick = () => onChipClick('right', i, el, item.idx);
-    rightCol.appendChild(el);
+    if (rightCol) rightCol.appendChild(el);
   });
 }
+
 function onChipClick(side, displayIdx, el, originalIdx) {
   if (matchChecked) return;
   if (el.classList.contains('connected') || el.classList.contains('correct') || el.classList.contains('wrong')) return;
+  
   if (side === 'left') {
     document.querySelectorAll('#match-col-left .match-chip.selected').forEach(c => c.classList.remove('selected'));
     if (matchSelected.left === displayIdx) { matchSelected.left = null; return; }
@@ -2366,43 +2661,61 @@ function onChipClick(side, displayIdx, el, originalIdx) {
     matchSelected.rightOriginal = originalIdx;
     el.classList.add('selected');
   }
+  
   if (matchSelected.left !== null && matchSelected.right !== null) {
     connectPair(matchSelected.left, matchSelected.right, matchSelected.rightOriginal);
   }
 }
+
 function connectPair(leftIdx, rightDisplayIdx, rightOriginalIdx) {
   matchConnections = matchConnections.filter(c => c.leftIdx !== leftIdx && c.rightDisplay !== rightDisplayIdx);
   matchConnections.push({ leftIdx, rightDisplay: rightDisplayIdx, rightOriginal: rightOriginalIdx });
+  
   document.querySelectorAll('.match-chip.selected').forEach(c => c.classList.remove('selected'));
   matchSelected = { left: null, right: null };
+  
   drawLines();
+  
   const connectedLefts = new Set(matchConnections.map(c => c.leftIdx));
-  document.getElementById('btn-check').disabled = connectedLefts.size < matchSets[matchSetIdx].pairs.length;
+  const checkBtn = getElement('btn-check');
+  if (checkBtn) checkBtn.disabled = connectedLefts.size < matchSets[matchSetIdx].pairs.length;
 }
+
 function drawLines() {
-  const svg = document.getElementById('match-svg');
-  const area = document.getElementById('match-area');
+  const svg = getElement('match-svg');
+  const area = getElement('match-area');
+  if (!svg || !area) return;
+  
   svg.innerHTML = '';
   const areaRect = area.getBoundingClientRect();
+  
+  const leftChips = document.querySelectorAll('#match-col-left .match-chip');
+  const rightChips = document.querySelectorAll('#match-col-right .match-chip');
+  
+  const fragment = document.createDocumentFragment();
+  
   matchConnections.forEach(conn => {
-    const leftChips = document.querySelectorAll('#match-col-left .match-chip');
-    const rightChips = document.querySelectorAll('#match-col-right .match-chip');
     const leftEl = leftChips[conn.leftIdx];
     const rightEl = [...rightChips].find(c => parseInt(c.dataset.displayIdx) === conn.rightDisplay);
+    
     if (!leftEl || !rightEl) return;
+    
     const lr = leftEl.getBoundingClientRect();
     const rr = rightEl.getBoundingClientRect();
+    
     const x1 = lr.right - areaRect.left;
     const y1 = lr.top + lr.height/2 - areaRect.top;
     const x2 = rr.left - areaRect.left;
     const y2 = rr.top + rr.height/2 - areaRect.top;
     const cx = (x1 + x2)/2;
+    
     let stroke = '#4A4AB0', opacity = '0.5';
     if (matchChecked) {
       const isCorrect = conn.leftIdx === conn.rightOriginal;
       stroke = isCorrect ? 'var(--green)' : 'var(--red)';
       opacity = '0.8';
     }
+    
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
     path.setAttribute('stroke', stroke);
@@ -2410,58 +2723,84 @@ function drawLines() {
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke-opacity', opacity);
     path.setAttribute('stroke-linecap', 'round');
-    svg.appendChild(path);
+    
+    fragment.appendChild(path);
   });
+  
+  svg.appendChild(fragment);
 }
+
 function checkMatch() {
   if (matchConnections.length === 0) return;
   matchChecked = true;
+  
   const pairs = matchSets[matchSetIdx].pairs;
   let allCorrect = true;
+  
   const leftChips = document.querySelectorAll('#match-col-left .match-chip');
   const rightChips = document.querySelectorAll('#match-col-right .match-chip');
+  
   matchConnections.forEach(conn => {
     const isCorrect = conn.leftIdx === conn.rightOriginal;
     if (!isCorrect) allCorrect = false;
+    
     const leftEl = leftChips[conn.leftIdx];
     const rightEl = [...rightChips].find(c => parseInt(c.dataset.displayIdx) === conn.rightDisplay);
+    
     if (leftEl) leftEl.classList.add(isCorrect ? 'correct' : 'wrong');
     if (rightEl) rightEl.classList.add(isCorrect ? 'correct' : 'wrong');
   });
+  
   drawLines();
-  const resultBar = document.getElementById('match-result-bar');
+  
+  const resultBar = getElement('match-result-bar');
   if (allCorrect) {
     matchSessionCorrect++;
-    resultBar.textContent = '✓ Все верно!';
-    resultBar.className = 'match-result-bar correct';
+    if (resultBar) {
+      resultBar.textContent = '✓ Все верно!';
+      resultBar.className = 'match-result-bar correct';
+    }
   } else {
     matchSessionWrong++;
-    resultBar.textContent = '✗ Есть ошибки — посмотри пояснения ниже';
-    resultBar.className = 'match-result-bar wrong';
+    if (resultBar) {
+      resultBar.textContent = '✗ Есть ошибки — посмотри пояснения ниже';
+      resultBar.className = 'match-result-bar wrong';
+    }
   }
-  const hintsEl = document.getElementById('match-hints');
-  hintsEl.innerHTML = '';
-  pairs.forEach((pair, i) => {
-    const conn = matchConnections.find(c => c.leftIdx === i);
-    const isCorrect = conn && conn.rightOriginal === i;
-    const el = document.createElement('div');
-    el.className = 'hint-item ' + (conn ? (isCorrect ? 'show-correct' : 'show-wrong') : '');
-    el.innerHTML = `<div class="hint-word">${pair.word}</div><div class="hint-text">${pair.hint}</div><div class="hint-example">Пример: ${pair.example}</div>`;
-    hintsEl.appendChild(el);
-  });
-  document.getElementById('btn-check').textContent = 'Далее →';
-  document.getElementById('btn-check').disabled = false;
-  document.getElementById('btn-check').onclick = nextMatchSet;
+  
+  const hintsEl = getElement('match-hints');
+  if (hintsEl) {
+    hintsEl.innerHTML = '';
+    pairs.forEach((pair, i) => {
+      const conn = matchConnections.find(c => c.leftIdx === i);
+      const isCorrect = conn && conn.rightOriginal === i;
+      const el = document.createElement('div');
+      el.className = 'hint-item ' + (conn ? (isCorrect ? 'show-correct' : 'show-wrong') : '');
+      el.innerHTML = `<div class="hint-word">${escapeHtml(pair.word)}</div><div class="hint-text">${escapeHtml(pair.hint)}</div><div class="hint-example">Пример: ${escapeHtml(pair.example)}</div>`;
+      hintsEl.appendChild(el);
+    });
+  }
+  
+  const checkBtn = getElement('btn-check');
+  if (checkBtn) {
+    checkBtn.textContent = 'Далее →';
+    checkBtn.disabled = false;
+    checkBtn.onclick = nextMatchSet;
+  }
 }
+
 function nextMatchSet() {
   matchSetIdx++;
   renderMatchSet();
 }
+
 function skipMatchSet() {
   matchSessionWrong++;
   nextMatchSet();
 }
+
 function exitMatch() { openDeck(currentDeckId); }
+
 function showMatchResults() {
   const total = matchSets.length;
   const pct = total ? Math.round(matchSessionCorrect / total * 100) : 0;
@@ -2469,11 +2808,18 @@ function showMatchResults() {
   if (pct >= 90) { emoji = '🏆'; title = 'Великолепно!'; }
   else if (pct >= 70) { emoji = '🎉'; title = 'Отличная работа!'; }
   else if (pct >= 50) { emoji = '💪'; title = 'Хороший прогресс!'; }
-  document.getElementById('res-emoji').textContent = emoji;
-  document.getElementById('res-title').textContent = title;
-  document.getElementById('res-sub').textContent = `Ты верно соединил ${pct}% блоков`;
-  document.getElementById('res-known').textContent = matchSessionCorrect;
-  document.getElementById('res-errors').textContent = matchSessionWrong;
+  
+  const emojiEl = getElement('res-emoji');
+  if (emojiEl) emojiEl.textContent = emoji;
+  const titleEl = getElement('res-title');
+  if (titleEl) titleEl.textContent = title;
+  const subEl = getElement('res-sub');
+  if (subEl) subEl.textContent = `Ты верно соединил ${pct}% блоков`;
+  const knownEl = getElement('res-known');
+  if (knownEl) knownEl.textContent = matchSessionCorrect;
+  const errorsEl = getElement('res-errors');
+  if (errorsEl) errorsEl.textContent = matchSessionWrong;
+  
   showScreen('results-screen');
 }
 
@@ -2485,47 +2831,67 @@ function showResults() {
   if (pct >= 90) { emoji = '🏆'; title = 'Великолепно!'; }
   else if (pct >= 70) { emoji = '🎉'; title = 'Отличная работа!'; }
   else if (pct >= 50) { emoji = '💪'; title = 'Хороший прогресс!'; }
-  document.getElementById('res-emoji').textContent = emoji;
-  document.getElementById('res-title').textContent = title;
-  document.getElementById('res-sub').textContent = `Ты ответил верно на ${pct}% карточек`;
-  document.getElementById('res-known').textContent = sessionKnown;
-  document.getElementById('res-errors').textContent = sessionErrors;
+  
+  const emojiEl = getElement('res-emoji');
+  if (emojiEl) emojiEl.textContent = emoji;
+  const titleEl = getElement('res-title');
+  if (titleEl) titleEl.textContent = title;
+  const subEl = getElement('res-sub');
+  if (subEl) subEl.textContent = `Ты ответил верно на ${pct}% карточек`;
+  const knownEl = getElement('res-known');
+  if (knownEl) knownEl.textContent = sessionKnown;
+  const errorsEl = getElement('res-errors');
+  if (errorsEl) errorsEl.textContent = sessionErrors;
+  
   showScreen('results-screen');
 }
+
 function goToDeckDetail() { openDeck(currentDeckId); }
+
 function openNotes() {
   currentNotesTab = 'session';
   notesDeckFilter = null;
   showScreen('errors-screen');
   document.querySelectorAll('.notes-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
-  document.getElementById('notes-tab-session').style.display = '';
-  document.getElementById('notes-tab-all').style.display = '';
+  const sessionTab = getElement('notes-tab-session');
+  if (sessionTab) sessionTab.style.display = '';
+  const allTab = getElement('notes-tab-all');
+  if (allTab) allTab.style.display = '';
   renderErrorNotes('session');
 }
+
 function openNotesDeck(deckId) {
   notesDeckFilter = deckId;
   currentNotesTab = 'all';
   showScreen('errors-screen');
   document.querySelectorAll('.notes-tab').forEach((b, i) => b.classList.toggle('active', i === 1));
-  document.getElementById('notes-tab-session').style.display = 'none';
-  document.getElementById('notes-tab-all').style.display = '';
+  const sessionTab = getElement('notes-tab-session');
+  if (sessionTab) sessionTab.style.display = 'none';
+  const allTab = getElement('notes-tab-all');
+  if (allTab) allTab.style.display = '';
   renderErrorNotes('all');
 }
+
 let currentNotesTab = 'session';
 let notesDeckFilter = null;
+
 function switchNotesTab(tab, btn) {
   currentNotesTab = tab;
   document.querySelectorAll('.notes-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderErrorNotes(tab);
 }
+
 function closeNotes() {
   if (notesDeckFilter !== null) openDeck(notesDeckFilter);
   else showScreen('results-screen');
 }
+
 async function renderErrorNotes(tab) {
-  const scroll = document.getElementById('notes-scroll');
+  const scroll = getElement('notes-scroll');
+  if (!scroll) return;
   scroll.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:14px">Загружаю…</div>';
+  
   if (tab === 'session') {
     if (sessionErrorCards.length === 0) {
       scroll.innerHTML = `<div class="notes-empty"><div class="notes-empty-icon">🎉</div><div class="notes-empty-text">В этой сессии ошибок не было!</div></div>`;
@@ -2539,7 +2905,7 @@ async function renderErrorNotes(tab) {
     sessionErrorCards.forEach(card => {
       const item = document.createElement('div');
       item.className = 'notes-item';
-      item.innerHTML = `<div class="notes-item-q">${card.q}</div><div class="notes-item-a">${card.a}</div>`;
+      item.innerHTML = `<div class="notes-item-q">${escapeHtml(card.q)}</div><div class="notes-item-a">${escapeHtml(card.a)}</div>`;
       scroll.appendChild(item);
     });
   } else {
@@ -2548,31 +2914,37 @@ async function renderErrorNotes(tab) {
     const filteredStats = notesDeckFilter !== null
       ? allStats.filter(s => s.id.startsWith(notesDeckFilter + '_') && (s.errors || 0) > 0)
       : allStats.filter(s => (s.errors || 0) > 0);
+    
     if (filteredStats.length === 0) {
       scroll.innerHTML = `<div class="notes-empty"><div class="notes-empty-icon">🎉</div><div class="notes-empty-text">Ошибок пока нет!<br>Продолжай в том же духе.</div></div>`;
       return;
     }
+    
     const byDeck = {};
     filteredStats.forEach(stat => {
       const [deckId, cardIdx] = stat.id.split('_');
       if (!byDeck[deckId]) byDeck[deckId] = [];
       byDeck[deckId].push({ cardIdx: parseInt(cardIdx), errors: stat.errors || 0, known: stat.known || 0 });
     });
+    
     scroll.innerHTML = '';
     const banner = document.createElement('div');
     banner.style.cssText = 'background:var(--yellow-light);border:1px solid #F5C842;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#9A6F00;font-weight:600;margin-bottom:4px';
     banner.textContent = notesDeckFilter !== null ? `📋 Ошибки этого набора — ${filteredStats.length} шт.` : `📋 Все карточки с ошибками — ${filteredStats.length} шт.`;
     scroll.appendChild(banner);
+    
     for (const deck of decks) {
       const deckErrors = byDeck[deck.id];
       if (!deckErrors || deck.type === 'match') continue;
       deckErrors.sort((a, b) => b.errors - a.errors);
+      
       if (notesDeckFilter === null) {
         const titleEl = document.createElement('div');
         titleEl.className = 'notes-deck-title';
-        titleEl.textContent = `${deck.icon || '📚'} ${deck.name}`;
+        titleEl.textContent = `${deck.icon || '📚'} ${escapeHtml(deck.name)}`;
         scroll.appendChild(titleEl);
       }
+      
       deckErrors.forEach(({ cardIdx, errors, known }) => {
         const card = deck.cards[cardIdx];
         if (!card) return;
@@ -2580,8 +2952,8 @@ async function renderErrorNotes(tab) {
         item.className = 'notes-item';
         item.innerHTML = `
           <div class="notes-item-errors">✕ ${errors} ${errors===1?'ошибка':errors<5?'ошибки':'ошибок'}${known>0?' · ✓ '+known+' верно':''}</div>
-          <div class="notes-item-q">${card.q}</div>
-          <div class="notes-item-a">${card.a}</div>`;
+          <div class="notes-item-q">${escapeHtml(card.q)}</div>
+          <div class="notes-item-a">${escapeHtml(card.a)}</div>`;
         scroll.appendChild(item);
       });
     }
@@ -2592,41 +2964,66 @@ async function renderErrorNotes(tab) {
 function openAddModal(type) {
   currentAddType = type;
   ghTabLoaded = false;
-  document.getElementById('modal-title').textContent = type === 'guide' ? 'Добавить пособие' : 'Добавить колоду';
-  document.getElementById('modal-sub').textContent = type === 'guide' ? 'Загрузи JSON с описанием пособия' : 'Загрузи JSON с карточками или паронимами';
-  document.getElementById('add-modal').classList.add('open');
+  const modalTitle = getElement('modal-title');
+  if (modalTitle) modalTitle.textContent = type === 'guide' ? 'Добавить пособие' : 'Добавить колоду';
+  const modalSub = getElement('modal-sub');
+  if (modalSub) modalSub.textContent = type === 'guide' ? 'Загрузи JSON с описанием пособия' : 'Загрузи JSON с карточками или паронимами';
+  
+  const addModal = getElement('add-modal');
+  if (addModal) addModal.classList.add('open');
+  
   document.querySelectorAll('.modal-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
-  document.getElementById('add-tab-file').style.display = '';
-  document.getElementById('add-tab-github').style.display = 'none';
-  document.getElementById('gh-loading').style.display = '';
-  document.getElementById('gh-list').innerHTML = '';
-  document.getElementById('gh-error').style.display = 'none';
+  const tabFile = getElement('add-tab-file');
+  if (tabFile) tabFile.style.display = '';
+  const tabGithub = getElement('add-tab-github');
+  if (tabGithub) tabGithub.style.display = 'none';
+  const loading = getElement('gh-loading');
+  if (loading) loading.style.display = '';
+  const list = getElement('gh-list');
+  if (list) list.innerHTML = '';
+  const error = getElement('gh-error');
+  if (error) error.style.display = 'none';
 }
+
 function closeAddModal(e) {
-  if (!e || e.target === document.getElementById('add-modal'))
-    document.getElementById('add-modal').classList.remove('open');
+  if (!e || e.target === getElement('add-modal')) {
+    const modal = getElement('add-modal');
+    if (modal) modal.classList.remove('open');
+  }
 }
+
 function switchAddTab(tab, btn) {
   document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('add-tab-file').style.display = tab === 'file' ? '' : 'none';
-  document.getElementById('add-tab-github').style.display = tab === 'github' ? '' : 'none';
+  const tabFile = getElement('add-tab-file');
+  if (tabFile) tabFile.style.display = tab === 'file' ? '' : 'none';
+  const tabGithub = getElement('add-tab-github');
+  if (tabGithub) tabGithub.style.display = tab === 'github' ? '' : 'none';
   if (tab === 'github' && !ghTabLoaded) { ghTabLoaded = true; loadGithubList(); }
 }
+
 function triggerFileAdd() {
   closeAddModal();
-  document.getElementById('file-input').click();
+  const fileInput = getElement('file-input');
+  if (fileInput) fileInput.click();
 }
+
 async function handleFileAdd(event) {
   const file = event.target.files[0];
   if (!file) return;
   event.target.value = '';
+  
   try {
     const text = await file.text();
     const data = JSON.parse(text);
+    
     if (currentAddType === 'guide') {
       if (!data.name || !data.category) throw new Error('bad format');
-      addGuide(data);
+      const guides = getGuides();
+      const existing = guides.findIndex(g => g.name === data.name);
+      if (existing >= 0) guides[existing] = data;
+      else guides.push({ ...data, id: Date.now() });
+      saveGuides(guides);
       renderLibrary();
     } else {
       if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
@@ -2646,10 +3043,12 @@ async function handleFileAdd(event) {
     showToast('Ошибка: неверный формат файла');
   }
 }
+
 async function loadGithubList() {
-  const loading = document.getElementById('gh-loading');
-  const errEl = document.getElementById('gh-error');
-  const list = document.getElementById('gh-list');
+  const loading = getElement('gh-loading');
+  const errEl = getElement('gh-error');
+  const list = getElement('gh-list');
+  
   try {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/`, {
       headers: { 'Accept': 'application/vnd.github.v3+json' }
@@ -2657,7 +3056,8 @@ async function loadGithubList() {
     if (!res.ok) throw new Error(res.status);
     const files = await res.json();
     const jsonFiles = files.filter(f => f.name.endsWith('.json') && f.name !== 'manifest.json' && f.type === 'file');
-    loading.style.display = 'none';
+    if (loading) loading.style.display = 'none';
+    
     const filtered = [];
     for (const f of jsonFiles) {
       try {
@@ -2670,55 +3070,70 @@ async function loadGithubList() {
         }
       } catch (e) { /* skip */ }
     }
+    
     if (filtered.length === 0) {
-      list.innerHTML = '<div class="gh-loading">Нет подходящих JSON файлов</div>';
+      if (list) list.innerHTML = '<div class="gh-loading">Нет подходящих JSON файлов</div>';
       return;
     }
-    list.innerHTML = '';
-    for (const f of filtered) {
-      const existing = currentAddType === 'guide'
-        ? getGuides().find(g => g.sourceFile === f.name)
-        : (await dbGetAll('decks')).find(d => d.sourceFile === f.name);
-      const el = document.createElement('div');
-      el.className = 'gh-item' + (existing ? ' loaded' : '');
-      el.innerHTML = `
-        <div class="gh-item-icon">${existing ? '✓' : '📄'}</div>
-        <div class="gh-item-info">
-          <div class="gh-item-name">${f.data.name || f.name}</div>
-          <div class="gh-item-sub">${(f.size/1024).toFixed(1)} КБ</div>
-        </div>
-        <div class="gh-item-btn">${existing ? 'Добавлено' : 'Добавить'}</div>`;
-      el.onclick = () => importFromGithub(f.data, f.name, existing);
-      list.appendChild(el);
+    
+    if (list) {
+      list.innerHTML = '';
+      for (const f of filtered) {
+        const existing = currentAddType === 'guide'
+          ? getGuides().find(g => g.sourceFile === f.name)
+          : (await dbGetAll('decks')).find(d => d.sourceFile === f.name);
+        
+        const el = document.createElement('div');
+        el.className = 'gh-item' + (existing ? ' loaded' : '');
+        el.innerHTML = `
+          <div class="gh-item-icon">${existing ? '✓' : '📄'}</div>
+          <div class="gh-item-info">
+            <div class="gh-item-name">${escapeHtml(f.data.name || f.name)}</div>
+            <div class="gh-item-sub">${(f.size/1024).toFixed(1)} КБ</div>
+          </div>
+          <div class="gh-item-btn">${existing ? 'Добавлено' : 'Добавить'}</div>`;
+        el.onclick = () => importFromGithub(f.data, f.name, existing);
+        list.appendChild(el);
+      }
     }
   } catch (e) {
-    loading.style.display = 'none';
-    errEl.textContent = `Ошибка загрузки: ${e.message}`;
-    errEl.style.display = '';
+    if (loading) loading.style.display = 'none';
+    if (errEl) {
+      errEl.textContent = `Ошибка загрузки: ${e.message}`;
+      errEl.style.display = '';
+    }
   }
 }
+
 async function importFromGithub(data, filename, alreadyExists) {
   if (alreadyExists) return;
   if (currentAddType === 'guide') {
-    addGuide({ ...data, sourceFile: filename });
+    const guides = getGuides();
+    const existing = guides.findIndex(g => g.name === data.name);
+    if (existing >= 0) guides[existing] = { ...data, sourceFile: filename };
+    else guides.push({ ...data, id: Date.now(), sourceFile: filename });
+    saveGuides(guides);
     renderLibrary();
   } else {
-    await dbPut('decks', { ...data, sourceFile: filename, createdAt: Date.now() });
+    const deck = { ...data, sourceFile: filename, createdAt: Date.now() };
+    await dbPut('decks', deck);
     renderDecks();
   }
   closeAddModal();
   showToast(`✓ ${data.name || filename} добавлено`);
 }
+
 function openSampleModal() {
   closeAddModal();
-  const sampleModal = document.getElementById('sample-modal');
-  const title = document.getElementById('sample-title');
-  const sub = document.getElementById('sample-sub');
-  const pre = document.getElementById('sample-pre');
+  const sampleModal = getElement('sample-modal');
+  const title = getElement('sample-title');
+  const sub = getElement('sample-sub');
+  const pre = getElement('sample-pre');
+  
   if (currentAddType === 'guide') {
-    title.textContent = 'Формат guide.json';
-    sub.textContent = 'Добавь файл с таким форматом в свой GitHub репозиторий:';
-    pre.textContent = `{
+    if (title) title.textContent = 'Формат guide.json';
+    if (sub) sub.textContent = 'Добавь файл с таким форматом в свой GitHub репозиторий:';
+    if (pre) pre.textContent = `{
   "name": "Название пособия",
   "type": "guide",
   "category": "bio",
@@ -2732,9 +3147,9 @@ function openSampleModal() {
   "url": "https://ссылка-на-файл.pdf"
 }`;
   } else {
-    title.textContent = 'Формат колоды';
-    sub.textContent = 'Для flashcard (обычные карточки) или match (паронимы):';
-    pre.textContent = `// Флеш-карточки
+    if (title) title.textContent = 'Формат колоды';
+    if (sub) sub.textContent = 'Для flashcard (обычные карточки) или match (паронимы):';
+    if (pre) pre.textContent = `// Флеш-карточки
 {
   "name": "Ударения ЕГЭ",
   "type": "flashcard",
@@ -2756,31 +3171,48 @@ function openSampleModal() {
   ]
 }`;
   }
-  sampleModal.classList.add('open');
+  if (sampleModal) sampleModal.classList.add('open');
 }
+
 function closeSampleModal(e) {
-  if (!e || e.target === document.getElementById('sample-modal'))
-    document.getElementById('sample-modal').classList.remove('open');
+  if (!e || e.target === getElement('sample-modal')) {
+    const modal = getElement('sample-modal');
+    if (modal) modal.classList.remove('open');
+  }
 }
 
 // ==================== НАСТРОЙКИ ====================
 function renderSettings() {
-  document.getElementById('gh-user-input').value = GITHUB_USER;
-  document.getElementById('gh-repo-input').value = GITHUB_REPO;
-  document.getElementById('settings-guide-count').textContent = getGuides().length;
-  document.getElementById('settings-atlas-count').textContent = getAtlasItems().length;
-  document.getElementById('settings-notes-count').textContent = getNotes().length;
+  const userInput = getElement('gh-user-input');
+  if (userInput) userInput.value = GITHUB_USER;
+  const repoInput = getElement('gh-repo-input');
+  if (repoInput) repoInput.value = GITHUB_REPO;
+  
+  const guideCount = getElement('settings-guide-count');
+  if (guideCount) guideCount.textContent = getGuides().length;
+  const atlasCount = getElement('settings-atlas-count');
+  if (atlasCount) atlasCount.textContent = getAtlasItems().length;
+  const notesCount = getElement('settings-notes-count');
+  if (notesCount) notesCount.textContent = getNotes().length;
+  
   dbGetAll('decks').then(decks => {
-    document.getElementById('settings-deck-count').textContent = decks.length;
+    const deckCount = getElement('settings-deck-count');
+    if (deckCount) deckCount.textContent = decks.length;
   });
 }
+
 function saveSettings() {
-  GITHUB_USER = document.getElementById('gh-user-input').value.trim();
-  GITHUB_REPO = document.getElementById('gh-repo-input').value.trim();
-  localStorage.setItem('gh_user', GITHUB_USER);
-  localStorage.setItem('gh_repo', GITHUB_REPO);
-  showToast('✓ Настройки сохранены');
+  const userInput = getElement('gh-user-input');
+  const repoInput = getElement('gh-repo-input');
+  if (userInput && repoInput) {
+    GITHUB_USER = userInput.value.trim();
+    GITHUB_REPO = repoInput.value.trim();
+    localStorage.setItem('gh_user', GITHUB_USER);
+    localStorage.setItem('gh_repo', GITHUB_REPO);
+    showToast('✓ Настройки сохранены');
+  }
 }
+
 function clearAllData() {
   if (!confirm('Удалить все пособия, колоды, заметки и атлас?')) return;
   localStorage.removeItem('bio_guides');
@@ -2803,21 +3235,26 @@ let isPreviewMode = false;
 
 function renderNotes() {
   const notes = getNotes();
-  const list = document.getElementById('notes-list');
+  const list = getElement('notes-list');
   if (!list) return;
-  const searchQuery = document.getElementById('notes-search')?.value.toLowerCase() || '';
+  
+  const searchQuery = getElement('notes-search')?.value.toLowerCase() || '';
   let filtered = currentNoteFolder === 'all' ? notes : notes.filter(n => n.folder === currentNoteFolder);
+  
   if (searchQuery) {
     filtered = filtered.filter(n => 
       n.title.toLowerCase().includes(searchQuery) || 
       n.content.toLowerCase().includes(searchQuery)
     );
   }
+  
   filtered.sort((a, b) => b.updatedAt - a.updatedAt);
+  
   if (filtered.length === 0) {
     list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📝</div><div class="empty-state-text">Нет заметок</div><div class="empty-state-sub">Нажми + чтобы создать первую заметку</div></div>`;
     return;
   }
+  
   list.innerHTML = '';
   filtered.forEach(note => {
     const card = document.createElement('div');
@@ -2826,12 +3263,13 @@ function renderNotes() {
     const preview = note.content.replace(/[#*`>\-\[\]]/g, '').trim().substring(0, 150);
     const date = new Date(note.updatedAt);
     const timeAgo = formatTimeAgo(date);
+    
     card.innerHTML = `
       <div class="note-header">
-        <div class="note-title">${note.title || 'Без названия'}</div>
+        <div class="note-title">${escapeHtml(note.title) || 'Без названия'}</div>
         <div class="note-date">${timeAgo}</div>
       </div>
-      <div class="note-preview">${preview || 'Пустая заметка'}</div>
+      <div class="note-preview">${escapeHtml(preview) || 'Пустая заметка'}</div>
       <div class="note-folder ${note.folder}">${folderLabels[note.folder]}</div>
     `;
     card.onclick = () => openNoteEditor(note.id);
@@ -2886,14 +3324,24 @@ function openNoteEditor(noteId) {
   const note = notes.find(n => n.id === noteId);
   if (!note) return;
   if (!note.images) note.images = [];
-  document.getElementById('note-title').value = note.title;
-  document.getElementById('note-content').value = note.content;
-  document.getElementById('note-folder').value = note.folder;
+  
+  const titleInput = getElement('note-title');
+  if (titleInput) titleInput.value = note.title;
+  const contentInput = getElement('note-content');
+  if (contentInput) contentInput.value = note.content;
+  const folderSelect = getElement('note-folder');
+  if (folderSelect) folderSelect.value = note.folder;
+  
   renderNoteImages(note.images);
+  
   isPreviewMode = false;
-  document.getElementById('note-preview').style.display = 'none';
-  document.getElementById('note-content').style.display = 'block';
-  document.getElementById('preview-toggle-text').textContent = '👁 Превью';
+  const preview = getElement('note-preview');
+  if (preview) preview.style.display = 'none';
+  const content = getElement('note-content');
+  if (content) content.style.display = 'block';
+  const toggleText = getElement('preview-toggle-text');
+  if (toggleText) toggleText.textContent = '👁 Превью';
+  
   showScreen('note-editor-screen');
 }
 
@@ -2908,13 +3356,16 @@ function saveNote() {
   const notes = getNotes();
   const noteIndex = notes.findIndex(n => n.id === currentNoteId);
   if (noteIndex === -1) return;
-  const title = document.getElementById('note-title').value.trim();
-  const content = document.getElementById('note-content').value;
-  const folder = document.getElementById('note-folder').value;
+  
+  const title = getElement('note-title')?.value.trim() || '';
+  const content = getElement('note-content')?.value || '';
+  const folder = getElement('note-folder')?.value || 'personal';
+  
   notes[noteIndex].title = title || 'Без названия';
   notes[noteIndex].content = content;
   notes[noteIndex].folder = folder;
   notes[noteIndex].updatedAt = Date.now();
+  
   saveNotes(notes);
   showToast('✓ Заметка сохранена');
 }
@@ -2922,18 +3373,21 @@ function saveNote() {
 function deleteNote() {
   if (!currentNoteId) return;
   if (!confirm('Удалить эту заметку?')) return;
+  
   const notes = getNotes();
   const filtered = notes.filter(n => n.id !== currentNoteId);
   saveNotes(filtered);
+  
   showToast('✓ Заметка удалена');
   showScreen('notes-screen');
   renderNotes();
 }
 
 function renderNoteImages(images) {
-  const gallery = document.getElementById('note-images-gallery');
-  const container = document.getElementById('note-images-container');
+  const gallery = getElement('note-images-gallery');
+  const container = getElement('note-images-container');
   if (!gallery || !container) return;
+  
   if (!images || images.length === 0) {
     gallery.style.display = 'none';
     return;
@@ -2948,7 +3402,10 @@ function renderNoteImages(images) {
   });
 }
 
-function triggerNoteImageUpload() { document.getElementById('note-image-input').click(); }
+function triggerNoteImageUpload() {
+  const input = getElement('note-image-input');
+  if (input) input.click();
+}
 
 function handleNoteImageUpload(event) {
   const file = event.target.files[0];
@@ -2981,27 +3438,28 @@ function deleteNoteImage(index) {
 
 function togglePreview() {
   isPreviewMode = !isPreviewMode;
-  const content = document.getElementById('note-content');
-  const preview = document.getElementById('note-preview');
-  const toggleText = document.getElementById('preview-toggle-text');
+  const content = getElement('note-content');
+  const preview = getElement('note-preview');
+  const toggleText = getElement('preview-toggle-text');
+  
   if (isPreviewMode) {
     const notes = getNotes();
     const note = notes.find(n => n.id === currentNoteId);
-    let markdown = content.value;
+    let markdown = content?.value || '';
     if (note && note.images) {
       markdown = markdown.replace(/!\[([^\]]*)\]\(image:(\d+)\)/g, (match, alt, index) => {
         const img = note.images[parseInt(index)];
         return img ? `![${alt}](${img})` : match;
       });
     }
-    preview.innerHTML = marked.parse(markdown);
-    content.style.display = 'none';
-    preview.style.display = 'block';
-    toggleText.textContent = '✏️ Редактор';
+    if (preview) preview.innerHTML = marked.parse(markdown);
+    if (content) content.style.display = 'none';
+    if (preview) preview.style.display = 'block';
+    if (toggleText) toggleText.textContent = '✏️ Редактор';
   } else {
-    content.style.display = 'block';
-    preview.style.display = 'none';
-    toggleText.textContent = '👁 Превью';
+    if (content) content.style.display = 'block';
+    if (preview) preview.style.display = 'none';
+    if (toggleText) toggleText.textContent = '👁 Превью';
   }
 }
 
@@ -3012,19 +3470,22 @@ let atlasImageBase64 = null;
 
 function renderAtlas() {
   const items = getAtlasItems();
-  const grid = document.getElementById('atlas-grid');
+  const grid = getElement('atlas-grid');
   if (!grid) return;
+  
   let filtered = currentAtlasCategory === 'all' ? items : items.filter(i => i.category === currentAtlasCategory);
+  
   if (filtered.length === 0) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🗺️</div><div class="empty-state-text">Атлас пуст</div><div class="empty-state-sub">Нажми + чтобы добавить первый элемент</div></div>`;
     return;
   }
+  
   grid.innerHTML = '';
   filtered.forEach(item => {
     const card = document.createElement('div');
     card.className = 'atlas-card';
     const categoryLabels = { anatomy: '🫀 Анатомия', botany: '🌿 Ботаника', zoology: '🦋 Зоология', cells: '🔬 Клетки', ecology: '🌍 Экология' };
-    card.innerHTML = `<div class="atlas-card-img">${item.image ? `<img src="${item.image}" alt="${item.title}">` : '🖼️'}</div><div class="atlas-card-content"><div class="atlas-card-title">${item.title}</div><div class="atlas-card-category">${categoryLabels[item.category]}</div></div>`;
+    card.innerHTML = `<div class="atlas-card-img">${item.image ? `<img src="${item.image}" alt="${escapeHtml(item.title)}">` : '🖼️'}</div><div class="atlas-card-content"><div class="atlas-card-title">${escapeHtml(item.title)}</div><div class="atlas-card-category">${categoryLabels[item.category]}</div></div>`;
     card.onclick = () => openAtlasDetail(item.id);
     grid.appendChild(card);
   });
@@ -3042,26 +3503,38 @@ function openAtlasDetail(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   currentAtlasId = id;
+  
   const categoryLabels = { anatomy: '🫀 Анатомия', botany: '🌿 Ботаника', zoology: '🦋 Зоология', cells: '🔬 Клетки', ecology: '🌍 Экология' };
-  document.getElementById('atlas-detail-image').src = item.image || '';
-  document.getElementById('atlas-detail-image').style.display = item.image ? 'block' : 'none';
-  document.getElementById('atlas-detail-category').textContent = categoryLabels[item.category];
-  document.getElementById('atlas-detail-title').textContent = item.title;
-  document.getElementById('atlas-detail-desc').innerHTML = marked.parse(item.description || '');
+  const imgEl = getElement('atlas-detail-image');
+  if (imgEl) { imgEl.src = item.image || ''; imgEl.style.display = item.image ? 'block' : 'none'; }
+  const catEl = getElement('atlas-detail-category');
+  if (catEl) catEl.textContent = categoryLabels[item.category];
+  const titleEl = getElement('atlas-detail-title');
+  if (titleEl) titleEl.textContent = item.title;
+  const descEl = getElement('atlas-detail-desc');
+  if (descEl) descEl.innerHTML = marked.parse(item.description || '');
+  
   showScreen('atlas-detail-screen');
 }
 
 function createAtlasItem() {
   currentAtlasId = null;
   atlasImageBase64 = null;
-  document.getElementById('atlas-title').value = '';
-  document.getElementById('atlas-category').value = 'anatomy';
-  document.getElementById('atlas-description').value = '';
-  document.getElementById('atlas-image-preview').style.display = 'none';
+  const titleInput = getElement('atlas-title');
+  if (titleInput) titleInput.value = '';
+  const categorySelect = getElement('atlas-category');
+  if (categorySelect) categorySelect.value = 'anatomy';
+  const descInput = getElement('atlas-description');
+  if (descInput) descInput.value = '';
+  const preview = getElement('atlas-image-preview');
+  if (preview) preview.style.display = 'none';
   showScreen('atlas-editor-screen');
 }
 
-function triggerAtlasImageUpload() { document.getElementById('atlas-image-input').click(); }
+function triggerAtlasImageUpload() {
+  const input = getElement('atlas-image-input');
+  if (input) input.click();
+}
 
 function handleAtlasImageUpload(event) {
   const file = event.target.files[0];
@@ -3069,17 +3542,21 @@ function handleAtlasImageUpload(event) {
   const reader = new FileReader();
   reader.onload = function(e) {
     atlasImageBase64 = e.target.result;
-    document.getElementById('atlas-preview-img').src = atlasImageBase64;
-    document.getElementById('atlas-image-preview').style.display = 'block';
+    const previewImg = getElement('atlas-preview-img');
+    if (previewImg) previewImg.src = atlasImageBase64;
+    const previewDiv = getElement('atlas-image-preview');
+    if (previewDiv) previewDiv.style.display = 'block';
   };
   reader.readAsDataURL(file);
 }
 
 function saveAtlasItem() {
-  const title = document.getElementById('atlas-title').value.trim();
-  const category = document.getElementById('atlas-category').value;
-  const description = document.getElementById('atlas-description').value;
+  const title = getElement('atlas-title')?.value.trim() || '';
+  const category = getElement('atlas-category')?.value || 'anatomy';
+  const description = getElement('atlas-description')?.value || '';
+  
   if (!title) { showToast('⚠️ Введите название'); return; }
+  
   const items = getAtlasItems();
   if (currentAtlasId) {
     const index = items.findIndex(i => i.id === currentAtlasId);
@@ -3113,16 +3590,24 @@ function editAtlasItem() {
   const items = getAtlasItems();
   const item = items.find(i => i.id === currentAtlasId);
   if (!item) return;
-  document.getElementById('atlas-title').value = item.title || '';
-  document.getElementById('atlas-category').value = item.category || 'anatomy';
-  document.getElementById('atlas-description').value = item.description || '';
+  
+  const titleInput = getElement('atlas-title');
+  if (titleInput) titleInput.value = item.title || '';
+  const categorySelect = getElement('atlas-category');
+  if (categorySelect) categorySelect.value = item.category || 'anatomy';
+  const descInput = getElement('atlas-description');
+  if (descInput) descInput.value = item.description || '';
+  
   if (item.image) {
     atlasImageBase64 = item.image;
-    document.getElementById('atlas-preview-img').src = item.image;
-    document.getElementById('atlas-image-preview').style.display = 'block';
+    const previewImg = getElement('atlas-preview-img');
+    if (previewImg) previewImg.src = item.image;
+    const previewDiv = getElement('atlas-image-preview');
+    if (previewDiv) previewDiv.style.display = 'block';
   } else {
     atlasImageBase64 = null;
-    document.getElementById('atlas-image-preview').style.display = 'none';
+    const previewDiv = getElement('atlas-image-preview');
+    if (previewDiv) previewDiv.style.display = 'none';
   }
   showScreen('atlas-editor-screen');
 }
@@ -3145,9 +3630,9 @@ function closeAtlasEditor() {
 
 // ==================== ВСТАВКА ИЗОБРАЖЕНИЙ ====================
 document.addEventListener('DOMContentLoaded', () => {
-  const noteContent = document.getElementById('note-content');
+  const noteContent = getElement('note-content');
   if (noteContent) noteContent.addEventListener('paste', handleNotePaste);
-  const atlasEditor = document.getElementById('atlas-editor-screen');
+  const atlasEditor = getElement('atlas-editor-screen');
   if (atlasEditor) atlasEditor.addEventListener('paste', handleAtlasPaste);
 });
 
@@ -3169,14 +3654,16 @@ function handleNotePaste(e) {
         renderNoteImages(note.images);
         const imageIndex = note.images.length - 1;
         showToast(`✓ Изображение вставлено (номер ${imageIndex})`);
-        const textarea = document.getElementById('note-content');
-        const cursorPos = textarea.selectionStart;
-        const textBefore = textarea.value.substring(0, cursorPos);
-        const textAfter = textarea.value.substring(cursorPos);
-        const imageMarkdown = `![Изображение](image:${imageIndex})`;
-        textarea.value = textBefore + imageMarkdown + textAfter;
-        textarea.selectionStart = textarea.selectionEnd = cursorPos + imageMarkdown.length;
-        textarea.focus();
+        const textarea = getElement('note-content');
+        if (textarea) {
+          const cursorPos = textarea.selectionStart;
+          const textBefore = textarea.value.substring(0, cursorPos);
+          const textAfter = textarea.value.substring(cursorPos);
+          const imageMarkdown = `![Изображение](image:${imageIndex})`;
+          textarea.value = textBefore + imageMarkdown + textAfter;
+          textarea.selectionStart = textarea.selectionEnd = cursorPos + imageMarkdown.length;
+          textarea.focus();
+        }
       };
       reader.readAsDataURL(blob);
       break;
@@ -3185,7 +3672,8 @@ function handleNotePaste(e) {
 }
 
 function handleAtlasPaste(e) {
-  if (!document.getElementById('atlas-editor-screen').classList.contains('active')) return;
+  const editorScreen = getElement('atlas-editor-screen');
+  if (!editorScreen || !editorScreen.classList.contains('active')) return;
   const items = e.clipboardData?.items;
   if (!items) return;
   for (let i = 0; i < items.length; i++) {
@@ -3195,8 +3683,10 @@ function handleAtlasPaste(e) {
       const reader = new FileReader();
       reader.onload = function(event) {
         atlasImageBase64 = event.target.result;
-        document.getElementById('atlas-preview-img').src = atlasImageBase64;
-        document.getElementById('atlas-image-preview').style.display = 'block';
+        const previewImg = getElement('atlas-preview-img');
+        if (previewImg) previewImg.src = atlasImageBase64;
+        const previewDiv = getElement('atlas-image-preview');
+        if (previewDiv) previewDiv.style.display = 'block';
         showToast('✓ Изображение вставлено из буфера');
       };
       reader.readAsDataURL(blob);
@@ -3205,18 +3695,46 @@ function handleAtlasPaste(e) {
   }
 }
 
-// ==================== ИНИЦИАЛИЗАЦИЯ ====================
-openDB().then(() => {
-  renderLibrary();
-  renderDecks();
-  navTo('library');
-}).catch(e => {
-  console.error('Ошибка открытия БД:', e);
-  renderLibrary();
-  navTo('library');
+// ==================== ОБРАБОТКА OFFLINE/ONLINE ====================
+window.addEventListener('online', () => {
+  if (window.showToast) showToast('🟢 Соединение восстановлено');
+  if (window.autoSaveToCloud) autoSaveToCloud();
 });
+
+window.addEventListener('offline', () => {
+  if (window.showToast) showToast('🔴 Нет соединения');
+});
+
+window.addEventListener('error', (event) => {
+  console.error('Global error:', event.error);
+  if (window.showToast) showToast('⚠️ Произошла ошибка');
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  if (window.showToast) showToast('⚠️ Ошибка загрузки данных');
+});
+
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
+(async function init() {
+  try {
+    await openDB();
+    console.log('✓ Database initialized');
+    
+    if (window.renderLibrary) renderLibrary();
+    if (window.renderDecks) await renderDecks();
+    if (window.navTo) navTo('library');
+  } catch (error) {
+    console.error('Initialization error:', error);
+    if (window.showToast) showToast('⚠️ Ошибка инициализации');
+    
+    if (window.renderLibrary) renderLibrary();
+    if (window.navTo) navTo('library');
+  }
+})();
+
 window.addEventListener('resize', () => {
-  if (document.getElementById('match-screen')?.classList.contains('active')) drawLines();
+  if (getElement('match-screen')?.classList.contains('active')) drawLines();
 });
 </script>
 </body>
