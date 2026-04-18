@@ -1,17 +1,14 @@
 // ==================== УТИЛИТЫ ====================
 
-// Универсальная функция получения элемента
 function getElement(id) {
   return document.getElementById(id);
 }
 
-// Показ экрана
 function showScreen(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screen = getElement(screenId);
   if (screen) screen.classList.add('active');
   
-  // Обновление навигации
   document.querySelectorAll('.bottom-nav-btn').forEach(btn => btn.classList.remove('active'));
   if (screenId === 'library-screen') {
     document.querySelectorAll('.bottom-nav-btn')[0]?.classList.add('active');
@@ -26,7 +23,6 @@ function showScreen(screenId) {
   }
 }
 
-// Навигация
 function navTo(screen) {
   if (screen === 'library') {
     showScreen('library-screen');
@@ -46,7 +42,6 @@ function navTo(screen) {
   }
 }
 
-// Toast уведомления
 let toastTimeout;
 function showToast(message) {
   let toast = getElement('toast');
@@ -56,17 +51,12 @@ function showToast(message) {
     toast.className = 'toast';
     document.body.appendChild(toast);
   }
-  
   clearTimeout(toastTimeout);
   toast.textContent = message;
   toast.classList.add('show');
-  
-  toastTimeout = setTimeout(() => {
-    toast.classList.remove('show');
-  }, 2500);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
-// Экспорт
 window.getElement = getElement;
 window.showScreen = showScreen;
 window.navTo = navTo;
