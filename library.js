@@ -123,5 +123,14 @@ function deleteGuide(id) {
   renderLibrary();
   window.showToast('Пособие удалено');
 }
-
+// В самом конце library.js
+window.openAddModal = openAddModal;
+window.closeAddModal = closeAddModal;
+window.switchAddTab = switchAddTab;
+window.triggerFileAdd = triggerFileAdd;
+window.handleFileAdd = handleFileAdd;
+window.loadGithubList = loadGithubList;
+window.importFromGithub = importFromGithub;
+window.openSampleModal = openSampleModal;
+window.closeSampleModal = closeSampleModal;
 // Функции модальных окон (импорт) – они уже определены в вашем проекте, если нет – добавьте их из предыдущих версий
