@@ -744,16 +744,26 @@
     <div class="home-title">Биолаб <span>&</span><br>Наш язык</div>
     <div class="home-sub">Учебные пособия для подготовки к ЕГЭ</div>
   </div>
+  
+  <!-- Поиск и кнопка добавления (как в заметках) -->
+  <div class="notes-header-row">
+    <div class="search-box">
+      <input type="text" class="search-input" id="library-search" placeholder="Поиск пособий..." oninput="searchLibrary()">
+    </div>
+    <button class="fab-header" onclick="openAddModal('guide')">＋</button>
+  </div>
+  
   <div class="cats" id="cats-row">
     <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
     <button class="cat-pill" onclick="filterCat('bio',this)">🧬 Биология</button>
     <button class="cat-pill" onclick="filterCat('ru',this)">✍️ Русский</button>
     <button class="cat-pill" onclick="filterCat('phys',this)">⚗️ Химия/Физика</button>
   </div>
+  
   <div class="scroll" id="guides-list">
     <div class="empty"><div class="empty-icon">📚</div><div class="empty-text">Библиотека пуста.<br>Нажми + чтобы добавить пособие</div></div>
   </div>
-  <button class="fab" onclick="openAddModal('guide')">＋</button>
+  <!-- Убрали старую FAB -->
 </div>
 
 <!-- КОЛОДЫ КАРТОЧЕК -->
@@ -763,11 +773,20 @@
     <div class="home-title">Тренируй<br>память</div>
     <div class="home-sub">Флеш-карты и паронимы для ЕГЭ</div>
   </div>
+  
+  <!-- Поиск и кнопка добавления -->
+  <div class="notes-header-row">
+    <div class="search-box">
+      <input type="text" class="search-input" id="decks-search" placeholder="Поиск колод..." oninput="searchDecks()">
+    </div>
+    <button class="fab-header" onclick="openAddModal('deck')">＋</button>
+  </div>
+  
   <div class="scroll">
     <div class="section-title">Мои колоды</div>
     <div id="decks-list"></div>
   </div>
-  <button class="fab" onclick="openAddModal('deck')">＋</button>
+  <!-- Убрали старую FAB -->
 </div>
 
 <!-- ДЕТАЛИ ПОСОБИЯ -->
@@ -969,6 +988,15 @@
     <div class="home-title">Атлас<br>биологии</div>
     <div class="home-sub">Схемы, диаграммы и иллюстрации</div>
   </div>
+  
+  <!-- Поиск и кнопка добавления -->
+  <div class="notes-header-row">
+    <div class="search-box">
+      <input type="text" class="search-input" id="atlas-search" placeholder="Поиск в атласе..." oninput="searchAtlas()">
+    </div>
+    <button class="fab-header" onclick="createAtlasItem()">＋</button>
+  </div>
+  
   <div class="atlas-categories">
     <div class="atlas-cat-pill active" onclick="filterAtlas('all', this)">🗺️ Все</div>
     <div class="atlas-cat-pill" onclick="filterAtlas('anatomy', this)">🫀 Анатомия</div>
@@ -977,10 +1005,11 @@
     <div class="atlas-cat-pill" onclick="filterAtlas('cells', this)">🔬 Клетки</div>
     <div class="atlas-cat-pill" onclick="filterAtlas('ecology', this)">🌍 Экология</div>
   </div>
+  
   <div class="scroll">
     <div class="atlas-grid" id="atlas-grid"></div>
   </div>
-  <button class="fab" onclick="createAtlasItem()">＋</button>
+  <!-- Убрали старую FAB -->
 </div>
 
 <!-- ДЕТАЛИ АТЛАСА -->
