@@ -145,6 +145,22 @@ window.addEventListener('resize', () => {
   if (document.getElementById('match-screen')?.classList.contains('active') && window.drawLines) {
     window.drawLines();
   }
+  // Очистка всех повторений (таблица reviews)
+function clearAllReviews() {
+  if (!confirm('Удалить все запланированные повторения? Это действие нельзя отменить.')) return;
+  window.dbDeleteRange('reviews', '').then(() => {
+    window.showToast('✓ Все повторения удалены');
+    // Если текущий экран — календарь, обновляем его
+    if (document.getElementById('calendar-screen')?.classList.contains('active')) {
+      if (window.renderCalendar) window.renderCalendar();
+      if (window.renderUpcomingReviews) window.renderUpcomingReviews();
+    }
+  }).catch(err => {
+    console.error(err);
+    window.showToast('⚠️ Ошибка при удалении');
+  });
+}
+window.clearAllReviews = clearAllReviews;
 });
 
 console.log('📚 Биолаб • Карточки • Заметки • Календарь повторений v3.0');
