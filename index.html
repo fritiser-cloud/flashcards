@@ -1005,6 +1005,8 @@
 После загрузки изображения можно вставить в текст используя синтаксис:
 ![описание](image:0)
 где 0 - номер изображения
+
+💡 Совет: Нажми Ctrl+V чтобы вставить изображение из буфера обмена
 "></textarea>
       <div class="editor-preview markdown-body" id="note-preview" style="display:none"></div>
     </div>
@@ -1100,6 +1102,8 @@
 - Правый желудочек
 - Левое предсердие
 - Левый желудочек
+
+💡 Совет: Нажми Ctrl+V чтобы вставить изображение из буфера обмена
 "></textarea>
     </div>
   </div>
@@ -2666,6 +2670,89 @@ openDB().then(() => {
 window.addEventListener('resize', () => {
   if (document.getElementById('match-screen')?.classList.contains('active')) drawLines();
 });
+
+// ==================== ВСТАВКА ИЗОБРАЖЕНИЙ ИЗ БУФЕРА ====================
+// Обработчик для заметок
+document.addEventListener('DOMContentLoaded', () => {
+  // Для заметок
+  const noteContent = document.getElementById('note-content');
+  if (noteContent) {
+    noteContent.addEventListener('paste', handleNotePaste);
+  }
+  
+  // Для атласа - слушаем на весь экран редактора
+  const atlasEditor = document.getElementById('atlas-editor-screen');
+  if (atlasEditor) {
+    atlasEditor.addEventListener('paste', handleAtlasPaste);
+  }
+});
+
+function handleNotePaste(e) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      e.preventDefault();
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      
+      reader.onload = function(event) {
+        const notes = getNotes();
+        const note = notes.find(n => n.id === currentNoteId);
+        if (!note) return;
+        
+        if (!note.images) note.images = [];
+        note.images.push(event.target.result);
+        saveNotes(notes);
+        renderNoteImages(note.images);
+        
+        const imageIndex = note.images.length - 1;
+        showToast(`✓ Изображение вставлено (номер ${imageIndex})`);
+        
+        // Вставляем markdown синтаксис в текущую позицию курсора
+        const textarea = document.getElementById('note-content');
+        const cursorPos = textarea.selectionStart;
+        const textBefore = textarea.value.substring(0, cursorPos);
+        const textAfter = textarea.value.substring(cursorPos);
+        const imageMarkdown = `![Изображение](image:${imageIndex})`;
+        
+        textarea.value = textBefore + imageMarkdown + textAfter;
+        textarea.selectionStart = textarea.selectionEnd = cursorPos + imageMarkdown.length;
+        textarea.focus();
+      };
+      
+      reader.readAsDataURL(blob);
+      break;
+    }
+  }
+}
+
+function handleAtlasPaste(e) {
+  // Только если фокус на экране редактора атласа
+  if (!document.getElementById('atlas-editor-screen').classList.contains('active')) return;
+  
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      e.preventDefault();
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      
+      reader.onload = function(event) {
+        atlasImageBase64 = event.target.result;
+        document.getElementById('atlas-preview-img').src = atlasImageBase64;
+        document.getElementById('atlas-image-preview').style.display = 'block';
+        showToast('✓ Изображение вставлено из буфера');
+      };
+      
+      reader.readAsDataURL(blob);
+      break;
+    }
+  }
+}
 </script>
 </body>
 </html>
