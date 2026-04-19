@@ -66,13 +66,14 @@ function clearAllData() {
 }
 window.clearAllData = clearAllData;
 
-// ==================== ОЧИСТКА ПОВТОРЕНИЙ ====================
+// ==================== ОЧИСТКА ПОВТОРЕНИЙ (КАЛЕНДАРЬ) ====================
 function clearAllReviews() {
   if (!confirm('🗑 Удалить все запланированные повторения? Это действие нельзя отменить.')) return;
   
   window.dbDeleteRange('reviews', '').then(() => {
     window.showToast('✓ Все повторения удалены');
     
+    // Если открыт календарь — обновляем его
     const calendarScreen = document.getElementById('calendar-screen');
     if (calendarScreen && calendarScreen.classList.contains('active')) {
       if (window.renderCalendar) window.renderCalendar();
