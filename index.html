@@ -438,10 +438,13 @@
     <div class="home-title">Биолаб <span>&</span><br>Наш язык</div>
     <div class="home-sub">Учебные пособия для подготовки к ЕГЭ</div>
   </div>
-  <div class="notes-header-row">
-    <div class="search-box"><input type="text" class="search-input" id="library-search" placeholder="Поиск пособий..." oninput="searchLibrary()"></div>
-    <button class="fab-header" onclick="openAddModal('guide')">＋</button>
+ <div class="notes-header-row">
+  <div class="search-box">
+    <input type="text" class="search-input" id="calendar-search" placeholder="Поиск тем..." oninput="searchCalendar()">
   </div>
+  <button class="fab-header" onclick="clearAllReviews()" style="background: var(--red); margin-right: 8px;" title="Очистить все повторения">🗑️</button>
+  <button class="fab-header" onclick="showAddTopicModal()">＋</button>
+</div>
   <div class="cats" id="cats-row">
     <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
     <button class="cat-pill" onclick="filterCat('bio',this)">🧬 Биология</button>
