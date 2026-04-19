@@ -264,4 +264,23 @@ function exitReview() {
   renderCalendar();
   renderUpcomingReviews();
 }
+async function clearAllReviews() {
+  if (!confirm('Вы уверены, что хотите удалить все запланированные повторения? Это действие нельзя отменить.')) {
+    return;
+  }
+  
+  try {
+    const allReviews = await window.dbGetAll('reviews');
+    for (const review of allReviews) {
+      await window.dbDelete('reviews', review.id);
+    }
+    window.showToast('🗑️ Все повторения удалены');
+    await renderCalendar();
+    await renderUpcomingReviews();
+  } catch (error) {
+    console.error('Ошибка при очистке повторений:', error);
+    window.showToast('❌ Ошибка при удалении');
+  }
+}
+window.clearAllReviews = clearAllReviews;
 window.exitReview = exitReview;
