@@ -1,4 +1,4 @@
-// calendar.js – исправленная версия с корректной сеткой и навигацией
+// calendar.js – полная рабочая версия с поддержкой очистки повторений
 
 let currentReviewItem = null;
 let reviewSessionQueue = [];
@@ -42,7 +42,7 @@ async function renderCalendar() {
   if (!container) return;
 
   const firstDayOfMonth = new Date(currentDisplayYear, currentDisplayMonth, 1, 12, 0, 0);
-  const startDayOfWeek = firstDayOfMonth.getDay(); // 0 = воскресенье
+  const startDayOfWeek = firstDayOfMonth.getDay();
   const offset = (startDayOfWeek === 0) ? -6 : -(startDayOfWeek - 1);
   const startDate = new Date(firstDayOfMonth);
   startDate.setDate(firstDayOfMonth.getDate() + offset);
