@@ -29,8 +29,10 @@ window.updateSettingsStats = updateSettingsStats;
 function renderSettings() {
   const ghUserInput = document.getElementById('gh-user-input');
   const ghRepoInput = document.getElementById('gh-repo-input');
+  const ghTokenInput = document.getElementById('gh-token-input');
   if (ghUserInput) ghUserInput.value = localStorage.getItem('gh_user') || 'fritiser-cloud';
   if (ghRepoInput) ghRepoInput.value = localStorage.getItem('gh_repo') || 'flashcards';
+  if (ghTokenInput) ghTokenInput.value = localStorage.getItem('gh_token') || '';
   updateSettingsStats();
 }
 window.renderSettings = renderSettings;
@@ -38,23 +40,30 @@ window.renderSettings = renderSettings;
 function saveSettings() {
   const ghUser = document.getElementById('gh-user-input')?.value.trim() || 'fritiser-cloud';
   const ghRepo = document.getElementById('gh-repo-input')?.value.trim() || 'flashcards';
+  const ghToken = document.getElementById('gh-token-input')?.value.trim() || '';
   localStorage.setItem('gh_user', ghUser);
   localStorage.setItem('gh_repo', ghRepo);
+  if (ghToken) localStorage.setItem('gh_token', ghToken);
+  else localStorage.removeItem('gh_token');
   window.showToast('✓ Настройки сохранены');
 }
 window.saveSettings = saveSettings;
 
-function clearAllData() {
+async function clearAllData() {
   if (!confirm('Удалить все пособия, колоды, заметки, атлас и историю повторений? Отменить нельзя.')) return;
-  localStorage.removeItem('bio_guides');
-  localStorage.removeItem('notes');
-  localStorage.removeItem('atlas');
-  localStorage.removeItem('gh_user');
-  localStorage.removeItem('gh_repo');
-  window.dbDeleteRange('decks', '');
-  window.dbDeleteRange('stats', '');
-  window.dbDeleteRange('favorites', '');
-  window.dbGetAll('reviews').then(reviews => reviews.forEach(r => window.dbDelete('reviews', r.id)));
+  // localStorage
+  ['bio_guides', 'notes', 'atlas', 'gh_user', 'gh_repo',
+   'ege_current_ru', 'ege_current_bio', 'ege_current_chem',
+   'ege_history_ru', 'ege_history_bio', 'ege_history_chem'
+  ].forEach(k => localStorage.removeItem(k));
+  // IndexedDB
+  await Promise.all([
+    window.dbGetAll('decks').then(items => Promise.all(items.map(i => window.dbDelete('decks', i.id)))),
+    window.dbGetAll('stats').then(items => Promise.all(items.map(i => window.dbDelete('stats', i.id)))),
+    window.dbGetAll('favorites').then(items => Promise.all(items.map(i => window.dbDelete('favorites', i.id)))),
+    window.dbGetAll('reviews').then(items => Promise.all(items.map(i => window.dbDelete('reviews', i.id)))),
+  ]);
+  if (window.invalidateDecksCache) window.invalidateDecksCache();
   if (window.renderLibrary) window.renderLibrary();
   if (window.renderDecks) window.renderDecks();
   if (window.renderAtlas) window.renderAtlas();
@@ -62,6 +71,8 @@ function clearAllData() {
   if (window.renderCalendar) window.renderCalendar();
   if (window.renderUpcomingReviews) window.renderUpcomingReviews();
   if (window.updateSettingsStats) window.updateSettingsStats();
+  if (window.renderScores) window.renderScores();
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
   window.showToast('🗑 Все данные удалены');
 }
 window.clearAllData = clearAllData;
@@ -111,8 +122,12 @@ window.navTo = navTo;
     if (window.renderAtlas) window.renderAtlas();
     if (window.renderNotes) window.renderNotes();
     if (window.updateSettingsStats) window.updateSettingsStats();
-    
+
     if (window.navTo) window.navTo('library');
+
+    // Автозагрузка из GitHub репозитория
+    if (window.autoLoadGithubGuides) window.autoLoadGithubGuides();
+    if (window.autoLoadGithubDecks) window.autoLoadGithubDecks();
   } catch (error) {
     console.error('Ошибка инициализации:', error);
     window.showToast('⚠️ Ошибка инициализации');

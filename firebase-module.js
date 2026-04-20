@@ -92,7 +92,7 @@ window.signOut = async function() {
   }
 };
 
-// Слияние двух массивов по id: для конфликтов побеждает элемент с бо́льшим updatedAt
+// Слияние по id (побеждает более новый updatedAt)
 function mergeArrays(local, cloud) {
   const map = new Map();
   for (const item of local) {
@@ -102,11 +102,40 @@ function mergeArrays(local, cloud) {
     if (item.id == null) continue;
     const key = String(item.id);
     const existing = map.get(key);
-    if (!existing || (item.updatedAt || 0) > (existing.updatedAt || 0)) {
-      map.set(key, item);
-    }
+    if (!existing || (item.updatedAt || 0) > (existing.updatedAt || 0)) map.set(key, item);
   }
   return [...map.values()];
+}
+
+// Слияние колод по name (autoIncrement id может конфликтовать между устройствами)
+function mergeDecks(local, cloud) {
+  const map = new Map();
+  for (const d of local) map.set(d.name, d);
+  for (const d of cloud) {
+    const existing = map.get(d.name);
+    if (!existing || (d.updatedAt || d.createdAt || 0) > (existing.updatedAt || existing.createdAt || 0)) map.set(d.name, d);
+  }
+  return [...map.values()];
+}
+
+// Слияние повторений по name+subject (autoIncrement id конфликтует)
+function mergeReviews(local, cloud) {
+  const key = r => (r.name || '') + '::' + (r.subject || '');
+  const map = new Map();
+  for (const r of local) map.set(key(r), r);
+  for (const r of cloud) {
+    const k = key(r);
+    const existing = map.get(k);
+    if (!existing || (r.updatedAt || 0) > (existing.updatedAt || 0)) map.set(k, r);
+  }
+  return [...map.values()];
+}
+
+// Полная замена содержимого store: удалить всё, записать merged
+async function replaceStore(storeName, items) {
+  const existing = await window.dbGetAll(storeName);
+  await Promise.all(existing.map(item => window.dbDelete(storeName, item.id)));
+  await Promise.all(items.map(item => window.dbPut(storeName, item)));
 }
 
 // Синхронизация: сливаем локальные данные с облачными (побеждает новее)
@@ -120,22 +149,71 @@ async function syncAllData() {
     if (userDoc.exists()) {
       const cloudData = userDoc.data();
 
-      if (cloudData.notes) {
+      // --- localStorage stores ---
+      if (cloudData.notes && cloudData.notes.length > 0) {
         const merged = mergeArrays(window.getNotes ? window.getNotes() : [], cloudData.notes);
         localStorage.setItem('notes', JSON.stringify(merged));
         if (window.renderNotes) window.renderNotes();
       }
-
-      if (cloudData.atlas) {
+      if (cloudData.atlas && cloudData.atlas.length > 0) {
         const merged = mergeArrays(window.getAtlasItems ? window.getAtlasItems() : [], cloudData.atlas);
         localStorage.setItem('atlas', JSON.stringify(merged));
         if (window.renderAtlas) window.renderAtlas();
       }
-
-      if (cloudData.guides) {
+      if (cloudData.guides && cloudData.guides.length > 0) {
         const merged = mergeArrays(window.getGuides ? window.getGuides() : [], cloudData.guides);
         localStorage.setItem('bio_guides', JSON.stringify(merged));
         if (window.renderLibrary) window.renderLibrary();
+      }
+
+      // --- Scores (localStorage) ---
+      for (const subj of ['ru', 'bio', 'chem']) {
+        if (cloudData['scores_current_' + subj]) {
+          const local = JSON.parse(localStorage.getItem('ege_current_' + subj) || '{}');
+          const cloud = cloudData['scores_current_' + subj];
+          // Побеждает тот у кого больше заполненных заданий
+          const localCount = Object.keys(local).length;
+          const cloudCount = Object.keys(cloud).length;
+          if (cloudCount > localCount) localStorage.setItem('ege_current_' + subj, JSON.stringify(cloud));
+        }
+        if (cloudData['scores_history_' + subj]) {
+          const local = JSON.parse(localStorage.getItem('ege_history_' + subj) || '[]');
+          const cloud = cloudData['scores_history_' + subj];
+          // Объединяем историю по label+date уникальности
+          const merged = [...local];
+          for (const entry of cloud) {
+            const key = entry.label + '::' + entry.savedAt;
+            if (!merged.find(e => e.label + '::' + e.savedAt === key)) merged.push(entry);
+          }
+          merged.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+          localStorage.setItem('ege_history_' + subj, JSON.stringify(merged.slice(0, 30)));
+        }
+      }
+
+      // --- IndexedDB stores ---
+      if (cloudData.decks && cloudData.decks.length > 0) {
+        const localDecks = await window.dbGetAll('decks');
+        const merged = mergeDecks(localDecks, cloudData.decks);
+        await replaceStore('decks', merged);
+        if (window.invalidateDecksCache) window.invalidateDecksCache();
+        if (window.renderDecks) window.renderDecks();
+      }
+      if (cloudData.stats && cloudData.stats.length > 0) {
+        const localStats = await window.dbGetAll('stats');
+        const merged = mergeArrays(localStats, cloudData.stats);
+        await replaceStore('stats', merged);
+      }
+      if (cloudData.favorites && cloudData.favorites.length > 0) {
+        const localFavs = await window.dbGetAll('favorites');
+        const merged = mergeArrays(localFavs, cloudData.favorites);
+        await replaceStore('favorites', merged);
+      }
+      if (cloudData.reviews && cloudData.reviews.length > 0) {
+        const localReviews = await window.dbGetAll('reviews');
+        const merged = mergeReviews(localReviews, cloudData.reviews);
+        await replaceStore('reviews', merged);
+        if (window.renderCalendar) window.renderCalendar();
+        if (window.renderUpcomingReviews) window.renderUpcomingReviews();
       }
     }
 
@@ -150,20 +228,32 @@ async function syncAllData() {
   }
 }
 
-// Сохранение локальных данных в облако
+// Сохранение всех локальных данных в облако
 async function saveToCloud() {
   if (!currentUser) return;
   try {
     const notes = window.getNotes ? window.getNotes() : [];
     const atlas = window.getAtlasItems ? window.getAtlasItems() : [];
     const guides = window.getGuides ? window.getGuides() : [];
-    const userDocRef = doc(db, 'users', currentUser.uid);
-    await setDoc(userDocRef, {
-      notes,
-      atlas,
-      guides,
+    const decks = await window.dbGetAll('decks');
+    const stats = await window.dbGetAll('stats');
+    const favorites = await window.dbGetAll('favorites');
+    const reviews = await window.dbGetAll('reviews');
+
+    const data = {
+      notes, atlas, guides,
+      decks, stats, favorites, reviews,
       updatedAt: serverTimestamp()
-    }, { merge: true });
+    };
+
+    // Scores (localStorage)
+    for (const subj of ['ru', 'bio', 'chem']) {
+      data['scores_current_' + subj] = JSON.parse(localStorage.getItem('ege_current_' + subj) || '{}');
+      data['scores_history_' + subj] = JSON.parse(localStorage.getItem('ege_history_' + subj) || '[]');
+    }
+
+    const userDocRef = doc(db, 'users', currentUser.uid);
+    await setDoc(userDocRef, data, { merge: true });
   } catch (error) {
     console.error('Ошибка сохранения в облако:', error);
   }

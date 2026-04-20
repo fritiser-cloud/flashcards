@@ -241,7 +241,9 @@ async function markCard(known) {
   let stat = await window.dbGet('stats', statId) || { id: statId, known: 0, errors: 0 };
   if (known) { stat.known = (stat.known || 0) + 1; sessionKnown++; }
   else { stat.errors = (stat.errors || 0) + 1; sessionErrors++; sessionErrorCards.push({ q: card.q, a: card.a }); }
+  stat.updatedAt = Date.now();
   await window.dbPut('stats', stat);
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
   studyIdx++;
   showCard();
 }
@@ -269,11 +271,13 @@ async function toggleFavorite() {
   const btn = document.getElementById('fav-btn');
   if (existing) {
     await window.dbDelete('favorites', favId);
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
     if (btn) { btn.textContent = '☆'; btn.classList.remove('active'); }
     window.showToast('Убрано из избранного');
     if (isFavMode) { studyIdx++; showCard(); }
   } else {
-    await window.dbPut('favorites', { id: favId });
+    await window.dbPut('favorites', { id: favId, updatedAt: Date.now() });
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
     if (btn) { btn.textContent = '★'; btn.classList.add('active'); btn.classList.add('pop'); setTimeout(() => btn.classList.remove('pop'), 200); }
     window.showToast('Добавлено в избранное ⭐');
   }

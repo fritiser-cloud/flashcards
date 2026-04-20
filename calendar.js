@@ -67,7 +67,7 @@ async function renderCalendar() {
 
   let html = `<div class="calendar-header">
                 <button class="calendar-nav" onclick="changeMonth(-1)">←</button>
-                <h2>${new Date(currentDisplayYear, currentDisplayMonth).toLocaleString('ru', { month: 'long', year: 'numeric' })}</h2>
+                <h2>${(() => { const d = new Date(currentDisplayYear, currentDisplayMonth); const m = d.toLocaleString('ru', {month:'long'}); return m.charAt(0).toUpperCase() + m.slice(1) + ' ' + currentDisplayYear; })()}</h2>
                 <button class="calendar-nav" onclick="changeMonth(1)">→</button>
               </div>
               <div class="calendar-weekdays">
@@ -140,9 +140,11 @@ async function saveTopic() {
     name, subject,
     created_at: new Date().toISOString(),
     next_review_date: new Date(firstReviewDate),
-    repetitions: 0, easiness: 2.5, interval: 1, last_quality: null
+    repetitions: 0, easiness: 2.5, interval: 1, last_quality: null,
+    updatedAt: Date.now()
   };
   await window.dbPut('reviews', reviewItem);
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
   window.showToast(`✓ Тема "${name}" добавлена`);
   closeTopicModal();
   renderCalendar();
@@ -244,8 +246,10 @@ async function submitReviewQuality(quality) {
     easiness: next.easiness,
     interval: next.interval,
     next_review_date: next.next_review_date,
-    last_quality: quality
+    last_quality: quality,
+    updatedAt: Date.now()
   });
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
   reviewSessionIdx++;
   showReviewCard();
 }

@@ -107,13 +107,42 @@
     .fab:active { transform: scale(0.92); }
     .fab-header { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--lavender-deep); color: #fff; font-size: 24px; cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
     .fab-header:active { transform: scale(0.92); background: var(--lavender-text); }
-    .bottom-nav { display: flex; background: rgba(250, 248, 255, 0.8); backdrop-filter: blur(20px); border-top: 1px solid var(--border); padding: 12px 0 max(12px, env(safe-area-inset-bottom)); position: sticky; bottom: 0; z-index: 10; width: 100%; }
+    .bottom-nav {
+      display: flex; align-items: center;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+      border-radius: 28px;
+      border: 1px solid rgba(220, 215, 235, 0.7);
+      box-shadow: 0 8px 32px rgba(80, 60, 140, 0.12), 0 2px 8px rgba(0,0,0,0.06);
+      padding: 6px 6px;
+      position: sticky;
+      bottom: max(14px, env(safe-area-inset-bottom));
+      margin: 0 10px max(14px, env(safe-area-inset-bottom));
+      z-index: 10;
+      width: calc(100% - 20px);
+    }
     .bottom-nav.hidden { display: none !important; }
-    .bottom-nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; cursor: pointer; border: none; background: none; font-family: var(--font); transition: all 0.15s; }
-    .bottom-nav-btn .icon { font-size: 24px; transition: transform 0.2s; }
-    .bottom-nav-btn .label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.3px; }
-    .bottom-nav-btn.active .icon { transform: scale(1.1); }
-    .bottom-nav-btn.active .label { color: var(--lavender-deep); }
+    .bottom-nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 2px; cursor: pointer; border: none; background: none;
+      font-family: var(--font); transition: all 0.2s; border-radius: 20px;
+    }
+    .bottom-nav-btn .icon {
+      font-size: 20px; line-height: 1;
+      width: 38px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 15px;
+      transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .bottom-nav-btn .label {
+      font-size: 9.5px; font-weight: 600; color: var(--text3);
+      letter-spacing: 0.2px; transition: all 0.2s; line-height: 1;
+    }
+    .bottom-nav-btn.active .icon {
+      background: var(--lavender);
+      transform: scale(1.08) translateY(-1px);
+    }
+    .bottom-nav-btn.active .label { color: var(--lavender-deep); font-weight: 700; }
     .reader-header { padding: 32px 24px 0; position: relative; z-index: 1; }
     .reader-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 6px; }
     .reader-title { font-family: var(--font-display); font-size: 32px; font-weight: 600; color: var(--text); line-height: 1.2; letter-spacing: -0.5px; }
@@ -372,7 +401,50 @@
     #fav-btn { font-size: 26px; transition: transform 0.2s; }
     #fav-btn.active { color: #F5C842; background: var(--yellow-light); }
     #fav-btn.pop { transform: scale(1.4); }
-    #guide-detail-screen .reader-content { flex: 1; overflow-y: auto; padding: 28px 24px 48px; }
+    /* ---- Ридер пособий ---- */
+    #guide-detail-screen { flex-direction: column; height: 100dvh; max-height: 100dvh; overflow: hidden; min-height: unset; }
+    .guide-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; flex-shrink: 0; }
+    .guide-breadcrumb { display: flex; align-items: center; gap: 6px; overflow: hidden; flex: 1; min-width: 0; }
+    .breadcrumb-home { display: flex; align-items: center; gap: 6px; background: none; border: none; font-family: var(--font); font-size: 14px; font-weight: 600; color: var(--lavender-deep); cursor: pointer; padding: 6px 10px; border-radius: 10px; white-space: nowrap; transition: background 0.15s; }
+    .breadcrumb-home:active { background: var(--lavender); }
+    .breadcrumb-sep { color: var(--text3); font-size: 14px; flex-shrink: 0; }
+    .breadcrumb-current { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .guide-header-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .guide-action-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--surface2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+    .guide-action-btn:active { background: var(--lavender); }
+    .guide-action-btn.toc-active { background: var(--lavender); color: var(--lavender-deep); }
+    .reading-progress-bar { height: 3px; background: var(--border); flex-shrink: 0; }
+    .reading-progress-fill { height: 100%; background: linear-gradient(90deg, var(--lavender-deep), #B39DDB); width: 0%; transition: width 0.1s; }
+    #guide-detail-screen .reader-content { flex: 1; overflow-y: auto; padding: 0 0 80px; }
+    .guide-hero-card { padding: 28px 24px 24px; border-bottom: 1.5px solid var(--border); margin-bottom: 24px; }
+    .guide-hero-icon { font-size: 44px; margin-bottom: 12px; }
+    /* TOC sheet */
+    .toc-overlay { display: none; position: fixed; inset: 0; background: rgba(26,21,48,0.4); z-index: 50; backdrop-filter: blur(4px); }
+    .toc-overlay.open { display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s; }
+    .toc-sheet { background: var(--surface); width: 100%; max-width: 480px; border-radius: 28px 28px 0 0; padding: 20px 24px 48px; max-height: 70dvh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(.34,1.56,.64,1); }
+    .toc-handle { width: 40px; height: 5px; background: var(--border); border-radius: 3px; margin: 0 auto 20px; }
+    .toc-sheet-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+    .toc-item { display: block; width: 100%; text-align: left; padding: 12px 16px; border-radius: 12px; border: none; background: none; font-family: var(--font); font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; transition: background 0.15s; margin-bottom: 4px; }
+    .toc-item:active { background: var(--lavender); color: var(--lavender-text); }
+    .toc-item.toc-item-sub { padding-left: 32px; font-size: 14px; font-weight: 400; color: var(--text2); }
+    .toc-item:hover { background: var(--surface2); }
+    /* PDF viewer */
+    .pdf-viewer-overlay { display: none; position: fixed; inset: 0; background: #1a1a1a; z-index: 60; flex-direction: column; }
+    .pdf-viewer-overlay.open { display: flex; }
+    .pdf-viewer-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); flex-shrink: 0; }
+    .pdf-viewer-title { font-size: 15px; font-weight: 600; color: #fff; }
+    .pdf-close-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .pdf-frame-wrap { flex: 1; overflow: hidden; }
+    .pdf-frame-wrap iframe { width: 100%; height: 100%; border: none; }
+    /* Chapters in reader */
+    .guide-chapter-card { display: flex; align-items: center; gap: 14px; padding: 14px 20px; background: var(--surface); border-radius: 14px; border: 1.5px solid var(--border); margin-bottom: 10px; cursor: default; }
+    .guide-chapter-num { width: 32px; height: 32px; border-radius: 50%; background: var(--lavender); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--lavender-text); flex-shrink: 0; }
+    .guide-chapter-info { flex: 1; min-width: 0; }
+    .guide-chapter-name { font-size: 15px; font-weight: 600; color: var(--text); }
+    .guide-chapter-tasks { font-size: 13px; color: var(--text3); margin-top: 2px; }
+    .guide-sections-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); padding: 0 24px; margin-bottom: 12px; }
+    .guide-markdown-wrap { padding: 0 24px; }
+    #guide-detail-screen .reader-content { flex: 1; overflow-y: auto; padding: 0 0 80px; }
     #deck-detail-screen .scroll { padding: 28px 24px; gap: 20px; }
     
     /* Стили для календаря */
@@ -411,7 +483,7 @@
       .screen { max-width: 1200px; margin: 0 auto; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
       body { background: #F0F0ED; }
       .scroll, .reader-content, .editor-content { padding-left: 32px; padding-right: 32px; }
-      .bottom-nav { max-width: 1200px; margin: 0 auto; border-radius: var(--radius) var(--radius) 0 0; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+      .bottom-nav { max-width: calc(1200px - 20px); margin: 0 auto max(14px, env(safe-area-inset-bottom)); }
       .atlas-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
       .atlas-card-img { min-height: 200px; padding: 20px; }
       .note-editor, .flashcard-container { max-width: 1200px; margin: 0 auto; }
@@ -425,6 +497,9 @@
     #app { width: 100%; max-width: 1200px; margin: 0 auto; }
 
     /* ===== БАЛЛЫ ЕГЭ ===== */
+    .score-filled-badge { font-size:12px; color:var(--text3); margin-bottom:12px; font-weight:500; }
+    .score-dim { color:var(--text3) !important; }
+    .score-group-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--text3); padding:14px 0 6px; border-bottom:1px solid var(--border); margin-bottom:8px; }
     .scores-tabs-row { display:flex; gap:8px; padding:0 20px 16px; overflow-x:auto; scrollbar-width:none; }
     .scores-tabs-row::-webkit-scrollbar { display:none; }
     .scores-tab { flex-shrink:0; padding:8px 18px; border-radius:20px; border:1.5px solid var(--border); background:var(--surface); color:var(--text2); font-size:14px; font-weight:600; cursor:pointer; transition:all 0.18s; }
@@ -452,6 +527,7 @@
     .score-task-row { display:flex; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:10px 14px; transition:border-color 0.15s, background 0.15s; }
     .score-task-row.task-partial { border-color:var(--yellow); background:#FFFDF0; }
     .score-task-row.task-full { border-color:var(--green); background:var(--green-light); }
+    .score-task-row.task-zero { border-color:#E0E0D8; background:var(--surface2); }
     .score-task-num { font-size:13px; font-weight:700; color:var(--text2); min-width:36px; }
     .score-task-maxlabel { font-size:11px; color:var(--text3); min-width:36px; }
     .score-task-name { font-size:13px; color:var(--text2); flex:1; }
@@ -459,9 +535,10 @@
 
     .score-btn { width:34px; height:34px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text2); font-size:14px; font-weight:600; cursor:pointer; transition:all 0.15s; }
     .score-btn:active { transform:scale(0.9); }
-    .score-btn.sbtn-zero.s-active { background:#FDECEA; border-color:var(--red); color:var(--red); }
+    .score-btn.sbtn-zero.s-active { background:#F0F0EC; border-color:#C0C0B8; color:var(--text2); }
     .score-btn.sbtn-mid.s-active { background:var(--yellow-light); border-color:var(--yellow); color:#9A6F00; }
     .score-btn.sbtn-full.s-active { background:var(--green-light); border-color:var(--green); color:var(--green); }
+    .score-btn.sbtn-neutral { background:var(--surface); border-color:var(--border); color:var(--text3); }
 
     .essay-controls { display:flex; align-items:center; gap:8px; margin-left:auto; }
     .essay-btn { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text); font-size:18px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
@@ -505,8 +582,12 @@
 <div id="library-screen" class="screen active">
   <div class="home-hero">
     <div class="home-label">📚 Твоя библиотека</div>
-    <div class="home-title">Биолаб <span>&</span><br>Наш язык</div>
+    <div class="home-title">Библиотека</div>
     <div class="home-sub">Учебные пособия для подготовки к ЕГЭ</div>
+  </div>
+  <div class="notes-header-row">
+    <div class="search-box"><input type="text" class="search-input" id="library-search" placeholder="Поиск пособий..." oninput="searchLibrary()"></div>
+    <button class="fab-header" onclick="openAddModal('guide')">＋</button>
   </div>
   <div class="cats" id="cats-row">
     <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
@@ -536,15 +617,66 @@
 
 <!-- ДЕТАЛИ ПОСОБИЯ -->
 <div id="guide-detail-screen" class="screen">
-  <div class="nav"><button class="nav-btn" onclick="showScreen('library-screen')">←</button><div class="nav-title" id="guide-detail-title">Пособие</div><button class="nav-btn" id="guide-delete-btn">🗑</button></div>
-  <div class="reader-header"><div class="reader-label" id="guide-category-label">Биология</div><div class="reader-title" id="guide-name">—</div><div class="reader-desc" id="guide-desc">—</div></div>
-  <div class="reader-content">
-    <div class="stats-row" id="guide-stats" style="display:none; margin-bottom:20px"><div class="stat-box"><div class="stat-num" id="stat-chapters">0</div><div class="stat-lbl">Глав</div></div><div class="stat-box sage"><div class="stat-num" id="stat-tasks">0</div><div class="stat-lbl">Задач разобрано</div></div></div>
-    <div class="card-tags" id="guide-tags" style="margin-bottom:20px"></div>
-    <div id="guide-chapters-list"></div>
-    <div id="guide-markdown-content" class="markdown-body" style="margin: 24px 0;"></div>
-    <div id="guide-action-buttons" style="margin-top:16px"></div>
+  <!-- Sticky breadcrumb bar -->
+  <div class="guide-header-bar">
+    <div class="guide-breadcrumb">
+      <button class="breadcrumb-home" onclick="window.showScreen('library-screen')">← <span id="breadcrumb-category">Библиотека</span></button>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current" id="breadcrumb-title">Пособие</span>
+    </div>
+    <div class="guide-header-actions">
+      <button class="guide-action-btn" id="toc-toggle-btn" onclick="toggleTOC()" title="Оглавление" style="display:none">☰</button>
+      <button class="guide-action-btn" id="guide-delete-btn" title="Удалить">🗑</button>
+    </div>
   </div>
+  <!-- Reading progress -->
+  <div class="reading-progress-bar"><div class="reading-progress-fill" id="reading-progress-fill"></div></div>
+  <!-- Content scroll area -->
+  <div class="reader-content" id="guide-reader-content" onscroll="updateReadingProgress()">
+    <!-- Hero -->
+    <div class="guide-hero-card">
+      <div class="guide-hero-icon" id="guide-hero-icon">📖</div>
+      <div class="reader-label" id="guide-category-label">Биология</div>
+      <div class="reader-title" id="guide-name">—</div>
+      <div class="reader-desc" id="guide-desc">—</div>
+      <div class="card-tags" id="guide-tags" style="margin-top:14px"></div>
+    </div>
+    <!-- Stats -->
+    <div style="padding: 0 24px">
+      <div class="stats-row" id="guide-stats" style="display:none; margin-bottom:20px">
+        <div class="stat-box"><div class="stat-num" id="stat-chapters">0</div><div class="stat-lbl">Глав</div></div>
+        <div class="stat-box sage"><div class="stat-num" id="stat-tasks">0</div><div class="stat-lbl">Задач</div></div>
+      </div>
+    </div>
+    <!-- Chapters list -->
+    <div id="guide-chapters-list"></div>
+    <!-- Markdown content -->
+    <div class="guide-markdown-wrap">
+      <div id="guide-markdown-content" class="markdown-body"></div>
+    </div>
+    <!-- Actions (PDF / external link) -->
+    <div id="guide-action-buttons" style="padding: 16px 24px 8px"></div>
+  </div>
+  <!-- TOC bottom sheet -->
+  <div class="toc-overlay" id="toc-overlay" onclick="toggleTOC()">
+    <div class="toc-sheet" onclick="event.stopPropagation()">
+      <div class="toc-handle"></div>
+      <div class="toc-sheet-title">Оглавление</div>
+      <div id="toc-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF VIEWER OVERLAY -->
+<div class="pdf-viewer-overlay" id="pdf-viewer-overlay">
+  <div class="pdf-viewer-bar">
+    <div class="pdf-viewer-title" id="pdf-viewer-title">PDF</div>
+    <button class="pdf-close-btn" onclick="closePdfViewer()">✕</button>
+  </div>
+  <div class="pdf-frame-wrap">
+    <iframe id="pdf-viewer-frame" src="" allowfullscreen></iframe>
+  </div>
+</div>
 </div>
 
 <!-- ДЕТАЛИ КОЛОДЫ -->
@@ -653,7 +785,7 @@
   <div class="nav"><div style="width:44px"></div><div class="nav-title">Настройки</div><div style="width:44px"></div></div>
   <div class="scroll">
     <div id="auth-section"><div id="auth-logged-out" style="display:none"><div class="settings-section"><div class="settings-label">Аккаунт</div><div style="padding:16px 0;text-align:center"><div style="font-size:56px;margin-bottom:16px">👤</div><div style="font-size:17px;font-weight:500;color:var(--text);margin-bottom:8px">Не авторизован</div><div style="font-size:14px;color:var(--text3);margin-bottom:24px">Войдите для синхронизации данных</div><button class="btn-google" onclick="signInWithGoogle()"><svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.96C.347 6.173 0 7.548 0 9s.348 2.827.96 4.042l3.005-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.96 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>Войти через Google</button></div></div></div><div id="auth-logged-in" style="display:none"><div class="auth-card"><img id="user-avatar" class="auth-avatar" src="" alt="Avatar"><div class="auth-name" id="user-name">Загрузка...</div><div class="auth-email" id="user-email"></div><div class="auth-status"><span>●</span> Подключено</div></div><div class="settings-section"><div class="settings-label">Синхронизация</div><div class="sync-status" id="sync-status"><span class="sync-icon success">☁️</span><span id="sync-text">Все данные синхронизированы</span></div><div class="settings-row"><div><div class="settings-row-label">Последняя синхронизация</div></div><div style="font-size:14px;color:var(--text3)" id="last-sync">Никогда</div></div></div><button class="btn btn-secondary" onclick="signOut()">Выйти из аккаунта</button><div style="height:16px"></div></div></div>
-    <div class="settings-section"><div class="settings-label">GitHub репозиторий</div><div class="settings-row"><div><div class="settings-row-label">Пользователь</div><div class="settings-row-sub">Логин GitHub</div></div><input class="settings-input" id="gh-user-input" placeholder="fritiser-cloud" value="fritiser-cloud"></div><div class="settings-row"><div><div class="settings-row-label">Репозиторий</div><div class="settings-row-sub">Название</div></div><input class="settings-input" id="gh-repo-input" placeholder="flashcards" value="flashcards"></div></div>
+    <div class="settings-section"><div class="settings-label">GitHub репозиторий</div><div class="settings-row"><div><div class="settings-row-label">Пользователь</div><div class="settings-row-sub">Логин GitHub</div></div><input class="settings-input" id="gh-user-input" placeholder="fritiser-cloud" value="fritiser-cloud"></div><div class="settings-row"><div><div class="settings-row-label">Репозиторий</div><div class="settings-row-sub">Название</div></div><input class="settings-input" id="gh-repo-input" placeholder="flashcards" value="flashcards"></div><div class="settings-row"><div><div class="settings-row-label">GitHub Token</div><div class="settings-row-sub">Для сохранения колод в decks/</div></div><input class="settings-input" id="gh-token-input" type="password" placeholder="ghp_..."></div></div>
     <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить</button><div style="height:12px"></div>
     <div class="settings-section"><div class="settings-label">О приложении</div><div class="settings-row"><div><div class="settings-row-label">Биолаб + Карточки + Заметки</div><div class="settings-row-sub">Версия 3.0 · ЕГЭ помощник</div></div></div><div class="settings-row"><div><div class="settings-row-label">Пособий загружено</div></div><div style="font-weight:700;color:var(--lavender-text)" id="settings-guide-count">0</div></div><div class="settings-row"><div><div class="settings-row-label">Колод загружено</div></div><div style="font-weight:700;color:var(--accent)" id="settings-deck-count">0</div></div><div class="settings-row"><div><div class="settings-row-label">Элементов в атласе</div></div><div style="font-weight:700;color:var(--sage-deep)" id="settings-atlas-count">0</div></div><div class="settings-row"><div><div class="settings-row-label">Заметок создано</div></div><div style="font-weight:700;color:var(--sky-deep)" id="settings-notes-count">0</div></div></div>
     <button class="btn btn-secondary" onclick="clearAllData()" style="color:#c00">🗑 Удалить все данные</button>
@@ -678,7 +810,7 @@
 <!-- НИЖНЕЕ МЕНЮ -->
 <div class="bottom-nav">
   <button class="bottom-nav-btn" id="nav-library" onclick="navTo('library')"><span class="icon">📚</span><span class="label">Библиотека</span></button>
-  <button class="bottom-nav-btn" id="nav-decks" onclick="navTo('decks')"><span class="icon">📇</span><span class="label">Карточки</span></button>
+  <button class="bottom-nav-btn" id="nav-decks" onclick="navTo('decks')"><span class="icon">🃏</span><span class="label">Карточки</span></button>
   <button class="bottom-nav-btn" id="nav-atlas" onclick="navTo('atlas')"><span class="icon">🗺️</span><span class="label">Атлас</span></button>
   <button class="bottom-nav-btn" id="nav-notes" onclick="navTo('notes')"><span class="icon">📝</span><span class="label">Заметки</span></button>
   <button class="bottom-nav-btn" id="nav-calendar" onclick="navTo('calendar')"><span class="icon">📅</span><span class="label">Календарь</span></button>
@@ -688,7 +820,46 @@
 
 <!-- МОДАЛЬНЫЕ ОКНА -->
 <div class="modal-overlay" id="add-modal" onclick="closeAddModal(event)">
-  <div class="modal"><div class="modal-handle"></div><div class="modal-title" id="modal-title">Добавить</div><div class="modal-sub" id="modal-sub">Загрузи файл или выбери из GitHub</div><div class="modal-tabs"><button class="modal-tab active" onclick="switchAddTab('file',this)">📂 Файл</button><button class="modal-tab" onclick="switchAddTab('github',this)">🐙 GitHub</button></div><div id="add-tab-file"><button class="btn btn-primary" onclick="triggerFileAdd()" style="margin-bottom:12px">📂 Загрузить JSON</button><button class="btn btn-secondary" onclick="openSampleModal()">👀 Формат файла</button></div><div id="add-tab-github" style="display:none"><div class="gh-loading" id="gh-loading">Загружаю список…</div><div id="gh-list"></div><div id="gh-error" style="display:none; color:var(--peach-text)"></div></div><button class="modal-cancel" onclick="closeAddModal()">Отмена</button></div>
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Добавить</div>
+    <div class="modal-sub" id="modal-sub">Загрузи файл или выбери из GitHub</div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchAddTab('file',this)">📂 Файл</button>
+      <button class="modal-tab" onclick="switchAddTab('github',this)">🐙 GitHub</button>
+    </div>
+    <div id="add-tab-file">
+      <div style="display:flex;flex-direction:column;gap:12px;padding:4px 0 8px">
+        <button onclick="triggerFileAdd()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--lavender);border:1.5px solid var(--lavender-deep);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
+          <span style="font-size:32px;line-height:1;flex-shrink:0">📂</span>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--lavender-text)">Загрузить JSON</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:3px">Файл с карточками или пособием</div>
+          </div>
+        </button>
+        <button id="btn-upload-pdf" onclick="triggerPdfAdd()" style="display:none;align-items:center;gap:16px;padding:18px 20px;background:var(--peach);border:1.5px solid var(--peach-deep);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
+          <span style="font-size:32px;line-height:1;flex-shrink:0">📄</span>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--peach-text)">Загрузить PDF</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:3px">Встроить PDF-документ в пособие</div>
+          </div>
+        </button>
+        <button onclick="openSampleModal()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
+          <span style="font-size:32px;line-height:1;flex-shrink:0">👀</span>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--text)">Формат файла</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:3px">Посмотреть пример JSON</div>
+          </div>
+        </button>
+      </div>
+    </div>
+    <div id="add-tab-github" style="display:none">
+      <div class="gh-loading" id="gh-loading">Загружаю список…</div>
+      <div id="gh-list"></div>
+      <div id="gh-error" style="display:none; color:var(--peach-text)"></div>
+    </div>
+    <button class="modal-cancel" onclick="closeAddModal()">Отмена</button>
+  </div>
 </div>
 <div class="modal-overlay" id="sample-modal" onclick="closeSampleModal(event)">
   <div class="modal"><div class="modal-handle"></div><div class="modal-title" id="sample-title">Формат файла</div><div class="modal-sub" id="sample-sub"></div><pre id="sample-pre" style="background:var(--surface2); border-radius:16px; padding:18px; font-size:12px; overflow-x:auto; line-height:1.7; border:1.5px solid var(--border);"></pre><button class="modal-cancel" onclick="closeSampleModal()">Закрыть</button></div>
@@ -699,6 +870,7 @@
 
 <div class="toast" id="toast"></div>
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
+<input type="file" id="pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="handlePdfAdd(event)">
 <input type="file" id="atlas-image-input" accept="image/*" style="display:none" onchange="handleAtlasImageUpload(event)">
 <input type="file" id="note-image-input" accept="image/*" style="display:none" onchange="handleNoteImageUpload(event)">
 </div>

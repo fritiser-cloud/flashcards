@@ -13,6 +13,14 @@ const EGE_SUBJECTS = {
       {id:23,max:1},{id:24,max:1},{id:25,max:1},{id:26,max:1},
       {id:27,max:22,isEssay:true,label:'Сочинение'}
     ],
+    groups: [
+      {label:'Задания 1–7',  ids:[1,2,3,4,5,6,7]},
+      {label:'Задание 8',    ids:[8]},
+      {label:'Задания 9–21', ids:[9,10,11,12,13,14,15,16,17,18,19,20,21]},
+      {label:'Задание 22',   ids:[22]},
+      {label:'Задания 23–26',ids:[23,24,25,26]},
+      {label:'Сочинение',    ids:[27]}
+    ],
     scale: [0,3,5,8,10,12,15,17,20,22,24,27,29,32,34,36,37,39,40,42,43,45,46,48,49,51,52,54,55,57,58,60,61,63,64,66,67,69,70,72,73,75,78,81,83,86,89,91,94,97,100]
   },
   bio: {
@@ -36,6 +44,10 @@ const EGE_SUBJECTS = {
       {id:22,max:3},{id:23,max:3},{id:24,max:3},{id:25,max:3},
       {id:26,max:3},{id:27,max:3},{id:28,max:3}
     ],
+    groups: [
+      {label:'Часть 1 — задания 1–21', ids:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]},
+      {label:'Часть 2 — задания 22–28', ids:[22,23,24,25,26,27,28]}
+    ],
     scale: [0,3,5,7,10,12,14,17,19,21,24,26,28,31,33,36,38,40,41,43,45,46,48,50,51,53,55,56,58,60,61,63,65,66,68,70,71,72,73,74,75,76,77,78,79,80,81,83,85,86,88,90,91,93,95,96,98,100]
   },
   chem: {
@@ -52,6 +64,11 @@ const EGE_SUBJECTS = {
       {id:29,max:2},{id:30,max:2},
       {id:31,max:4},{id:32,max:5},{id:33,max:3},{id:34,max:4}
     ],
+    groups: [
+      {label:'Задания 1–15',           ids:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},
+      {label:'Задания 16–30',          ids:[16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]},
+      {label:'Развёрнутые ответы 31–34',ids:[31,32,33,34]}
+    ],
     scale: [0,4,7,10,14,17,20,23,27,30,33,36,38,39,40,42,43,44,46,47,48,49,51,52,53,55,56,57,58,60,61,62,64,65,66,68,69,70,71,73,74,75,77,78,79,80,82,84,86,88,90,91,93,95,97,99,100]
   }
 };
@@ -59,6 +76,7 @@ const EGE_SUBJECTS = {
 let currentScoreSubject = 'ru';
 
 // ==================== ДАННЫЕ ====================
+// scores хранит явно выставленные значения. Отсутствующий ключ = «не заполнено».
 function getScoreCurrent(subject) {
   try { return JSON.parse(localStorage.getItem('ege_current_' + subject) || '{}'); } catch { return {}; }
 }
@@ -80,10 +98,13 @@ function calcSecondary(subject, primary) {
   return scale[Math.min(Math.max(primary, 0), scale.length - 1)];
 }
 
-// ==================== РЕНДЕР ====================
-function renderScores() {
-  renderScoresContent();
+// Сколько заданий уже заполнено
+function countFilled(subject, scores) {
+  return EGE_SUBJECTS[subject].tasks.filter(t => t.id in scores).length;
 }
+
+// ==================== РЕНДЕР ====================
+function renderScores() { renderScoresContent(); }
 window.renderScores = renderScores;
 
 function switchScoreSubject(subject, btn) {
@@ -101,15 +122,34 @@ function renderScoresContent() {
   const scores = getScoreCurrent(currentScoreSubject);
   const primary = calcPrimary(currentScoreSubject, scores);
   const secondary = calcSecondary(currentScoreSubject, primary);
+  const filled = countFilled(currentScoreSubject, scores);
+  const total = subj.tasks.length;
   const pct = Math.round(primary / subj.maxPrimary * 100);
-  const secColor = secondary >= 61 ? 'var(--green)' : secondary >= 36 ? 'var(--yellow)' : 'var(--red)';
-  const barColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)';
+
+  // Цвета только если что-то заполнено
+  const isEmpty = filled === 0;
+  const secColor = isEmpty ? 'var(--text3)' : secondary >= 61 ? 'var(--green)' : secondary >= 36 ? 'var(--yellow)' : 'var(--red)';
+  const barColor = isEmpty ? 'var(--lavender-mid)' : pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)';
+
+  // Строим список заданий с группами
+  const taskMap = Object.fromEntries(subj.tasks.map(t => [t.id, t]));
+  let tasksHTML = '';
+  for (const group of subj.groups) {
+    tasksHTML += `<div class="score-group-label">${group.label}</div>`;
+    for (const id of group.ids) {
+      const task = taskMap[id];
+      const isSet = id in scores;
+      const score = isSet ? scores[id] : null;
+      tasksHTML += buildTaskRowHTML(task, score, isSet);
+    }
+  }
 
   container.innerHTML = `
     <div class="score-summary-card">
+      <div class="score-filled-badge">${filled} из ${total} заданий заполнено</div>
       <div class="score-summary-row">
         <div class="score-block">
-          <div class="score-big" id="score-primary-num">${primary}</div>
+          <div class="score-big${isEmpty ? ' score-dim' : ''}" id="score-primary-num">${primary}</div>
           <div class="score-big-of">из ${subj.maxPrimary}</div>
           <div class="score-label">первичных</div>
         </div>
@@ -121,8 +161,10 @@ function renderScoresContent() {
         </div>
       </div>
       <div class="score-bar-row">
-        <div class="score-bar"><div class="score-bar-fill" id="score-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-        <span class="score-bar-pct" id="score-bar-pct">${pct}%</span>
+        <div class="score-bar">
+          <div class="score-bar-fill" id="score-bar-fill" style="width:${isEmpty?'0':pct}%;background:${barColor}"></div>
+        </div>
+        <span class="score-bar-pct" id="score-bar-pct">${isEmpty ? '—' : pct+'%'}</span>
       </div>
     </div>
 
@@ -130,9 +172,7 @@ function renderScoresContent() {
       <span class="score-section-title">Задания</span>
       <button class="score-link-btn" onclick="resetCurrentScores()">↺ Сбросить</button>
     </div>
-    <div class="score-tasks-list" id="score-tasks-list">
-      ${subj.tasks.map(t => buildTaskRowHTML(t, scores[t.id] || 0)).join('')}
-    </div>
+    <div class="score-tasks-list" id="score-tasks-list">${tasksHTML}</div>
 
     <div style="padding:4px 0 20px">
       <button class="btn btn-primary" onclick="saveVariant()" style="width:100%">💾 Сохранить вариант</button>
@@ -143,18 +183,20 @@ function renderScoresContent() {
   `;
 }
 
-function buildTaskRowHTML(task, score) {
-  const full = score === task.max;
-  const partial = score > 0 && !full;
-  const rowCls = full ? 'task-full' : partial ? 'task-partial' : '';
+function buildTaskRowHTML(task, score, isSet) {
+  const full   = isSet && score === task.max;
+  const zero   = isSet && score === 0;
+  const partial = isSet && score > 0 && !full;
+  const rowCls = full ? 'task-full' : partial ? 'task-partial' : zero ? 'task-zero' : '';
 
   if (task.isEssay) {
+    const val = isSet ? score : 0;
     return `<div class="score-task-row ${rowCls}" id="task-row-${task.id}">
       <div class="score-task-num">№${task.id}</div>
       <div class="score-task-name">${task.label}</div>
       <div class="essay-controls">
         <button class="essay-btn" onclick="adjustEssay(${task.id},-1,${task.max})">−</button>
-        <span class="essay-val" id="essay-val-${task.id}">${score}</span>
+        <span class="essay-val" id="essay-val-${task.id}">${val}</span>
         <span class="essay-sep">/${task.max}</span>
         <button class="essay-btn" onclick="adjustEssay(${task.id},1,${task.max})">+</button>
       </div>
@@ -163,8 +205,10 @@ function buildTaskRowHTML(task, score) {
 
   const options = task.options || Array.from({length: task.max + 1}, (_, i) => i);
   const btns = options.map(v => {
-    const cls = v === 0 ? 'sbtn-zero' : v < task.max ? 'sbtn-mid' : 'sbtn-full';
-    return `<button class="score-btn ${cls}${score===v?' s-active':''}" onclick="setTaskScore(${task.id},${v})">${v}</button>`;
+    const isActive = isSet && score === v;
+    let cls = 'sbtn-neutral';
+    if (isActive) cls = v === 0 ? 'sbtn-zero' : v < task.max ? 'sbtn-mid' : 'sbtn-full';
+    return `<button class="score-btn ${cls}${isActive?' s-active':''}" onclick="setTaskScore(${task.id},${v})">${v}</button>`;
   }).join('');
 
   return `<div class="score-task-row ${rowCls}" id="task-row-${task.id}">
@@ -193,15 +237,16 @@ function buildAnalyticsHTML() {
   const primaries = history.map(v => calcPrimary(currentScoreSubject, v.tasks));
   const avgPrimary = Math.round(primaries.reduce((a,b) => a+b, 0) / primaries.length);
   const bestPrimary = Math.max(...primaries);
+  const cnt = history.length;
 
   let html = `<div class="score-section-header">
     <span class="score-section-title">Аналитика</span>
-    <span class="score-section-sub">${history.length} ${history.length===1?'вариант':history.length<5?'варианта':'вариантов'}</span>
+    <span class="score-section-sub">${cnt} ${cnt===1?'вариант':cnt<5?'варианта':'вариантов'}</span>
   </div>
   <div class="analytics-summary-row">
     <div class="analytics-stat-card">
       <div class="analytics-stat-num">${calcSecondary(currentScoreSubject, avgPrimary)}</div>
-      <div class="analytics-stat-label">Средний тестовый</div>
+      <div class="analytics-stat-label">Средний балл</div>
     </div>
     <div class="analytics-stat-card">
       <div class="analytics-stat-num">${calcSecondary(currentScoreSubject, bestPrimary)}</div>
@@ -245,7 +290,7 @@ function buildHistoryHTML() {
       <div class="history-scores">
         <span class="history-primary">${prim}/${subj.maxPrimary}</span>
         <span class="history-arrow">→</span>
-        <span class="history-secondary" style="color:${secColor};font-weight:700">${sec}</span>
+        <span class="history-secondary" style="color:${secColor}">${sec}</span>
       </div>
       <button class="history-del-btn" onclick="deleteVariant(${idx})">✕</button>
     </div>`;
@@ -261,7 +306,7 @@ function setTaskScore(taskId, score) {
 
   const task = EGE_SUBJECTS[currentScoreSubject].tasks.find(t => t.id === taskId);
   const row = document.getElementById('task-row-' + taskId);
-  if (task && row) row.outerHTML = buildTaskRowHTML(task, score);
+  if (task && row) row.outerHTML = buildTaskRowHTML(task, score, true);
 
   updateSummaryDisplay();
 }
@@ -279,18 +324,22 @@ function updateSummaryDisplay() {
   const scores = getScoreCurrent(currentScoreSubject);
   const primary = calcPrimary(currentScoreSubject, scores);
   const secondary = calcSecondary(currentScoreSubject, primary);
+  const filled = countFilled(currentScoreSubject, scores);
   const pct = Math.round(primary / subj.maxPrimary * 100);
-  const secColor = secondary >= 61 ? 'var(--green)' : secondary >= 36 ? 'var(--yellow)' : 'var(--red)';
-  const barColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)';
+  const isEmpty = filled === 0;
+  const secColor = isEmpty ? 'var(--text3)' : secondary >= 61 ? 'var(--green)' : secondary >= 36 ? 'var(--yellow)' : 'var(--red)';
+  const barColor = isEmpty ? 'var(--lavender-mid)' : pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)';
 
   const pEl = document.getElementById('score-primary-num');
-  if (pEl) pEl.textContent = primary;
+  if (pEl) { pEl.textContent = primary; pEl.classList.toggle('score-dim', isEmpty); }
   const sEl = document.getElementById('score-secondary-num');
   if (sEl) { sEl.textContent = secondary; sEl.style.color = secColor; }
   const fill = document.getElementById('score-bar-fill');
-  if (fill) { fill.style.width = pct + '%'; fill.style.background = barColor; }
+  if (fill) { fill.style.width = (isEmpty ? 0 : pct) + '%'; fill.style.background = barColor; }
   const pctEl = document.getElementById('score-bar-pct');
-  if (pctEl) pctEl.textContent = pct + '%';
+  if (pctEl) pctEl.textContent = isEmpty ? '—' : pct + '%';
+  const badgeEl = document.querySelector('.score-filled-badge');
+  if (badgeEl) badgeEl.textContent = `${filled} из ${subj.tasks.length} заданий заполнено`;
 }
 
 function resetCurrentScores() {
@@ -303,7 +352,9 @@ window.resetCurrentScores = resetCurrentScores;
 function saveVariant() {
   const scores = getScoreCurrent(currentScoreSubject);
   const primary = calcPrimary(currentScoreSubject, scores);
-  if (primary === 0) { window.showToast('⚠️ Заполни хотя бы одно задание'); return; }
+  if (primary === 0 && countFilled(currentScoreSubject, scores) === 0) {
+    window.showToast('⚠️ Заполни хотя бы одно задание'); return;
+  }
   const history = getScoreHistory(currentScoreSubject);
   const defaultLabel = 'Вариант ' + (history.length + 1);
   const label = prompt('Название варианта:', defaultLabel);
