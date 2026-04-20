@@ -92,33 +92,54 @@ window.signOut = async function() {
   }
 };
 
-// Синхронизация: загружаем данные из Firestore в localStorage
+// Слияние двух массивов по id: для конфликтов побеждает элемент с бо́льшим updatedAt
+function mergeArrays(local, cloud) {
+  const map = new Map();
+  for (const item of local) {
+    if (item.id != null) map.set(String(item.id), item);
+  }
+  for (const item of cloud) {
+    if (item.id == null) continue;
+    const key = String(item.id);
+    const existing = map.get(key);
+    if (!existing || (item.updatedAt || 0) > (existing.updatedAt || 0)) {
+      map.set(key, item);
+    }
+  }
+  return [...map.values()];
+}
+
+// Синхронизация: сливаем локальные данные с облачными (побеждает новее)
 async function syncAllData() {
   if (!currentUser) return;
   updateSyncStatus('syncing', 'Синхронизация...');
   try {
     const userDocRef = doc(db, 'users', currentUser.uid);
     const userDoc = await getDoc(userDocRef);
+
     if (userDoc.exists()) {
       const cloudData = userDoc.data();
-      // Восстанавливаем заметки
+
       if (cloudData.notes) {
-        localStorage.setItem('notes', JSON.stringify(cloudData.notes));
+        const merged = mergeArrays(window.getNotes ? window.getNotes() : [], cloudData.notes);
+        localStorage.setItem('notes', JSON.stringify(merged));
         if (window.renderNotes) window.renderNotes();
       }
-      // Восстанавливаем атлас
+
       if (cloudData.atlas) {
-        localStorage.setItem('atlas', JSON.stringify(cloudData.atlas));
+        const merged = mergeArrays(window.getAtlasItems ? window.getAtlasItems() : [], cloudData.atlas);
+        localStorage.setItem('atlas', JSON.stringify(merged));
         if (window.renderAtlas) window.renderAtlas();
       }
-      // Восстанавливаем пособия
+
       if (cloudData.guides) {
-        localStorage.setItem('bio_guides', JSON.stringify(cloudData.guides));
+        const merged = mergeArrays(window.getGuides ? window.getGuides() : [], cloudData.guides);
+        localStorage.setItem('bio_guides', JSON.stringify(merged));
         if (window.renderLibrary) window.renderLibrary();
       }
-      // Колоды не синхронизируем через Firestore (они в IndexedDB), но можно добавить при желании
     }
-    // После загрузки облачных данных сохраняем текущие локальные данные обратно в облако
+
+    // Загружаем слитый результат обратно в облако
     await saveToCloud();
     updateSyncStatus('success', 'Синхронизировано');
     const lastSyncEl = document.getElementById('last-sync');
@@ -138,20 +159,22 @@ async function saveToCloud() {
     const guides = window.getGuides ? window.getGuides() : [];
     const userDocRef = doc(db, 'users', currentUser.uid);
     await setDoc(userDocRef, {
-      notes: notes,
-      atlas: atlas,
-      guides: guides,
+      notes,
+      atlas,
+      guides,
       updatedAt: serverTimestamp()
     }, { merge: true });
-    console.log('✅ Данные сохранены в облако');
   } catch (error) {
     console.error('Ошибка сохранения в облако:', error);
   }
 }
 
-// Функция для автоматического сохранения (вызывается после любых изменений)
+// Debounce: не бьём в Firestore при каждом нажатии, а ждём 3 секунды тишины
+let _autoSaveTimer = null;
 window.autoSaveToCloud = function() {
-  if (currentUser) saveToCloud();
+  if (!currentUser) return;
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => saveToCloud(), 3000);
 };
 
 // Обновление индикатора синхронизации в настройках

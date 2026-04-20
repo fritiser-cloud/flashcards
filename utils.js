@@ -58,6 +58,20 @@ function navTo(tab) {
 }
 window.navTo = navTo;
 
+function safeMarkdown(text) {
+  const html = marked.parse(text || '');
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  div.querySelectorAll('script').forEach(el => el.remove());
+  div.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+    });
+  });
+  return div.innerHTML;
+}
+window.safeMarkdown = safeMarkdown;
+
 function plural(n, one, few, many) {
   if (n % 10 === 1 && n % 100 !== 11) return one;
   if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return few;

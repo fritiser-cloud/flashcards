@@ -6,6 +6,23 @@ let matchSets = [], matchSetIdx = 0, matchSessionCorrect = 0, matchSessionWrong 
 let matchSelected = { left: null, right: null }, matchConnections = [], matchChecked = false;
 let decksSearchQuery = '';
 
+// ==================== КЭШ КОЛОД ====================
+let _decksCache = null;
+
+async function _loadDecks() {
+  if (!_decksCache) _decksCache = await window.dbGetAll('decks');
+  return _decksCache;
+}
+
+function _getDeck(deckId) {
+  return _decksCache ? (_decksCache.find(d => d.id === deckId) || null) : null;
+}
+
+function invalidateDecksCache() {
+  _decksCache = null;
+}
+window.invalidateDecksCache = invalidateDecksCache;
+
 function searchDecks() {
   const input = document.getElementById('decks-search');
   if (input) decksSearchQuery = input.value.toLowerCase();
@@ -15,7 +32,7 @@ window.searchDecks = searchDecks;
 
 async function renderDecks() {
   try {
-    const decks = await window.dbGetAll('decks');
+    const decks = await _loadDecks();
     const allStats = await window.dbGetAll('stats');
     const list = document.getElementById('decks-list');
     if (!list) return;
@@ -65,7 +82,7 @@ window.renderDecks = renderDecks;
 async function openDeck(deckId) {
   try {
     currentDeckId = deckId;
-    const deck = await window.dbGet('decks', deckId);
+    const deck = _getDeck(deckId) || await window.dbGet('decks', deckId);
     if (!deck) return;
     const isMatch = deck.type === 'match';
     const iconEl = document.getElementById('deck-detail-icon');
@@ -142,6 +159,7 @@ window.openDeck = openDeck;
 
 async function deleteDeck(deckId) {
   if (!confirm('Удалить колоду?')) return;
+  invalidateDecksCache();
   await window.dbDelete('decks', deckId);
   await window.dbDeleteRange('stats', String(deckId));
   await window.dbDeleteRange('favorites', String(deckId));
@@ -163,7 +181,8 @@ async function startStudy(deckId, errorsOnly, favOnly) {
   currentDeckId = deckId;
   isErrorsMode = errorsOnly;
   isFavMode = favOnly;
-  const deck = await window.dbGet('decks', deckId);
+  const deck = _getDeck(deckId) || await window.dbGet('decks', deckId);
+  if (!deck) { window.showToast('⚠️ Колода не найдена'); return; }
   const allStats = await window.dbGetRange('stats', String(deckId));
   let indices;
   if (favOnly) {
@@ -263,7 +282,7 @@ window.toggleFavorite = toggleFavorite;
 
 async function startMatch(deckId) {
   currentDeckId = deckId;
-  const deck = await window.dbGet('decks', deckId);
+  const deck = _getDeck(deckId) || await window.dbGet('decks', deckId);
   matchSets = [...deck.cards].sort(() => Math.random() - 0.5);
   matchSetIdx = 0; matchSessionCorrect = 0; matchSessionWrong = 0;
   const nameEl = document.getElementById('match-deck-name');

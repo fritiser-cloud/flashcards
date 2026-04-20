@@ -62,7 +62,7 @@ function openAtlasDetail(id) {
   const titleEl = document.getElementById('atlas-detail-title');
   if (titleEl) titleEl.textContent = item.title;
   const descEl = document.getElementById('atlas-detail-desc');
-  if (descEl) descEl.innerHTML = marked.parse(item.description || '');
+  if (descEl) descEl.innerHTML = window.safeMarkdown(item.description || '');
   window.showScreen('atlas-detail-screen');
 }
 window.openAtlasDetail = openAtlasDetail;

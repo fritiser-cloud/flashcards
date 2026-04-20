@@ -54,7 +54,7 @@ function clearAllData() {
   window.dbDeleteRange('decks', '');
   window.dbDeleteRange('stats', '');
   window.dbDeleteRange('favorites', '');
-  window.dbDeleteRange('reviews', '');
+  window.dbGetAll('reviews').then(reviews => reviews.forEach(r => window.dbDelete('reviews', r.id)));
   if (window.renderLibrary) window.renderLibrary();
   if (window.renderDecks) window.renderDecks();
   if (window.renderAtlas) window.renderAtlas();
@@ -65,26 +65,6 @@ function clearAllData() {
   window.showToast('🗑 Все данные удалены');
 }
 window.clearAllData = clearAllData;
-
-// ==================== ОЧИСТКА ПОВТОРЕНИЙ (КАЛЕНДАРЬ) ====================
-function clearAllReviews() {
-  if (!confirm('🗑 Удалить все запланированные повторения? Это действие нельзя отменить.')) return;
-  
-  window.dbDeleteRange('reviews', '').then(() => {
-    window.showToast('✓ Все повторения удалены');
-    
-    // Если открыт календарь — обновляем его
-    const calendarScreen = document.getElementById('calendar-screen');
-    if (calendarScreen && calendarScreen.classList.contains('active')) {
-      if (window.renderCalendar) window.renderCalendar();
-      if (window.renderUpcomingReviews) window.renderUpcomingReviews();
-    }
-  }).catch(err => {
-    console.error('Ошибка при удалении повторений:', err);
-    window.showToast('⚠️ Ошибка при удалении');
-  });
-}
-window.clearAllReviews = clearAllReviews;
 
 // ==================== НАВИГАЦИЯ ====================
 function navTo(tab) {
@@ -110,6 +90,9 @@ function navTo(tab) {
       window.renderCalendar();
       if (window.renderUpcomingReviews) window.renderUpcomingReviews();
     }
+  } else if (tab === 'scores') {
+    window.showScreen('scores-screen');
+    if (window.renderScores) window.renderScores();
   } else if (tab === 'settings') {
     window.showScreen('settings-screen');
     if (window.renderSettings) window.renderSettings();
@@ -122,7 +105,7 @@ window.navTo = navTo;
   try {
     await window.openDB();
     console.log('✓ База данных инициализирована');
-    
+
     if (window.renderLibrary) window.renderLibrary();
     if (window.renderDecks) await window.renderDecks();
     if (window.renderAtlas) window.renderAtlas();

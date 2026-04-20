@@ -200,7 +200,7 @@ function togglePreview() {
         return img ? `![${alt}](${img})` : match;
       });
     }
-    if (preview) preview.innerHTML = marked.parse(markdown);
+    if (preview) preview.innerHTML = window.safeMarkdown(markdown);
     if (content) content.style.display = 'none';
     if (preview) preview.style.display = 'block';
     if (toggleText) toggleText.textContent = '✏️ Редактор';

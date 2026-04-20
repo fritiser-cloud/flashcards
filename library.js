@@ -99,7 +99,7 @@ function openGuide(id) {
   const actionsDiv = document.getElementById('guide-action-buttons');
   if (mdContainer && actionsDiv) {
     if (guide.content) {
-      mdContainer.innerHTML = marked.parse(guide.content);
+      mdContainer.innerHTML = window.safeMarkdown(guide.content);
       mdContainer.style.display = 'block';
       actionsDiv.innerHTML = guide.url ? `<button class="btn btn-secondary" onclick="openGuideUrl()">🔗 Открыть оригинал</button>` : '';
     } else {
@@ -204,6 +204,7 @@ async function handleFileAdd(event) {
         color: data.color || colors[Math.floor(Math.random() * colors.length)],
         cards: data.cards, createdAt: Date.now()
       };
+      if (window.invalidateDecksCache) window.invalidateDecksCache();
       await window.dbPut('decks', deck);
       if (window.renderDecks) window.renderDecks();
     }
@@ -283,6 +284,7 @@ async function importFromGithub(data, filename, alreadyExists) {
     renderLibrary();
   } else {
     const deck = { ...data, sourceFile: filename, createdAt: Date.now() };
+    if (window.invalidateDecksCache) window.invalidateDecksCache();
     await window.dbPut('decks', deck);
     if (window.renderDecks) window.renderDecks();
   }
@@ -315,15 +317,5 @@ function closeSampleModal(e) {
     const modal = document.getElementById('sample-modal');
     if (modal) modal.classList.remove('open');
   }
-  window.openAddModal = openAddModal;
-window.closeAddModal = closeAddModal;
-window.switchAddTab = switchAddTab;
-window.triggerFileAdd = triggerFileAdd;
-window.handleFileAdd = handleFileAdd;
-window.loadGithubList = loadGithubList;
-window.importFromGithub = importFromGithub;
-window.openSampleModal = openSampleModal;
-window.closeSampleModal = closeSampleModal;
-
 }
 window.closeSampleModal = closeSampleModal;

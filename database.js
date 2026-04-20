@@ -94,20 +94,15 @@ function dbDeleteRange(store, prefix) {
 window.dbDeleteRange = dbDeleteRange;
 
 // ==================== СПЕЦИАЛЬНЫЕ ФУНКЦИИ ДЛЯ КАЛЕНДАРЯ ====================
-function getReviewsForDate(date) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const allReviews = await dbGetAll('reviews');
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      const filtered = allReviews.filter(review => {
-        const reviewDate = new Date(review.next_review_date);
-        return reviewDate >= startOfDay && reviewDate <= endOfDay;
-      });
-      resolve(filtered);
-    } catch (error) { reject(error); }
+async function getReviewsForDate(date) {
+  const allReviews = await dbGetAll('reviews');
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+  return allReviews.filter(review => {
+    const reviewDate = new Date(review.next_review_date);
+    return reviewDate >= startOfDay && reviewDate <= endOfDay;
   });
 }
 window.getReviewsForDate = getReviewsForDate;

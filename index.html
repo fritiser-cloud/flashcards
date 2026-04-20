@@ -423,6 +423,76 @@
     .atlas-card-img { display: flex; align-items: center; justify-content: center; background: var(--surface2); }
     .atlas-card-title, .atlas-card-category { white-space: normal; word-break: break-word; }
     #app { width: 100%; max-width: 1200px; margin: 0 auto; }
+
+    /* ===== БАЛЛЫ ЕГЭ ===== */
+    .scores-tabs-row { display:flex; gap:8px; padding:0 20px 16px; overflow-x:auto; scrollbar-width:none; }
+    .scores-tabs-row::-webkit-scrollbar { display:none; }
+    .scores-tab { flex-shrink:0; padding:8px 18px; border-radius:20px; border:1.5px solid var(--border); background:var(--surface); color:var(--text2); font-size:14px; font-weight:600; cursor:pointer; transition:all 0.18s; }
+    .scores-tab.active { background:var(--lavender-deep); color:#fff; border-color:var(--lavender-deep); }
+
+    .score-summary-card { margin:0 20px 16px; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:20px; }
+    .score-summary-row { display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:16px; }
+    .score-block { text-align:center; }
+    .score-big { font-size:42px; font-weight:700; font-family:var(--font-display); color:var(--text); line-height:1; }
+    .score-big-of { font-size:13px; color:var(--text3); margin-top:2px; }
+    .score-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:var(--text3); margin-top:4px; }
+    .score-arrow-sep { font-size:22px; color:var(--text3); }
+    .score-bar-row { display:flex; align-items:center; gap:10px; }
+    .score-bar { flex:1; height:8px; background:var(--surface2); border-radius:4px; overflow:hidden; }
+    .score-bar-fill { height:100%; border-radius:4px; transition:width 0.3s ease, background 0.3s; }
+    .score-bar-pct { font-size:13px; font-weight:700; color:var(--text2); min-width:36px; text-align:right; }
+
+    .score-section-header { display:flex; align-items:center; justify-content:space-between; padding:8px 20px 10px; }
+    .score-section-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text3); }
+    .score-section-sub { font-size:12px; color:var(--text3); }
+    .score-link-btn { background:none; border:none; color:var(--lavender-deep); font-size:13px; font-weight:600; cursor:pointer; padding:4px 8px; border-radius:8px; }
+    .score-link-btn:active { background:var(--lavender); }
+
+    .score-tasks-list { padding:0 20px; display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+    .score-task-row { display:flex; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:10px 14px; transition:border-color 0.15s, background 0.15s; }
+    .score-task-row.task-partial { border-color:var(--yellow); background:#FFFDF0; }
+    .score-task-row.task-full { border-color:var(--green); background:var(--green-light); }
+    .score-task-num { font-size:13px; font-weight:700; color:var(--text2); min-width:36px; }
+    .score-task-maxlabel { font-size:11px; color:var(--text3); min-width:36px; }
+    .score-task-name { font-size:13px; color:var(--text2); flex:1; }
+    .score-task-btns { display:flex; gap:5px; margin-left:auto; }
+
+    .score-btn { width:34px; height:34px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text2); font-size:14px; font-weight:600; cursor:pointer; transition:all 0.15s; }
+    .score-btn:active { transform:scale(0.9); }
+    .score-btn.sbtn-zero.s-active { background:#FDECEA; border-color:var(--red); color:var(--red); }
+    .score-btn.sbtn-mid.s-active { background:var(--yellow-light); border-color:var(--yellow); color:#9A6F00; }
+    .score-btn.sbtn-full.s-active { background:var(--green-light); border-color:var(--green); color:var(--green); }
+
+    .essay-controls { display:flex; align-items:center; gap:8px; margin-left:auto; }
+    .essay-btn { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text); font-size:18px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .essay-btn:active { background:var(--lavender); transform:scale(0.9); }
+    .essay-val { font-size:20px; font-weight:700; color:var(--text); min-width:28px; text-align:center; }
+    .essay-sep { font-size:14px; color:var(--text3); }
+
+    .score-empty-hint { text-align:center; padding:20px 24px 28px; color:var(--text3); font-size:14px; line-height:1.6; }
+
+    .analytics-summary-row { display:flex; gap:12px; padding:0 20px 12px; }
+    .analytics-stat-card { flex:1; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:14px; text-align:center; }
+    .analytics-stat-num { font-size:28px; font-weight:700; font-family:var(--font-display); color:var(--lavender-deep); }
+    .analytics-stat-label { font-size:11px; color:var(--text3); margin-top:2px; }
+    .analytics-chart-label { padding:0 20px 10px; font-size:12px; color:var(--text3); font-weight:600; }
+    .analytics-chart { display:flex; gap:3px; align-items:flex-end; padding:0 20px 20px; height:100px; overflow-x:auto; scrollbar-width:none; }
+    .analytics-chart::-webkit-scrollbar { display:none; }
+    .analytics-col { display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0; width:28px; height:100%; }
+    .analytics-bar-wrap { flex:1; display:flex; align-items:flex-end; width:100%; }
+    .analytics-bar { width:100%; border-radius:3px 3px 0 0; min-height:3px; transition:height 0.3s; }
+    .analytics-col-num { font-size:9px; color:var(--text3); font-weight:600; }
+
+    .score-history-item { display:flex; align-items:center; gap:12px; padding:12px 14px; margin:0 20px 8px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; }
+    .history-meta { flex:1; min-width:0; }
+    .history-name { font-size:14px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .history-date { font-size:12px; color:var(--text3); margin-top:2px; }
+    .history-scores { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+    .history-primary { font-size:13px; color:var(--text2); }
+    .history-arrow { font-size:12px; color:var(--text3); }
+    .history-secondary { font-size:16px; font-weight:700; }
+    .history-del-btn { width:30px; height:30px; border:none; background:none; color:var(--text3); font-size:14px; cursor:pointer; border-radius:8px; flex-shrink:0; }
+    .history-del-btn:active { background:var(--red-light); color:var(--red); }
   </style>
 </head>
 <body>
@@ -438,13 +508,6 @@
     <div class="home-title">Биолаб <span>&</span><br>Наш язык</div>
     <div class="home-sub">Учебные пособия для подготовки к ЕГЭ</div>
   </div>
- <div class="notes-header-row">
-  <div class="search-box">
-    <input type="text" class="search-input" id="calendar-search" placeholder="Поиск тем..." oninput="searchCalendar()">
-  </div>
-  <button class="fab-header" onclick="clearAllReviews()" style="background: var(--red); margin-right: 8px;" title="Очистить все повторения">🗑️</button>
-  <button class="fab-header" onclick="showAddTopicModal()">＋</button>
-</div>
   <div class="cats" id="cats-row">
     <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
     <button class="cat-pill" onclick="filterCat('bio',this)">🧬 Биология</button>
@@ -573,7 +636,7 @@
 <!-- КАЛЕНДАРЬ И ПОВТОРЕНИЯ -->
 <div id="calendar-screen" class="screen">
   <div class="home-hero"><div class="home-label">📅 Умное повторение</div><div class="home-title">Календарь<br>повторений</div><div class="home-sub">Система интервальных повторений на основе кривой забывания Эббингауза</div></div>
-  <div class="notes-header-row"><div class="search-box"><input type="text" class="search-input" id="calendar-search" placeholder="Поиск тем..." oninput="searchCalendar()"></div><button class="fab-header" onclick="showAddTopicModal()">＋</button></div>
+  <div class="notes-header-row"><div class="search-box"><input type="text" class="search-input" id="calendar-search" placeholder="Поиск тем..." oninput="searchCalendar()"></div><button class="fab-header" onclick="clearAllReviews()" style="background: var(--red); margin-right: 8px;" title="Сбросить все повторения">🗑️</button><button class="fab-header" onclick="showAddTopicModal()">＋</button></div>
   <div class="scroll"><div id="calendar-container" class="calendar-wrapper"></div><div class="section-title">Ближайшие повторения</div><div id="upcoming-reviews"></div></div>
 </div>
 
@@ -597,6 +660,21 @@
   </div>
 </div>
 
+<!-- БАЛЛЫ ЕГЭ -->
+<div id="scores-screen" class="screen">
+  <div class="home-hero">
+    <div class="home-label">📊 Мониторинг прогресса</div>
+    <div class="home-title">Учёт баллов<br>ЕГЭ</div>
+    <div class="home-sub">Отмечай результаты вариантов и следи за прогрессом по каждому заданию</div>
+  </div>
+  <div class="scores-tabs-row">
+    <button class="scores-tab active" onclick="switchScoreSubject('ru',this)">📝 Русский</button>
+    <button class="scores-tab" onclick="switchScoreSubject('bio',this)">🧬 Биология</button>
+    <button class="scores-tab" onclick="switchScoreSubject('chem',this)">⚗️ Химия</button>
+  </div>
+  <div class="scroll" id="scores-content"></div>
+</div>
+
 <!-- НИЖНЕЕ МЕНЮ -->
 <div class="bottom-nav">
   <button class="bottom-nav-btn" id="nav-library" onclick="navTo('library')"><span class="icon">📚</span><span class="label">Библиотека</span></button>
@@ -604,6 +682,7 @@
   <button class="bottom-nav-btn" id="nav-atlas" onclick="navTo('atlas')"><span class="icon">🗺️</span><span class="label">Атлас</span></button>
   <button class="bottom-nav-btn" id="nav-notes" onclick="navTo('notes')"><span class="icon">📝</span><span class="label">Заметки</span></button>
   <button class="bottom-nav-btn" id="nav-calendar" onclick="navTo('calendar')"><span class="icon">📅</span><span class="label">Календарь</span></button>
+  <button class="bottom-nav-btn" id="nav-scores" onclick="navTo('scores')"><span class="icon">📊</span><span class="label">Баллы</span></button>
   <button class="bottom-nav-btn" id="nav-settings" onclick="navTo('settings')"><span class="icon">⚙️</span><span class="label">Настройки</span></button>
 </div>
 
@@ -631,6 +710,7 @@
 <script src="atlas.js"></script>
 <script src="notes.js"></script>
 <script src="calendar.js"></script>
+<script src="scores.js"></script>
 <script src="app.js"></script>
 <script type="module" src="firebase-module.js"></script>
 </body>
