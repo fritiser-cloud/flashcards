@@ -55,6 +55,14 @@ function dbPut(store, value) {
 }
 window.dbPut = dbPut;
 
+// *** НОВАЯ: обёртка для автоматического вызова автосохранения ***
+async function dbPutWithSync(store, value) {
+  const result = await dbPut(store, value);
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
+  return result;
+}
+window.dbPutWithSync = dbPutWithSync;
+
 function dbDelete(store, key) {
   return new Promise((resolve, reject) => {
     if (!db) { reject('DB not initialized'); return; }
@@ -65,6 +73,7 @@ function dbDelete(store, key) {
 }
 window.dbDelete = dbDelete;
 
+// *** ИСПРАВЛЕНО: добавлена проверка на инициализацию БД ***
 function dbGetRange(store, prefix) {
   return new Promise((resolve, reject) => {
     if (!db) { reject('DB not initialized'); return; }
@@ -76,6 +85,7 @@ function dbGetRange(store, prefix) {
 }
 window.dbGetRange = dbGetRange;
 
+// *** ИСПРАВЛЕНО: добавлена проверка на инициализацию БД ***
 function dbDeleteRange(store, prefix) {
   return new Promise((resolve, reject) => {
     if (!db) { reject('DB not initialized'); return; }

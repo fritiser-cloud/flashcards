@@ -49,20 +49,31 @@ function saveSettings() {
 }
 window.saveSettings = saveSettings;
 
+// *** ИСПРАВЛЕНО: полная очистка всех данных, включая баллы ЕГЭ и токен ***
 async function clearAllData() {
   if (!confirm('Удалить все пособия, колоды, заметки, атлас и историю повторений? Отменить нельзя.')) return;
-  // localStorage
-  ['bio_guides', 'notes', 'atlas', 'gh_user', 'gh_repo',
-   'ege_current_ru', 'ege_current_bio', 'ege_current_chem',
-   'ege_history_ru', 'ege_history_bio', 'ege_history_chem'
-  ].forEach(k => localStorage.removeItem(k));
-  // IndexedDB
+  
+  // localStorage – очищаем ВСЕ ключи приложения
+  const localStorageKeys = [
+    'bio_guides', 'notes', 'atlas',
+    'gh_user', 'gh_repo', 'gh_token',
+    'ege_current_ru', 'ege_current_bio', 'ege_current_chem',
+    'ege_history_ru', 'ege_history_bio', 'ege_history_chem'
+  ];
+  localStorageKeys.forEach(k => localStorage.removeItem(k));
+  
+  // IndexedDB – используем транзакцию для атомарной очистки всех хранилищ
+  const db = await window.openDB();
+  const tx = db.transaction(['decks', 'stats', 'favorites', 'reviews'], 'readwrite');
   await Promise.all([
-    window.dbGetAll('decks').then(items => Promise.all(items.map(i => window.dbDelete('decks', i.id)))),
-    window.dbGetAll('stats').then(items => Promise.all(items.map(i => window.dbDelete('stats', i.id)))),
-    window.dbGetAll('favorites').then(items => Promise.all(items.map(i => window.dbDelete('favorites', i.id)))),
-    window.dbGetAll('reviews').then(items => Promise.all(items.map(i => window.dbDelete('reviews', i.id)))),
+    tx.objectStore('decks').clear(),
+    tx.objectStore('stats').clear(),
+    tx.objectStore('favorites').clear(),
+    tx.objectStore('reviews').clear()
   ]);
+  await tx.done;
+  
+  // Обновление UI
   if (window.invalidateDecksCache) window.invalidateDecksCache();
   if (window.renderLibrary) window.renderLibrary();
   if (window.renderDecks) window.renderDecks();
@@ -72,7 +83,10 @@ async function clearAllData() {
   if (window.renderUpcomingReviews) window.renderUpcomingReviews();
   if (window.updateSettingsStats) window.updateSettingsStats();
   if (window.renderScores) window.renderScores();
+  
+  // Отправить пустое состояние в облако
   if (window.autoSaveToCloud) window.autoSaveToCloud();
+  
   window.showToast('🗑 Все данные удалены');
 }
 window.clearAllData = clearAllData;

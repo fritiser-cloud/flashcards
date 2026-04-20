@@ -81,13 +81,16 @@ function getScoreCurrent(subject) {
   try { return JSON.parse(localStorage.getItem('ege_current_' + subject) || '{}'); } catch { return {}; }
 }
 function saveScoreCurrent(subject, data) {
-  localStorage.setItem('ege_current_' + subject, JSON.stringify(data));
+  const withTs = { ...data, _savedAt: Date.now() };
+  localStorage.setItem('ege_current_' + subject, JSON.stringify(withTs));
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
 }
 function getScoreHistory(subject) {
   try { return JSON.parse(localStorage.getItem('ege_history_' + subject) || '[]'); } catch { return []; }
 }
 function saveScoreHistory(subject, history) {
   localStorage.setItem('ege_history_' + subject, JSON.stringify(history));
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
 }
 
 function calcPrimary(subject, scores) {

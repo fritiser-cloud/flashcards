@@ -54,7 +54,7 @@ async function renderCalendar() {
     daysArray.push(date);
   }
 
-  const reviews = await window.getUpcomingReviews();
+  const reviews = (await window.getUpcomingReviews()).filter(r => !r.deleted);
   const reviewMap = new Map();
   reviews.forEach(review => {
     const dateKey = formatDate(new Date(review.next_review_date));
@@ -155,7 +155,7 @@ window.saveTopic = saveTopic;
 async function renderUpcomingReviews() {
   const container = document.getElementById('upcoming-reviews');
   if (!container) return;
-  let reviews = await window.getUpcomingReviews();
+  let reviews = (await window.getUpcomingReviews()).filter(r => !r.deleted);
   if (calendarSearchQuery) {
     reviews = reviews.filter(r => r.name.toLowerCase().includes(calendarSearchQuery));
   }
@@ -186,7 +186,7 @@ async function renderUpcomingReviews() {
 window.renderUpcomingReviews = renderUpcomingReviews;
 
 async function selectDate(dateKey) {
-  const reviews = await window.getReviewsForDate(new Date(dateKey));
+  const reviews = (await window.getReviewsForDate(new Date(dateKey))).filter(r => !r.deleted);
   if (reviews.length === 0) { window.showToast('📭 На этот день нет запланированных повторений'); return; }
   reviewSessionQueue = reviews;
   reviewSessionIdx = 0;
@@ -272,12 +272,11 @@ async function clearAllReviews() {
   if (!confirm('Вы уверены, что хотите удалить все запланированные повторения? Это действие нельзя отменить.')) {
     return;
   }
-  
   try {
     const allReviews = await window.dbGetAll('reviews');
-    for (const review of allReviews) {
-      await window.dbDelete('reviews', review.id);
-    }
+    const now = Date.now();
+    await Promise.all(allReviews.map(r => window.dbPut('reviews', { ...r, deleted: true, updatedAt: now })));
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
     window.showToast('🗑️ Все повторения удалены');
     await renderCalendar();
     await renderUpcomingReviews();

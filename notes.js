@@ -8,7 +8,7 @@ function renderNotes() {
   const list = getElement('notes-list');
   if (!list) return;
   const searchQuery = getElement('notes-search')?.value.toLowerCase() || '';
-  let filtered = currentNoteFolder === 'all' ? notes : notes.filter(n => n.folder === currentNoteFolder);
+  let filtered = (currentNoteFolder === 'all' ? notes : notes.filter(n => n.folder === currentNoteFolder)).filter(n => !n.deleted);
   if (searchQuery) filtered = filtered.filter(n => n.title.toLowerCase().includes(searchQuery) || n.content.toLowerCase().includes(searchQuery));
   filtered.sort((a, b) => b.updatedAt - a.updatedAt);
   if (filtered.length === 0) {
@@ -127,8 +127,9 @@ function deleteNote() {
   if (!currentNoteId) return;
   if (!confirm('Удалить эту заметку?')) return;
   const notes = getNotes();
-  const filtered = notes.filter(n => n.id !== currentNoteId);
-  saveNotes(filtered);
+  const note = notes.find(n => n.id === currentNoteId);
+  if (note) { note.deleted = true; note.updatedAt = Date.now(); }
+  saveNotes(notes);
   showToast('✓ Заметка удалена');
   showScreen('notes-screen');
   renderNotes();

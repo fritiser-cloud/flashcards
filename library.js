@@ -238,7 +238,9 @@ window.openGuideUrl = openGuideUrl;
 
 function deleteGuide(id) {
   if (!confirm('Удалить пособие?')) return;
-  const guides = window.getGuides ? window.getGuides().filter(g => g.id !== id) : [];
+  const guides = window.getGuides ? window.getGuides() : [];
+  const guide = guides.find(g => g.id === id);
+  if (guide) { guide.deleted = true; guide.updatedAt = Date.now(); }
   window.saveGuides(guides);
   window.showScreen('library-screen');
   renderLibrary();
@@ -373,6 +375,7 @@ async function handleFileAdd(event) {
       };
       if (window.invalidateDecksCache) window.invalidateDecksCache();
       await window.dbPut('decks', deck);
+      if (window.autoSaveToCloud) window.autoSaveToCloud();
       if (window.renderDecks) window.renderDecks();
       const pushed = await pushDeckToGithub(filename, data);
       closeAddModal();
@@ -461,6 +464,7 @@ async function importFromGithub(data, filename, alreadyExists) {
     const deck = { ...data, sourceFile, createdAt: Date.now() };
     if (window.invalidateDecksCache) window.invalidateDecksCache();
     await window.dbPut('decks', deck);
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
     if (window.renderDecks) window.renderDecks();
   }
   closeAddModal();
@@ -601,6 +605,7 @@ async function autoLoadGithubDecks() {
       } catch (e) { /* skip bad files */ }
     }
     if (added > 0) {
+      if (window.autoSaveToCloud) window.autoSaveToCloud();
       if (window.renderDecks) await window.renderDecks();
       window.showToast(`📥 Загружено ${added} ${added === 1 ? 'колода' : 'колод'} из GitHub`);
     }

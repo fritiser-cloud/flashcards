@@ -37,9 +37,9 @@ async function renderDecks() {
     const list = document.getElementById('decks-list');
     if (!list) return;
     
-    let filteredDecks = decks;
+    let filteredDecks = decks.filter(deck => !deck.deleted);
     if (decksSearchQuery) {
-      filteredDecks = decks.filter(deck => deck.name.toLowerCase().includes(decksSearchQuery));
+      filteredDecks = filteredDecks.filter(deck => deck.name.toLowerCase().includes(decksSearchQuery));
     }
     
     if (filteredDecks.length === 0) {
@@ -160,9 +160,9 @@ window.openDeck = openDeck;
 async function deleteDeck(deckId) {
   if (!confirm('Удалить колоду?')) return;
   invalidateDecksCache();
-  await window.dbDelete('decks', deckId);
-  await window.dbDeleteRange('stats', String(deckId));
-  await window.dbDeleteRange('favorites', String(deckId));
+  const deck = await window.dbGet('decks', deckId);
+  if (deck) await window.dbPut('decks', { ...deck, deleted: true, updatedAt: Date.now() });
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
   window.showScreen('decks-screen');
   renderDecks();
   window.showToast('Колода удалена');
@@ -171,7 +171,10 @@ window.deleteDeck = deleteDeck;
 
 async function resetDeck(deckId) {
   if (!confirm('Сбросить прогресс этой колоды?')) return;
-  await window.dbDeleteRange('stats', String(deckId));
+  const allStats = await window.dbGetRange('stats', String(deckId));
+  const now = Date.now();
+  await Promise.all(allStats.map(s => window.dbPut('stats', { ...s, known: 0, errors: 0, updatedAt: now })));
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
   await openDeck(deckId);
   window.showToast('Прогресс сброшен');
 }

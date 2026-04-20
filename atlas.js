@@ -24,7 +24,7 @@ function renderAtlas() {
   const grid = document.getElementById('atlas-grid');
   if (!grid) return;
   
-  let filtered = currentAtlasCategory === 'all' ? items : items.filter(i => i.category === currentAtlasCategory);
+  let filtered = (currentAtlasCategory === 'all' ? items : items.filter(i => i.category === currentAtlasCategory)).filter(i => !i.deleted);
   if (atlasSearchQuery) {
     filtered = filtered.filter(item => 
       (item.title && item.title.toLowerCase().includes(atlasSearchQuery)) ||
@@ -158,8 +158,9 @@ function deleteAtlasItem() {
   if (!currentAtlasId) return;
   if (!confirm('Удалить этот элемент из атласа?')) return;
   const items = window.getAtlasItems ? window.getAtlasItems() : [];
-  const filtered = items.filter(i => i.id !== currentAtlasId);
-  window.saveAtlasItems(filtered);
+  const item = items.find(i => i.id === currentAtlasId);
+  if (item) { item.deleted = true; item.updatedAt = Date.now(); }
+  window.saveAtlasItems(items);
   window.showToast('✓ Элемент удалён');
   window.showScreen('atlas-screen');
   renderAtlas();
