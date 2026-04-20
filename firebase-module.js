@@ -1,11 +1,11 @@
 // firebase-module.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signOut as firebaseSignOut, 
-  onAuthStateChanged 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
 import {
   getFirestore,
@@ -16,7 +16,6 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
-// Конфигурация Firebase (замените на свои данные, если нужно)
 const firebaseConfig = {
   apiKey: "AIzaSyAlGPZkNsKMbfezIVwmky4EeXDUOJ-sUpw",
   authDomain: "biolab-app-dc4df.firebaseapp.com",
@@ -30,27 +29,27 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 let currentUser = null;
-let _unsubscribeSnapshot = null; // функция отписки от realtime listener
-let _isSaving = false;           // флаг: мы сами сейчас пишем — не реагировать на свой snapshot
+let _unsubscribeSnapshot = null;
+let _isSaving = false;
 
-// Следим за состоянием авторизации
-onAuthStateChanged(auth, (user) => {
+// ==================== АВТОРИЗАЦИЯ ====================
+
+onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   updateAuthUI(user);
   if (user) {
+    // Грузим всё из Firebase — оно главное
+    await loadFromCloud();
     startRealtimeSync();
   } else {
-    // Отписываемся от listener при выходе
     if (_unsubscribeSnapshot) { _unsubscribeSnapshot(); _unsubscribeSnapshot = null; }
   }
 });
 
-// Обновление интерфейса в настройках
 function updateAuthUI(user) {
   const loggedIn = document.getElementById('auth-logged-in');
   const loggedOut = document.getElementById('auth-logged-out');
   if (!loggedIn || !loggedOut) return;
-  
   if (user) {
     loggedIn.style.display = 'block';
     loggedOut.style.display = 'none';
@@ -66,7 +65,6 @@ function updateAuthUI(user) {
   }
 }
 
-// Глобальная функция для входа (вызывается из кнопки)
 window.signInWithGoogle = async function() {
   try {
     const provider = new GoogleAuthProvider();
@@ -75,16 +73,12 @@ window.signInWithGoogle = async function() {
   } catch (error) {
     console.error('Ошибка входа:', error);
     let message = '⚠️ Ошибка входа';
-    if (error.code === 'auth/popup-closed-by-user') {
-      message = '⏸️ Вход отменён';
-    } else if (error.code === 'auth/popup-blocked') {
-      message = '🚫 Всплывающие окна заблокированы';
-    }
+    if (error.code === 'auth/popup-closed-by-user') message = '⏸️ Вход отменён';
+    else if (error.code === 'auth/popup-blocked') message = '🚫 Всплывающие окна заблокированы';
     window.showToast(message);
   }
 };
 
-// Глобальная функция для выхода
 window.signOut = async function() {
   if (!confirm('Выйти из аккаунта?')) return;
   try {
@@ -96,155 +90,84 @@ window.signOut = async function() {
   }
 };
 
-// Слияние по id (побеждает более новый updatedAt)
-function mergeArrays(local, cloud) {
-  const map = new Map();
-  for (const item of local) {
-    if (item.id != null) map.set(String(item.id), item);
-  }
-  for (const item of cloud) {
-    if (item.id == null) continue;
-    const key = String(item.id);
-    const existing = map.get(key);
-    if (!existing || (item.updatedAt || 0) > (existing.updatedAt || 0)) map.set(key, item);
-  }
-  return [...map.values()];
-}
+// ==================== ЗАГРУЗКА ИЗ FIREBASE (главный источник) ====================
 
-// Слияние колод по name (autoIncrement id может конфликтовать между устройствами)
-function mergeDecks(local, cloud) {
-  const map = new Map();
-  for (const d of local) map.set(d.name, d);
-  for (const d of cloud) {
-    const existing = map.get(d.name);
-    if (!existing || (d.updatedAt || d.createdAt || 0) > (existing.updatedAt || existing.createdAt || 0)) map.set(d.name, d);
-  }
-  return [...map.values()];
-}
-
-// Слияние повторений по name+subject (autoIncrement id конфликтует)
-function mergeReviews(local, cloud) {
-  const key = r => (r.name || '') + '::' + (r.subject || '');
-  const map = new Map();
-  for (const r of local) map.set(key(r), r);
-  for (const r of cloud) {
-    const k = key(r);
-    const existing = map.get(k);
-    if (!existing || (r.updatedAt || 0) > (existing.updatedAt || 0)) map.set(k, r);
-  }
-  return [...map.values()];
-}
-
-// Полная замена содержимого store: удалить всё, записать merged
+// Полная перезапись store из облака
 async function replaceStore(storeName, items) {
+  if (!Array.isArray(items) || items.length === 0) return;
   const existing = await window.dbGetAll(storeName);
   await Promise.all(existing.map(item => window.dbDelete(storeName, item.id)));
   await Promise.all(items.map(item => window.dbPut(storeName, item)));
 }
 
-// Синхронизация: сливаем локальные данные с облачными (побеждает новее)
-async function syncAllData() {
+// Загрузить всё из Firebase и перезаписать локальный кеш
+async function loadFromCloud() {
   if (!currentUser) return;
-  updateSyncStatus('syncing', 'Синхронизация...');
+  updateSyncStatus('syncing', 'Загрузка...');
   try {
     const userDocRef = doc(db, 'users', currentUser.uid);
     const userDoc = await getDoc(userDocRef);
 
-    if (userDoc.exists()) {
-      const cloudData = userDoc.data();
-
-      // --- localStorage stores ---
-      if (cloudData.notes && cloudData.notes.length > 0) {
-        const merged = mergeArrays(window.getNotes ? window.getNotes() : [], cloudData.notes);
-        localStorage.setItem('notes', JSON.stringify(merged));
-        if (window.renderNotes) window.renderNotes();
-      }
-      if (cloudData.atlas && cloudData.atlas.length > 0) {
-        const merged = mergeArrays(window.getAtlasItems ? window.getAtlasItems() : [], cloudData.atlas);
-        localStorage.setItem('atlas', JSON.stringify(merged));
-        if (window.renderAtlas) window.renderAtlas();
-      }
-      if (cloudData.guides && cloudData.guides.length > 0) {
-        const merged = mergeArrays(window.getGuides ? window.getGuides() : [], cloudData.guides);
-        localStorage.setItem('bio_guides', JSON.stringify(merged));
-        if (window.renderLibrary) window.renderLibrary();
-      }
-
-      // --- Scores (localStorage) ---
-      for (const subj of ['ru', 'bio', 'chem']) {
-        if (cloudData['scores_current_' + subj]) {
-          const local = JSON.parse(localStorage.getItem('ege_current_' + subj) || '{}');
-          const cloud = cloudData['scores_current_' + subj];
-          // Побеждает более новый по метке времени _savedAt
-          const localTs = local._savedAt || 0;
-          const cloudTs = cloud._savedAt || 0;
-          if (cloudTs > localTs) localStorage.setItem('ege_current_' + subj, JSON.stringify(cloud));
-        }
-        if (cloudData['scores_history_' + subj]) {
-          const local = JSON.parse(localStorage.getItem('ege_history_' + subj) || '[]');
-          const cloud = cloudData['scores_history_' + subj];
-          // Объединяем историю по label+date уникальности
-          const merged = [...local];
-          for (const entry of cloud) {
-            const key = entry.label + '::' + (entry.date || entry.savedAt);
-            if (!merged.find(e => e.label + '::' + (e.date || e.savedAt) === key)) merged.push(entry);
-          }
-          merged.sort((a, b) => (b.date || b.savedAt || 0) - (a.date || a.savedAt || 0));
-          localStorage.setItem('ege_history_' + subj, JSON.stringify(merged.slice(0, 30)));
-        }
-      }
-
-      // --- IndexedDB stores ---
-      if (cloudData.decks && cloudData.decks.length > 0) {
-        const localDecks = await window.dbGetAll('decks');
-        const merged = mergeDecks(localDecks, cloudData.decks);
-        await replaceStore('decks', merged);
-        if (window.invalidateDecksCache) window.invalidateDecksCache();
-        if (window.renderDecks) window.renderDecks();
-      }
-      // *** ИСПРАВЛЕНО: добавлены stats, favorites, reviews ***
-      if (cloudData.stats && cloudData.stats.length > 0) {
-        const localStats = await window.dbGetAll('stats');
-        const merged = mergeArrays(localStats, cloudData.stats);
-        await replaceStore('stats', merged);
-      }
-      if (cloudData.favorites && cloudData.favorites.length > 0) {
-        const localFavs = await window.dbGetAll('favorites');
-        const merged = mergeArrays(localFavs, cloudData.favorites);
-        await replaceStore('favorites', merged);
-      }
-      if (cloudData.reviews && cloudData.reviews.length > 0) {
-        const localReviews = await window.dbGetAll('reviews');
-        const merged = mergeReviews(localReviews, cloudData.reviews);
-        await replaceStore('reviews', merged);
-        if (window.renderCalendar) window.renderCalendar();
-        if (window.renderUpcomingReviews) window.renderUpcomingReviews();
-      }
+    if (!userDoc.exists()) {
+      // Новый пользователь — сохраняем локальные данные в облако
+      await saveToCloud();
+      updateSyncStatus('success', 'Синхронизировано');
+      return;
     }
 
-    if (window.renderScores) window.renderScores();
+    const cloud = userDoc.data();
+
+    // --- localStorage: перезаписываем из облака ---
+    if (cloud.notes)     localStorage.setItem('notes',      JSON.stringify(cloud.notes));
+    if (cloud.atlas)     localStorage.setItem('atlas',      JSON.stringify(cloud.atlas));
+    if (cloud.guides)    localStorage.setItem('bio_guides', JSON.stringify(cloud.guides));
+
+    for (const subj of ['ru', 'bio', 'chem']) {
+      if (cloud['scores_current_' + subj])
+        localStorage.setItem('ege_current_' + subj, JSON.stringify(cloud['scores_current_' + subj]));
+      if (cloud['scores_history_' + subj])
+        localStorage.setItem('ege_history_' + subj, JSON.stringify(cloud['scores_history_' + subj]));
+    }
+
+    // --- IndexedDB: перезаписываем из облака ---
+    if (cloud.decks)     await replaceStore('decks',     cloud.decks);
+    if (cloud.stats)     await replaceStore('stats',     cloud.stats);
+    if (cloud.favorites) await replaceStore('favorites', cloud.favorites);
+    if (cloud.reviews)   await replaceStore('reviews',   cloud.reviews);
+
+    // --- Обновляем UI ---
+    if (window.invalidateDecksCache) window.invalidateDecksCache();
+    if (window.renderDecks)          window.renderDecks();
+    if (window.renderNotes)          window.renderNotes();
+    if (window.renderAtlas)          window.renderAtlas();
+    if (window.renderLibrary)        window.renderLibrary();
+    if (window.renderScores)         window.renderScores();
+    if (window.renderCalendar)       window.renderCalendar();
+    if (window.renderUpcomingReviews) window.renderUpcomingReviews();
+
     updateSyncStatus('success', 'Синхронизировано');
     const lastSyncEl = document.getElementById('last-sync');
     if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
   } catch (error) {
-    console.error('Ошибка синхронизации:', error);
-    updateSyncStatus('error', 'Ошибка синхронизации');
+    console.error('Ошибка загрузки из облака:', error);
+    updateSyncStatus('error', 'Ошибка загрузки');
   }
 }
 
-// Сохранение всех локальных данных в облако
+// ==================== СОХРАНЕНИЕ В FIREBASE ====================
+
 async function saveToCloud() {
   if (!currentUser) return;
   _isSaving = true;
+  updateSyncStatus('syncing', 'Сохранение...');
   try {
-    const notes = window.getNotes ? window.getNotes() : [];
-    const atlas = window.getAtlasItems ? window.getAtlasItems() : [];
-    const guides = window.getGuides ? window.getGuides() : [];
-    const decks = await window.dbGetAll('decks');
-    // *** ИСПРАВЛЕНО: добавлены stats, favorites, reviews ***
-    const stats = await window.dbGetAll('stats');
+    const notes     = window.getNotes      ? window.getNotes()      : [];
+    const atlas     = window.getAtlasItems ? window.getAtlasItems() : [];
+    const guides    = window.getGuides     ? window.getGuides()     : [];
+    const decks     = await window.dbGetAll('decks');
+    const stats     = await window.dbGetAll('stats');
     const favorites = await window.dbGetAll('favorites');
-    const reviews = await window.dbGetAll('reviews');
+    const reviews   = await window.dbGetAll('reviews');
 
     const data = {
       notes, atlas, guides,
@@ -252,7 +175,6 @@ async function saveToCloud() {
       updatedAt: serverTimestamp()
     };
 
-    // Scores (localStorage)
     for (const subj of ['ru', 'bio', 'chem']) {
       data['scores_current_' + subj] = JSON.parse(localStorage.getItem('ege_current_' + subj) || '{}');
       data['scores_history_' + subj] = JSON.parse(localStorage.getItem('ege_history_' + subj) || '[]');
@@ -260,22 +182,40 @@ async function saveToCloud() {
 
     const userDocRef = doc(db, 'users', currentUser.uid);
     await setDoc(userDocRef, data, { merge: true });
+
+    updateSyncStatus('success', 'Сохранено');
+    const lastSyncEl = document.getElementById('last-sync');
+    if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
   } catch (error) {
-    console.error('Ошибка сохранения в облако:', error);
+    console.error('Ошибка сохранения:', error);
+    updateSyncStatus('error', 'Ошибка сохранения');
   } finally {
-    setTimeout(() => { _isSaving = false; }, 2000);
+    setTimeout(() => { _isSaving = false; }, 1000);
   }
 }
 
-// Debounce: не бьём в Firestore при каждом нажатии, а ждём 3 секунды тишины
+// Debounce 1 секунда (вместо 3)
 let _autoSaveTimer = null;
 window.autoSaveToCloud = function() {
   if (!currentUser) return;
   clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(() => saveToCloud(), 3000);
+  updateSyncStatus('syncing', 'Сохранение...');
+  _autoSaveTimer = setTimeout(() => saveToCloud(), 1000);
 };
 
-// Обновление индикатора синхронизации в настройках
+// ==================== REALTIME SYNC ====================
+
+function startRealtimeSync() {
+  if (_unsubscribeSnapshot) _unsubscribeSnapshot();
+  const userDocRef = doc(db, 'users', currentUser.uid);
+  _unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+    if (_isSaving) return; // игнорируем свои записи
+    if (docSnap.exists()) loadFromCloud();
+  });
+}
+
+// ==================== ИНДИКАТОР СТАТУСА ====================
+
 function updateSyncStatus(status, text) {
   const statusEl = document.getElementById('sync-status');
   if (!statusEl) return;
@@ -293,17 +233,4 @@ function updateSyncStatus(status, text) {
     iconEl.textContent = '⚠️';
   }
   textEl.textContent = text;
-}
-
-// Подписка на realtime-обновления (вызывается при авторизации)
-function startRealtimeSync() {
-  if (_unsubscribeSnapshot) _unsubscribeSnapshot();
-  const userDocRef = doc(db, 'users', currentUser.uid);
-  _unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
-    if (_isSaving) return; // игнорируем свои же изменения
-    if (docSnap.exists()) {
-      // В реальном времени обновляем только если данные изменились не нами
-      syncAllData(); // можно реализовать более тонкое обновление
-    }
-  });
 }
