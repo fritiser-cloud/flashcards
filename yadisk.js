@@ -88,18 +88,14 @@ async function getYadiskDownloadUrl(publicUrl) {
 async function listYadiskFolder(folder) {
   const token = getYadiskToken();
   if (!token) return [];
-  try {
-    const folderPath = `${YADISK_ROOT}/${folder}`;
-    const res = await fetch(
-      `${YADISK_BASE}/resources?path=${encodeURIComponent(folderPath)}&fields=_embedded&limit=100`,
-      { headers: yadiskHeaders() }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data._embedded?.items || [];
-  } catch {
-    return [];
-  }
+  const folderPath = `${YADISK_ROOT}/${folder}`;
+  const res = await fetch(
+    `${YADISK_BASE}/resources?path=${encodeURIComponent(folderPath)}&fields=_embedded&limit=100`,
+    { headers: yadiskHeaders() }
+  ).catch(() => null);
+  if (!res || !res.ok) return []; // 404 = папка ещё не создана, это нормально
+  const data = await res.json();
+  return data._embedded?.items || [];
 }
 
 // Скачать JSON-файл с Яндекс Диска по public_url

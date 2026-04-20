@@ -138,10 +138,6 @@ window.navTo = navTo;
     if (window.updateSettingsStats) window.updateSettingsStats();
 
     if (window.navTo) window.navTo('library');
-
-    // Автозагрузка из GitHub репозитория
-    if (window.autoLoadGithubGuides) window.autoLoadGithubGuides();
-    if (window.autoLoadGithubDecks) window.autoLoadGithubDecks();
   } catch (error) {
     console.error('Ошибка инициализации:', error);
     window.showToast('⚠️ Ошибка инициализации');
