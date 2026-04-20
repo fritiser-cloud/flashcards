@@ -206,17 +206,27 @@ function closeTOC() {
 }
 window.closeTOC = closeTOC;
 
-function openPdfViewer(url, title) {
+async function openPdfViewer(url, title) {
   const overlay = document.getElementById('pdf-viewer-overlay');
   const frame = document.getElementById('pdf-viewer-frame');
   const titleEl = document.getElementById('pdf-viewer-title');
   if (!overlay || !frame) return;
   if (titleEl) titleEl.textContent = title || 'PDF';
-  // Use Google Docs viewer for remote PDFs, direct for blob/data URLs
-  const src = url.startsWith('blob:') || url.startsWith('data:') ? url
-    : `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-  frame.src = src;
   overlay.classList.add('open');
+  frame.src = '';
+
+  let src = url;
+  if (url.startsWith('data:') || url.startsWith('blob:')) {
+    src = url; // локальный base64/blob — напрямую
+  } else if (window.getYadiskDownloadUrl) {
+    // Яндекс Диск public_url — получить прямую ссылку для скачивания
+    window.showToast('⏳ Открытие PDF...');
+    const dlUrl = await window.getYadiskDownloadUrl(url);
+    src = `https://docs.google.com/viewer?url=${encodeURIComponent(dlUrl)}&embedded=true`;
+  } else {
+    src = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+  }
+  frame.src = src;
 }
 window.openPdfViewer = openPdfViewer;
 
@@ -285,14 +295,11 @@ window.closeAddModal = closeAddModal;
 function switchAddTab(tab, btn) {
   document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const tabFile = document.getElementById('add-tab-file');
-  if (tabFile) tabFile.style.display = tab === 'file' ? '' : 'none';
-  const tabGithub = document.getElementById('add-tab-github');
-  if (tabGithub) tabGithub.style.display = tab === 'github' ? '' : 'none';
-  if (tab === 'github' && !ghTabLoaded) {
-    ghTabLoaded = true;
-    loadGithubList();
-  }
+  document.getElementById('add-tab-file').style.display    = tab === 'file'    ? '' : 'none';
+  document.getElementById('add-tab-github').style.display  = tab === 'github'  ? '' : 'none';
+  document.getElementById('add-tab-yadisk').style.display  = tab === 'yadisk'  ? '' : 'none';
+  if (tab === 'github' && !ghTabLoaded) { ghTabLoaded = true; loadGithubList(); }
+  if (tab === 'yadisk') loadYadiskList();
 }
 window.switchAddTab = switchAddTab;
 
@@ -314,30 +321,44 @@ async function handlePdfAdd(event) {
   const file = event.target.files[0];
   if (!file) return;
   event.target.value = '';
+  const name = file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ');
   try {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const dataUrl = e.target.result;
-      const name = file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ');
+    const token = window.getYadiskToken ? window.getYadiskToken() : '';
+    if (token) {
+      // Загрузить PDF на Яндекс Диск
+      window.showToast('⏳ Загрузка PDF на Яндекс Диск...');
+      const filename = `${Date.now()}_${file.name.replace(/[^а-яёa-z0-9._-]/gi, '_')}`;
+      const publicUrl = await window.uploadFileToYadisk(file, filename, 'pdfs');
+      if (!publicUrl) throw new Error('Не удалось загрузить на Яндекс Диск');
       const guide = {
-        id: Date.now(),
-        name,
-        category: 'bio',
-        type: 'guide',
-        icon: '📄',
-        desc: 'PDF-документ',
-        tags: [],
-        pdf: dataUrl,
-        sourceFile: null
+        id: Date.now(), name, category: 'bio', type: 'guide',
+        icon: '📄', desc: 'PDF-документ', tags: [],
+        pdf: publicUrl, pdfOnYadisk: true, sourceFile: null
       };
       const guides = window.getGuides ? window.getGuides() : [];
       guides.push(guide);
       window.saveGuides(guides);
       renderLibrary();
-      window.showToast(`✓ ${name} добавлено`);
-    };
-    reader.readAsDataURL(file);
+      window.showToast(`✓ ${name} загружено на Яндекс Диск`);
+    } else {
+      // Fallback: сохранить как base64
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const guide = {
+          id: Date.now(), name, category: 'bio', type: 'guide',
+          icon: '📄', desc: 'PDF-документ', tags: [],
+          pdf: e.target.result, sourceFile: null
+        };
+        const guides = window.getGuides ? window.getGuides() : [];
+        guides.push(guide);
+        window.saveGuides(guides);
+        renderLibrary();
+        window.showToast(`✓ ${name} добавлено (установи токен Яндекс Диска для облачного хранения)`);
+      };
+      reader.readAsDataURL(file);
+    }
   } catch (e) {
+    console.error(e);
     window.showToast('⚠️ Ошибка при загрузке PDF');
   }
 }
@@ -353,33 +374,37 @@ async function handleFileAdd(event) {
     if (currentAddType === 'guide') {
       if (!data.name || !data.category) throw new Error('bad format');
       const filename = data.name.toLowerCase().replace(/[^а-яёa-z0-9]+/gi, '_') + '.json';
-      const sourceFile = 'guides/' + filename;
       const guides = window.getGuides ? window.getGuides() : [];
       const existing = guides.findIndex(g => g.name === data.name);
-      if (existing >= 0) guides[existing] = { ...data, sourceFile };
+      let sourceFile = 'guides/' + filename;
+      // Попробовать сохранить на Яндекс Диск
+      const yadiskUrl = await pushJsonToYadisk(filename, data, 'guides');
+      if (yadiskUrl) sourceFile = yadiskUrl;
+      if (existing >= 0) guides[existing] = { ...data, id: guides[existing].id, sourceFile };
       else guides.push({ ...data, id: Date.now(), sourceFile });
       window.saveGuides(guides);
       renderLibrary();
-      const pushed = await pushGuideToGithub(filename, data);
       closeAddModal();
-      window.showToast(pushed ? `✓ ${data.name} добавлено и сохранено в GitHub` : `✓ ${data.name} добавлено`);
+      window.showToast(yadiskUrl ? `✓ ${data.name} сохранено на Яндекс Диск` : `✓ ${data.name} добавлено`);
       return;
     } else {
       if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
       const colors = ['#E8F4EE', '#FDF0E8', '#FEF9E7', '#EEF0FD', '#FDE8F0'];
       const filename = data.name.toLowerCase().replace(/[^а-яёa-z0-9]+/gi, '_') + '.json';
+      // Попробовать сохранить на Яндекс Диск
+      const yadiskUrl = await pushJsonToYadisk(filename, data, 'decks');
+      const sourceFile = yadiskUrl || ('decks/' + filename);
       const deck = {
         name: data.name, icon: data.icon || '📚', type: data.type || 'flashcard',
         color: data.color || colors[Math.floor(Math.random() * colors.length)],
-        cards: data.cards, sourceFile: 'decks/' + filename, createdAt: Date.now()
+        cards: data.cards, sourceFile, createdAt: Date.now()
       };
       if (window.invalidateDecksCache) window.invalidateDecksCache();
       await window.dbPut('decks', deck);
       if (window.autoSaveToCloud) window.autoSaveToCloud();
       if (window.renderDecks) window.renderDecks();
-      const pushed = await pushDeckToGithub(filename, data);
       closeAddModal();
-      window.showToast(pushed ? `✓ ${data.name} добавлено и сохранено в GitHub` : `✓ ${data.name} добавлено`);
+      window.showToast(yadiskUrl ? `✓ ${data.name} сохранено на Яндекс Диск` : `✓ ${data.name} добавлено`);
       return;
     }
     closeAddModal();
@@ -389,6 +414,90 @@ async function handleFileAdd(event) {
   }
 }
 window.handleFileAdd = handleFileAdd;
+
+// Загрузить JSON на Яндекс Диск, вернуть public_url или null
+async function pushJsonToYadisk(filename, data, folder) {
+  if (!window.uploadFileToYadisk || !window.getYadiskToken()) return null;
+  try {
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    return await window.uploadFileToYadisk(blob, filename, folder);
+  } catch {
+    return null;
+  }
+}
+
+// Загрузить список файлов с Яндекс Диска для выбранного типа
+async function loadYadiskList() {
+  const list = document.getElementById('yadisk-list');
+  const loading = document.getElementById('yadisk-loading');
+  const errEl = document.getElementById('yadisk-error');
+  if (!list) return;
+  if (loading) loading.style.display = '';
+  if (errEl) errEl.style.display = 'none';
+  list.innerHTML = '';
+
+  const folder = currentAddType === 'deck' ? 'decks' : 'guides';
+  const items = await (window.listYadiskFolder ? window.listYadiskFolder(folder) : []);
+
+  if (loading) loading.style.display = 'none';
+
+  const jsonItems = items.filter(i => i.name.endsWith('.json') && i.type === 'file');
+  if (jsonItems.length === 0) {
+    list.innerHTML = '<div class="gh-loading">Нет файлов на Яндекс Диске</div>';
+    return;
+  }
+
+  for (const item of jsonItems) {
+    try {
+      const dlUrl = await window.getYadiskDownloadUrl(item.public_url || item.path);
+      const resp = await fetch(dlUrl);
+      const data = await resp.json();
+      const existing = currentAddType === 'guide'
+        ? (window.getGuides ? window.getGuides() : []).find(g => g.name === data.name)
+        : (await window.dbGetAll('decks')).find(d => d.name === data.name);
+      const el = document.createElement('div');
+      el.className = 'gh-item' + (existing ? ' loaded' : '');
+      el.innerHTML = `
+        <div class="gh-item-icon">${existing ? '✓' : '📄'}</div>
+        <div class="gh-item-info">
+          <div class="gh-item-name">${window.escapeHtml(data.name || item.name)}</div>
+          <div class="gh-item-sub">${(item.size / 1024).toFixed(1)} КБ</div>
+        </div>
+        <div class="gh-item-btn">${existing ? 'Добавлено' : 'Добавить'}</div>`;
+      if (!existing) {
+        el.onclick = () => importFromYadisk(data, item.public_url || item.path);
+      }
+      list.appendChild(el);
+    } catch { /* пропустить плохой файл */ }
+  }
+}
+window.loadYadiskList = loadYadiskList;
+
+async function importFromYadisk(data, publicUrl) {
+  if (currentAddType === 'guide') {
+    const guides = window.getGuides ? window.getGuides() : [];
+    const existing = guides.findIndex(g => g.name === data.name);
+    if (existing >= 0) guides[existing] = { ...data, sourceFile: publicUrl };
+    else guides.push({ ...data, id: Date.now(), sourceFile: publicUrl });
+    window.saveGuides(guides);
+    renderLibrary();
+  } else {
+    const colors = ['#E8F4EE', '#FDF0E8', '#FEF9E7', '#EEF0FD', '#FDE8F0'];
+    const deck = {
+      name: data.name, icon: data.icon || '📚', type: data.type || 'flashcard',
+      color: data.color || colors[Math.floor(Math.random() * colors.length)],
+      cards: data.cards, sourceFile: publicUrl, createdAt: Date.now()
+    };
+    if (window.invalidateDecksCache) window.invalidateDecksCache();
+    await window.dbPut('decks', deck);
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
+    if (window.renderDecks) window.renderDecks();
+  }
+  closeAddModal();
+  window.showToast(`✓ ${data.name} добавлено`);
+}
+window.importFromYadisk = importFromYadisk;
 
 async function loadGithubList() {
   const loading = document.getElementById('gh-loading');
@@ -472,24 +581,87 @@ async function importFromGithub(data, filename, alreadyExists) {
 }
 window.importFromGithub = importFromGithub;
 
+const DECK_AI_PROMPT = `Создай набор флеш-карточек для подготовки к ЕГЭ по биологии на тему: "[ТЕМА]"
+
+Верни результат строго в формате JSON (без лишнего текста до и после):
+
+{
+  "name": "Название колоды",
+  "type": "flashcard",
+  "icon": "🧬",
+  "cards": [
+    { "q": "Вопрос или термин", "a": "Чёткий, лаконичный ответ" },
+    { "q": "Вопрос 2", "a": "Ответ 2" }
+  ]
+}
+
+Требования:
+- Минимум 30 карточек, лучше 50+
+- Вопросы: термины, определения, процессы, отличия, примеры организмов
+- Ответы: краткие (1–3 предложения), без воды
+- Охвати все ключевые понятия темы, типичные для заданий ЕГЭ
+- Не добавляй никакого текста вне JSON`;
+
+const GUIDE_AI_PROMPT = `Создай подробный конспект для подготовки к ЕГЭ по биологии на тему: "[ТЕМА]"
+
+Верни результат строго в формате JSON (без лишнего текста до и после):
+
+{
+  "name": "Название конспекта",
+  "type": "guide",
+  "category": "bio",
+  "icon": "🧬",
+  "color": "lavender",
+  "desc": "Краткое описание (1–2 предложения)",
+  "tags": ["ЕГЭ 2026", "Задание X", "ключевое слово"],
+  "chapters": [
+    { "title": "Название раздела", "tasks": 5 }
+  ],
+  "content": "# Заголовок\\n\\nТекст конспекта в формате Markdown.\\n\\n## Раздел 1\\n\\nСодержимое...\\n\\n## Раздел 2\\n\\nСодержимое..."
+}
+
+Требования к полю content:
+- Используй Markdown: ## для разделов, ### для подразделов, **жирный** для терминов, - для списков
+- Включи: определения, классификации, схемы в виде списков, типичные задания ЕГЭ и разбор ошибок
+- Объём: не менее 1500 слов
+- Все \\n внутри строки JSON должны быть экранированы как \\\\n
+- Не добавляй никакого текста вне JSON`;
+
 function openSampleModal() {
   closeAddModal();
   const title = document.getElementById('sample-title');
   const sub = document.getElementById('sample-sub');
   const pre = document.getElementById('sample-pre');
+  const aiBlock = document.getElementById('sample-ai-block');
+  const promptEl = document.getElementById('sample-prompt');
+
   if (currentAddType === 'guide') {
-    if (title) title.textContent = 'Формат guide.json';
-    if (sub) sub.textContent = 'Добавь файл с таким форматом в свой GitHub репозиторий:';
-    if (pre) pre.textContent = `{\n  "name": "Название пособия",\n  "type": "guide",\n  "category": "bio",\n  "icon": "🧬",\n  "color": "lavender",\n  "desc": "Краткое описание",\n  "tags": ["ЕГЭ 2026", "Задание 27"],\n  "chapters": [\n    { "title": "Глава 1", "tasks": 14 }\n  ],\n  "url": "https://ссылка-на-файл.pdf"\n}`;
+    if (title) title.textContent = 'Создать пособие через ИИ';
+    if (sub) sub.textContent = 'Скопируй промт, замени [ТЕМА] и отправь в ChatGPT или Claude — получишь готовый JSON';
+    if (aiBlock) aiBlock.style.display = 'block';
+    if (promptEl) promptEl.textContent = GUIDE_AI_PROMPT;
+    if (pre) pre.textContent = `{\n  "name": "Фотосинтез",\n  "type": "guide",\n  "category": "bio",\n  "icon": "🌿",\n  "color": "lavender",\n  "desc": "Световая и тёмновая фазы, задания ЕГЭ",\n  "tags": ["ЕГЭ 2026", "Задание 23"],\n  "chapters": [\n    { "title": "Световая фаза", "tasks": 8 },\n    { "title": "Тёмновая фаза", "tasks": 6 }\n  ],\n  "content": "## Введение\\n\\nФотосинтез — это..."\n}`;
   } else {
-    if (title) title.textContent = 'Формат колоды';
-    if (sub) sub.textContent = 'Для flashcard (обычные карточки) или match (паронимы):';
-    if (pre) pre.textContent = `// Флеш-карточки\n{\n  "name": "Ударения ЕГЭ",\n  "type": "flashcard",\n  "icon": "🗣️",\n  "cards": [{"q": "вручит", "a": "вручИт"}]\n}\n\n// Паронимы (match)\n{\n  "name": "Паронимы ЕГЭ",\n  "type": "match",\n  "cards": [\n    {\n      "pairs": [\n        {"word": "Абонемент", "example": "...", "hint": "..."},\n        {"word": "Абонент", "example": "...", "hint": "..."}\n      ]\n    }\n  ]\n}`;
+    if (title) title.textContent = 'Создать колоду через ИИ';
+    if (sub) sub.textContent = 'Скопируй промт, замени [ТЕМА] и отправь в ChatGPT или Claude — получишь готовый JSON';
+    if (aiBlock) aiBlock.style.display = 'block';
+    if (promptEl) promptEl.textContent = DECK_AI_PROMPT;
+    if (pre) pre.textContent = `// Флеш-карточки\n{\n  "name": "Митоз и мейоз",\n  "type": "flashcard",\n  "icon": "🔬",\n  "cards": [\n    {"q": "Что такое митоз?", "a": "Деление клетки, при котором образуются две дочерние клетки с тем же набором хромосом"},\n    {"q": "Сколько фаз у митоза?", "a": "4 фазы: профаза, метафаза, анафаза, телофаза"}\n  ]\n}`;
   }
   const sampleModal = document.getElementById('sample-modal');
   if (sampleModal) sampleModal.classList.add('open');
 }
 window.openSampleModal = openSampleModal;
+
+function copySamplePrompt() {
+  const promptEl = document.getElementById('sample-prompt');
+  if (!promptEl) return;
+  navigator.clipboard.writeText(promptEl.textContent).then(() => {
+    const btn = document.getElementById('copy-prompt-btn');
+    if (btn) { btn.textContent = '✓ Скопировано'; setTimeout(() => { btn.textContent = 'Скопировать'; }, 2000); }
+  }).catch(() => window.showToast('⚠️ Не удалось скопировать'));
+}
+window.copySamplePrompt = copySamplePrompt;
 
 function closeSampleModal(e) {
   if (!e || e.target === document.getElementById('sample-modal')) {

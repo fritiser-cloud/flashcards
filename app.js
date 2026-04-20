@@ -29,11 +29,9 @@ window.updateSettingsStats = updateSettingsStats;
 function renderSettings() {
   const ghUserInput = document.getElementById('gh-user-input');
   const ghRepoInput = document.getElementById('gh-repo-input');
-  const ghTokenInput = document.getElementById('gh-token-input');
   const yadiskTokenInput = document.getElementById('yadisk-token-input');
   if (ghUserInput) ghUserInput.value = localStorage.getItem('gh_user') || 'fritiser-cloud';
   if (ghRepoInput) ghRepoInput.value = localStorage.getItem('gh_repo') || 'flashcards';
-  if (ghTokenInput) ghTokenInput.value = localStorage.getItem('gh_token') || '';
   if (yadiskTokenInput) yadiskTokenInput.value = localStorage.getItem('yadisk_token') || '';
   updateSettingsStats();
 }
@@ -42,12 +40,9 @@ window.renderSettings = renderSettings;
 function saveSettings() {
   const ghUser = document.getElementById('gh-user-input')?.value.trim() || 'fritiser-cloud';
   const ghRepo = document.getElementById('gh-repo-input')?.value.trim() || 'flashcards';
-  const ghToken = document.getElementById('gh-token-input')?.value.trim() || '';
   const yadiskToken = document.getElementById('yadisk-token-input')?.value.trim() || '';
   localStorage.setItem('gh_user', ghUser);
   localStorage.setItem('gh_repo', ghRepo);
-  if (ghToken) localStorage.setItem('gh_token', ghToken);
-  else localStorage.removeItem('gh_token');
   if (yadiskToken) localStorage.setItem('yadisk_token', yadiskToken);
   else localStorage.removeItem('yadisk_token');
   window.showToast('✓ Настройки сохранены');

@@ -785,7 +785,7 @@
   <div class="nav"><div style="width:44px"></div><div class="nav-title">Настройки</div><div style="width:44px"></div></div>
   <div class="scroll">
     <div id="auth-section"><div id="auth-logged-out" style="display:none"><div class="settings-section"><div class="settings-label">Аккаунт</div><div style="padding:16px 0;text-align:center"><div style="font-size:56px;margin-bottom:16px">👤</div><div style="font-size:17px;font-weight:500;color:var(--text);margin-bottom:8px">Не авторизован</div><div style="font-size:14px;color:var(--text3);margin-bottom:24px">Войдите для синхронизации данных</div><button class="btn-google" onclick="signInWithGoogle()"><svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.96C.347 6.173 0 7.548 0 9s.348 2.827.96 4.042l3.005-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.96 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>Войти через Google</button></div></div></div><div id="auth-logged-in" style="display:none"><div class="auth-card"><img id="user-avatar" class="auth-avatar" src="" alt="Avatar"><div class="auth-name" id="user-name">Загрузка...</div><div class="auth-email" id="user-email"></div><div class="auth-status"><span>●</span> Подключено</div></div><div class="settings-section"><div class="settings-label">Синхронизация</div><div class="sync-status" id="sync-status"><span class="sync-icon success">☁️</span><span id="sync-text">Все данные синхронизированы</span></div><div class="settings-row"><div><div class="settings-row-label">Последняя синхронизация</div></div><div style="font-size:14px;color:var(--text3)" id="last-sync">Никогда</div></div></div><button class="btn btn-secondary" onclick="signOut()">Выйти из аккаунта</button><div style="height:16px"></div></div></div>
-    <div class="settings-section"><div class="settings-label">GitHub репозиторий</div><div class="settings-row"><div><div class="settings-row-label">Пользователь</div><div class="settings-row-sub">Логин GitHub</div></div><input class="settings-input" id="gh-user-input" placeholder="fritiser-cloud" value="fritiser-cloud"></div><div class="settings-row"><div><div class="settings-row-label">Репозиторий</div><div class="settings-row-sub">Название</div></div><input class="settings-input" id="gh-repo-input" placeholder="flashcards" value="flashcards"></div><div class="settings-row"><div><div class="settings-row-label">GitHub Token</div><div class="settings-row-sub">Для сохранения колод в decks/</div></div><input class="settings-input" id="gh-token-input" type="password" placeholder="ghp_..."></div></div>
+    <div class="settings-section"><div class="settings-label">GitHub репозиторий</div><div class="settings-row"><div><div class="settings-row-label">Пользователь</div><div class="settings-row-sub">Логин GitHub</div></div><input class="settings-input" id="gh-user-input" placeholder="fritiser-cloud" value="fritiser-cloud"></div><div class="settings-row"><div><div class="settings-row-label">Репозиторий</div><div class="settings-row-sub">Название</div></div><input class="settings-input" id="gh-repo-input" placeholder="flashcards" value="flashcards"></div></div>
     <div class="settings-section"><div class="settings-label">Яндекс Диск</div><div class="settings-row"><div><div class="settings-row-label">OAuth Токен</div><div class="settings-row-sub">Для хранения изображений атласа и заметок</div></div><input class="settings-input" id="yadisk-token-input" type="password" placeholder="y0_..."></div></div>
     <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить</button><div style="height:12px"></div>
     <div class="settings-section"><div class="settings-label">О приложении</div><div class="settings-row"><div><div class="settings-row-label">Биолаб + Карточки + Заметки</div><div class="settings-row-sub">Версия 3.0 · ЕГЭ помощник</div></div></div><div class="settings-row"><div><div class="settings-row-label">Пособий загружено</div></div><div style="font-weight:700;color:var(--lavender-text)" id="settings-guide-count">0</div></div><div class="settings-row"><div><div class="settings-row-label">Колод загружено</div></div><div style="font-weight:700;color:var(--accent)" id="settings-deck-count">0</div></div><div class="settings-row"><div><div class="settings-row-label">Элементов в атласе</div></div><div style="font-weight:700;color:var(--sage-deep)" id="settings-atlas-count">0</div></div><div class="settings-row"><div><div class="settings-row-label">Заметок создано</div></div><div style="font-weight:700;color:var(--sky-deep)" id="settings-notes-count">0</div></div></div>
@@ -828,6 +828,7 @@
     <div class="modal-tabs">
       <button class="modal-tab active" onclick="switchAddTab('file',this)">📂 Файл</button>
       <button class="modal-tab" onclick="switchAddTab('github',this)">🐙 GitHub</button>
+      <button class="modal-tab" onclick="switchAddTab('yadisk',this)">☁️ Яндекс</button>
     </div>
     <div id="add-tab-file">
       <div style="display:flex;flex-direction:column;gap:12px;padding:4px 0 8px">
@@ -859,11 +860,32 @@
       <div id="gh-list"></div>
       <div id="gh-error" style="display:none; color:var(--peach-text)"></div>
     </div>
+    <div id="add-tab-yadisk" style="display:none">
+      <div class="gh-loading" id="yadisk-loading">Загружаю с Яндекс Диска…</div>
+      <div id="yadisk-list"></div>
+      <div id="yadisk-error" style="display:none; color:var(--peach-text)"></div>
+    </div>
     <button class="modal-cancel" onclick="closeAddModal()">Отмена</button>
   </div>
 </div>
 <div class="modal-overlay" id="sample-modal" onclick="closeSampleModal(event)">
-  <div class="modal"><div class="modal-handle"></div><div class="modal-title" id="sample-title">Формат файла</div><div class="modal-sub" id="sample-sub"></div><pre id="sample-pre" style="background:var(--surface2); border-radius:16px; padding:18px; font-size:12px; overflow-x:auto; line-height:1.7; border:1.5px solid var(--border);"></pre><button class="modal-cancel" onclick="closeSampleModal()">Закрыть</button></div>
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="sample-title">Формат файла</div>
+    <div class="modal-sub" id="sample-sub"></div>
+    <div id="sample-ai-block" style="display:none; margin-bottom:16px">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+        <div style="font-size:13px; font-weight:600; color:var(--text2)">🤖 Промт для нейросети</div>
+        <button onclick="copySamplePrompt()" style="font-size:12px; padding:5px 12px; background:var(--accent); color:#fff; border:none; border-radius:8px; cursor:pointer" id="copy-prompt-btn">Скопировать</button>
+      </div>
+      <pre id="sample-prompt" style="background:var(--lavender); border:1.5px solid var(--lavender-deep); border-radius:16px; padding:16px; font-size:11.5px; line-height:1.8; white-space:pre-wrap; word-break:break-word; max-height:280px; overflow-y:auto; color:var(--lavender-text)"></pre>
+    </div>
+    <div id="sample-format-block">
+      <div style="font-size:13px; font-weight:600; color:var(--text2); margin-bottom:8px">📄 Формат JSON</div>
+      <pre id="sample-pre" style="background:var(--surface2); border-radius:16px; padding:18px; font-size:12px; overflow-x:auto; line-height:1.7; border:1.5px solid var(--border);"></pre>
+    </div>
+    <button class="modal-cancel" onclick="closeSampleModal()">Закрыть</button>
+  </div>
 </div>
 <div class="modal-overlay" id="topic-modal" onclick="closeTopicModal(event)">
   <div class="modal"><div class="modal-handle"></div><div class="modal-title">Новая тема для повторения</div><div class="modal-sub">Добавьте тему, которую хотите запомнить надолго</div><input type="text" class="settings-input" id="topic-name" placeholder="Название темы (например: Плоские черви)" style="width:100%; margin-bottom:16px"><select class="settings-input" id="topic-subject" style="width:100%; margin-bottom:16px"><option value="bio">🧬 Биология</option><option value="ru">📖 Русский язык</option><option value="phys">⚛️ Физика</option><option value="chem">🧪 Химия</option></select><div class="settings-row" style="padding:0 0 16px 0"><div><div class="settings-row-label">Дата первого изучения</div></div><input type="date" class="settings-input" id="topic-first-review" style="width:auto"></div><button class="btn btn-primary" onclick="saveTopic()" style="width:100%">➕ Добавить тему</button><button class="modal-cancel" onclick="closeTopicModal()">Отмена</button></div>
