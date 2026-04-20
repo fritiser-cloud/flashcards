@@ -125,11 +125,44 @@ function compressImage(base64, maxWidth = 1200, quality = 0.8) {
   });
 }
 
-// Сжать изображение и вернуть base64.
-// Яндекс Диск НЕ используется для изображений — download URL там временный и истекает,
-// что ломает отображение в <img>. PDF и JSON файлы загружаются через uploadFileToYadisk напрямую.
+// Upload image to Yandex Disk, return public_url (permanent).
+// Falls back to compressed base64 if no token.
 window.uploadImage = async function(base64) {
-  return await compressImage(base64);
+  const compressed = await compressImage(base64);
+  const token = getYadiskToken();
+  if (!token) return compressed;
+  try {
+    const fetchRes = await fetch(compressed);
+    const blob = await fetchRes.blob();
+    const filename = `img_${Date.now()}.jpg`;
+    const publicUrl = await uploadFileToYadisk(blob, filename, 'images');
+    return publicUrl || compressed; // store public_url, not download URL
+  } catch {
+    return compressed;
+  }
+};
+
+// Display a Yandex Disk image in an <img> element.
+// Fetches fresh download URL (cached in sessionStorage for the session).
+window.loadYadiskImage = async function(url, imgEl) {
+  if (!url) return;
+  // base64 or regular URL — set directly
+  if (url.startsWith('data:') || !url.includes('disk.yandex')) {
+    imgEl.src = url;
+    return;
+  }
+  // Check sessionStorage cache
+  const cacheKey = 'ydl_' + url;
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) { imgEl.src = cached; return; }
+  // Get fresh download URL
+  try {
+    const dlUrl = await getYadiskDownloadUrl(url);
+    sessionStorage.setItem(cacheKey, dlUrl);
+    imgEl.src = dlUrl;
+  } catch {
+    imgEl.src = url; // fallback
+  }
 };
 
 window.getYadiskToken = getYadiskToken;

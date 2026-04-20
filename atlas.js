@@ -42,7 +42,12 @@ function renderAtlas() {
   filtered.forEach(item => {
     const card = document.createElement('div');
     card.className = 'atlas-card';
-    card.innerHTML = `<div class="atlas-card-img">${item.image ? `<img src="${item.image}" alt="${window.escapeHtml(item.title)}">` : '🖼️'}</div><div class="atlas-card-content"><div class="atlas-card-title">${window.escapeHtml(item.title)}</div><div class="atlas-card-category">${categoryLabels[item.category]}</div></div>`;
+    const imgHtml = item.image ? `<img id="atlas-img-${item.id}" alt="${window.escapeHtml(item.title)}">` : '🖼️';
+    card.innerHTML = `<div class="atlas-card-img">${imgHtml}</div><div class="atlas-card-content"><div class="atlas-card-title">${window.escapeHtml(item.title)}</div><div class="atlas-card-category">${categoryLabels[item.category]}</div></div>`;
+    if (item.image) {
+      const imgEl = card.querySelector(`#atlas-img-${item.id}`);
+      if (imgEl) window.loadYadiskImage ? window.loadYadiskImage(item.image, imgEl) : (imgEl.src = item.image);
+    }
     card.onclick = () => openAtlasDetail(item.id);
     grid.appendChild(card);
   });
@@ -56,7 +61,12 @@ function openAtlasDetail(id) {
   currentAtlasId = id;
   const categoryLabels = { anatomy: '🫀 Анатомия', botany: '🌿 Ботаника', zoology: '🦋 Зоология', cells: '🔬 Клетки', ecology: '🌍 Экология' };
   const imgEl = document.getElementById('atlas-detail-image');
-  if (imgEl) { imgEl.src = item.image || ''; imgEl.style.display = item.image ? 'block' : 'none'; }
+  if (imgEl) {
+    imgEl.style.display = item.image ? 'block' : 'none';
+    if (item.image) {
+      window.loadYadiskImage ? window.loadYadiskImage(item.image, imgEl) : (imgEl.src = item.image);
+    }
+  }
   const catEl = document.getElementById('atlas-detail-category');
   if (catEl) catEl.textContent = categoryLabels[item.category];
   const titleEl = document.getElementById('atlas-detail-title');

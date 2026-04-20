@@ -133,9 +133,7 @@ function openGuide(id) {
   const actionsDiv = document.getElementById('guide-action-buttons');
   if (actionsDiv) {
     const btns = [];
-    if (guide.pdf) btns.push(`<button class="btn btn-primary" onclick="openPdfViewer('${window.escapeHtml(guide.pdf)}', '${window.escapeHtml(guide.name)}')">📄 Открыть PDF</button>`);
-    if (guide.url && !guide.pdf) btns.push(`<button class="btn btn-secondary" onclick="openGuideUrl()">🔗 Открыть оригинал</button>`);
-    else if (guide.url) btns.push(`<button class="btn btn-secondary" onclick="openGuideUrl()">🔗 Оригинал</button>`);
+    if (guide.url) btns.push(`<button class="btn btn-secondary" onclick="openGuideUrl()">🔗 Открыть оригинал</button>`);
     actionsDiv.innerHTML = btns.join('');
   }
 
@@ -206,37 +204,6 @@ function closeTOC() {
 }
 window.closeTOC = closeTOC;
 
-async function openPdfViewer(url, title) {
-  const overlay = document.getElementById('pdf-viewer-overlay');
-  const frame = document.getElementById('pdf-viewer-frame');
-  const titleEl = document.getElementById('pdf-viewer-title');
-  if (!overlay || !frame) return;
-  if (titleEl) titleEl.textContent = title || 'PDF';
-  overlay.classList.add('open');
-  frame.src = '';
-
-  let src = url;
-  if (url.startsWith('data:') || url.startsWith('blob:')) {
-    src = url; // локальный base64/blob — напрямую
-  } else if (window.getYadiskDownloadUrl) {
-    // Яндекс Диск public_url — получить прямую ссылку для скачивания
-    window.showToast('⏳ Открытие PDF...');
-    const dlUrl = await window.getYadiskDownloadUrl(url);
-    src = `https://docs.google.com/viewer?url=${encodeURIComponent(dlUrl)}&embedded=true`;
-  } else {
-    src = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-  }
-  frame.src = src;
-}
-window.openPdfViewer = openPdfViewer;
-
-function closePdfViewer() {
-  const overlay = document.getElementById('pdf-viewer-overlay');
-  const frame = document.getElementById('pdf-viewer-frame');
-  if (overlay) overlay.classList.remove('open');
-  if (frame) frame.src = '';
-}
-window.closePdfViewer = closePdfViewer;
 
 function openGuideUrl() {
   const guides = window.getGuides ? window.getGuides() : [];
@@ -278,9 +245,6 @@ function openAddModal(type) {
   if (list) list.innerHTML = '';
   const error = document.getElementById('gh-error');
   if (error) error.style.display = 'none';
-  // Show PDF button only for guides
-  const pdfBtn = document.getElementById('btn-upload-pdf');
-  if (pdfBtn) pdfBtn.style.display = type === 'guide' ? 'flex' : 'none';
 }
 window.openAddModal = openAddModal;
 
@@ -310,59 +274,6 @@ function triggerFileAdd() {
 }
 window.triggerFileAdd = triggerFileAdd;
 
-function triggerPdfAdd() {
-  closeAddModal();
-  const pdfInput = document.getElementById('pdf-input');
-  if (pdfInput) pdfInput.click();
-}
-window.triggerPdfAdd = triggerPdfAdd;
-
-async function handlePdfAdd(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  event.target.value = '';
-  const name = file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ');
-  try {
-    const token = window.getYadiskToken ? window.getYadiskToken() : '';
-    if (token) {
-      // Загрузить PDF на Яндекс Диск
-      window.showToast('⏳ Загрузка PDF на Яндекс Диск...');
-      const filename = `${Date.now()}_${file.name.replace(/[^а-яёa-z0-9._-]/gi, '_')}`;
-      const publicUrl = await window.uploadFileToYadisk(file, filename, 'pdfs');
-      if (!publicUrl) throw new Error('Не удалось загрузить на Яндекс Диск');
-      const guide = {
-        id: Date.now(), name, category: 'bio', type: 'guide',
-        icon: '📄', desc: 'PDF-документ', tags: [],
-        pdf: publicUrl, pdfOnYadisk: true, sourceFile: null
-      };
-      const guides = window.getGuides ? window.getGuides() : [];
-      guides.push(guide);
-      window.saveGuides(guides);
-      renderLibrary();
-      window.showToast(`✓ ${name} загружено на Яндекс Диск`);
-    } else {
-      // Fallback: сохранить как base64
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const guide = {
-          id: Date.now(), name, category: 'bio', type: 'guide',
-          icon: '📄', desc: 'PDF-документ', tags: [],
-          pdf: e.target.result, sourceFile: null
-        };
-        const guides = window.getGuides ? window.getGuides() : [];
-        guides.push(guide);
-        window.saveGuides(guides);
-        renderLibrary();
-        window.showToast(`✓ ${name} добавлено (установи токен Яндекс Диска для облачного хранения)`);
-      };
-      reader.readAsDataURL(file);
-    }
-  } catch (e) {
-    console.error(e);
-    window.showToast('⚠️ Ошибка при загрузке PDF');
-  }
-}
-window.handlePdfAdd = handlePdfAdd;
 
 async function handleFileAdd(event) {
   const file = event.target.files[0];

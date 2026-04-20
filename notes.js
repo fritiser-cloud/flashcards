@@ -146,8 +146,10 @@ function renderNoteImages(images) {
   images.forEach((img, index) => {
     const item = document.createElement('div');
     item.className = 'note-image-item';
-    item.innerHTML = `<img src="${img}" alt="Image ${index}"><div class="note-image-number">${index}</div><button class="note-image-delete" onclick="deleteNoteImage(${index})">✕</button>`;
+    item.innerHTML = `<img id="note-img-${index}" alt="Image ${index}"><div class="note-image-number">${index}</div><button class="note-image-delete" onclick="deleteNoteImage(${index})">✕</button>`;
     container.appendChild(item);
+    const imgEl = item.querySelector(`#note-img-${index}`);
+    if (imgEl) window.loadYadiskImage ? window.loadYadiskImage(img, imgEl) : (imgEl.src = img);
   });
 }
 window.renderNoteImages = renderNoteImages;
