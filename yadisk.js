@@ -129,22 +129,11 @@ function compressImage(base64, maxWidth = 1200, quality = 0.8) {
   });
 }
 
-// Сжать и загрузить изображение на Яндекс Диск (или вернуть сжатый base64)
+// Сжать изображение и вернуть base64.
+// Яндекс Диск НЕ используется для изображений — download URL там временный и истекает,
+// что ломает отображение в <img>. PDF и JSON файлы загружаются через uploadFileToYadisk напрямую.
 window.uploadImage = async function(base64) {
-  const compressed = await compressImage(base64);
-  const token = getYadiskToken();
-  if (!token) return compressed;
-  try {
-    const fetchRes = await fetch(compressed);
-    const blob = await fetchRes.blob();
-    const filename = `img_${Date.now()}.jpg`;
-    const publicUrl = await uploadFileToYadisk(blob, filename, 'images');
-    if (!publicUrl) return compressed;
-    // Получаем прямую ссылку для отображения в <img>
-    return await getYadiskDownloadUrl(publicUrl);
-  } catch {
-    return compressed;
-  }
+  return await compressImage(base64);
 };
 
 window.getYadiskToken = getYadiskToken;
