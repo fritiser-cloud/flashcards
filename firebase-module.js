@@ -31,6 +31,7 @@ const db = getFirestore(app);
 let currentUser = null;
 let _unsubscribeSnapshot = null;
 let _isSaving = false;
+let _lastLocalChange = 0; // когда последний раз пользователь что-то менял
 
 // ==================== АВТОРИЗАЦИЯ ====================
 
@@ -159,7 +160,7 @@ async function loadFromCloud() {
 async function saveToCloud() {
   if (!currentUser) return;
   _isSaving = true;
-  updateSyncStatus('syncing', 'Сохранение...');
+  updateSyncStatus('syncing', 'Сохранение...'); // показываем только здесь, не в debounce
   try {
     const notes     = window.getNotes      ? window.getNotes()      : [];
     const atlas     = window.getAtlasItems ? window.getAtlasItems() : [];
@@ -190,17 +191,19 @@ async function saveToCloud() {
     console.error('Ошибка сохранения:', error);
     updateSyncStatus('error', 'Ошибка сохранения');
   } finally {
-    setTimeout(() => { _isSaving = false; }, 1000);
+    // Держим флаг 5 секунд — чтобы эхо-snapshot от нашей же записи не вызвал перезагрузку
+    setTimeout(() => { _isSaving = false; }, 5000);
   }
 }
 
-// Debounce 1 секунда (вместо 3)
+// Debounce 2 секунды — достаточно быстро, но не дёргает на каждый символ
 let _autoSaveTimer = null;
 window.autoSaveToCloud = function() {
   if (!currentUser) return;
+  _lastLocalChange = Date.now();
   clearTimeout(_autoSaveTimer);
-  updateSyncStatus('syncing', 'Сохранение...');
-  _autoSaveTimer = setTimeout(() => saveToCloud(), 1000);
+  // Показываем индикатор только когда реально начинаем сохранять, не при каждом нажатии
+  _autoSaveTimer = setTimeout(() => saveToCloud(), 2000);
 };
 
 // ==================== REALTIME SYNC ====================
@@ -209,7 +212,9 @@ function startRealtimeSync() {
   if (_unsubscribeSnapshot) _unsubscribeSnapshot();
   const userDocRef = doc(db, 'users', currentUser.uid);
   _unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
-    if (_isSaving) return; // игнорируем свои записи
+    if (_isSaving) return; // игнорируем эхо от своих записей
+    // Не прерываем пользователя если он активно работает (менял что-то < 6 сек назад)
+    if (Date.now() - _lastLocalChange < 6000) return;
     if (docSnap.exists()) loadFromCloud();
   });
 }
@@ -234,3 +239,30 @@ function updateSyncStatus(status, text) {
   }
   textEl.textContent = text;
 }
+
+// ==================== СЖАТИЕ И ЗАГРУЗКА ИЗОБРАЖЕНИЙ ====================
+
+// Сжать base64-изображение через Canvas (max 1200px, JPEG 80%)
+function compressImage(base64, maxWidth = 1200, quality = 0.8) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(base64); // если не удалось — вернуть оригинал
+    img.src = base64;
+  });
+}
+
+// Сжать и загрузить на Яндекс Диск (если токен есть), иначе вернуть сжатый base64
+window.uploadImage = async function(base64) {
+  const compressed = await compressImage(base64);
+  if (window.uploadToYadisk) return await window.uploadToYadisk(compressed);
+  return compressed;
+};

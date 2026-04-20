@@ -92,12 +92,16 @@ function handleAtlasImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
-    atlasImageBase64 = e.target.result;
+  reader.onload = async function(e) {
     const previewImg = document.getElementById('atlas-preview-img');
-    if (previewImg) previewImg.src = atlasImageBase64;
     const previewDiv = document.getElementById('atlas-image-preview');
+    // Показываем превью сразу (base64), загружаем в Storage в фоне
+    if (previewImg) previewImg.src = e.target.result;
     if (previewDiv) previewDiv.style.display = 'block';
+    window.showToast('⏳ Загрузка изображения...');
+    atlasImageBase64 = await (window.uploadImage ? window.uploadImage(e.target.result, 'atlas') : e.target.result);
+    if (previewImg) previewImg.src = atlasImageBase64;
+    window.showToast('✓ Изображение готово');
   };
   reader.readAsDataURL(file);
 }
@@ -172,3 +176,37 @@ function closeAtlasEditor() {
   renderAtlas();
 }
 window.closeAtlasEditor = closeAtlasEditor;
+
+// Вставка изображения через Ctrl+V в редакторе атласа
+function handleAtlasPaste(e) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      e.preventDefault();
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = async function(event) {
+        const previewImg = document.getElementById('atlas-preview-img');
+        const previewDiv = document.getElementById('atlas-image-preview');
+        if (previewImg) previewImg.src = event.target.result;
+        if (previewDiv) previewDiv.style.display = 'block';
+        window.showToast('⏳ Загрузка изображения...');
+        atlasImageBase64 = await (window.uploadImage ? window.uploadImage(event.target.result, 'atlas') : event.target.result);
+        if (previewImg) previewImg.src = atlasImageBase64;
+        window.showToast('✓ Изображение вставлено');
+      };
+      reader.readAsDataURL(blob);
+      break;
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Слушаем paste глобально, но реагируем только когда открыт редактор атласа
+  document.addEventListener('paste', (e) => {
+    const screen = document.getElementById('atlas-editor-screen');
+    if (!screen || !screen.classList.contains('active')) return;
+    handleAtlasPaste(e);
+  });
+});

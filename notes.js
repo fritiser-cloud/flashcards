@@ -159,12 +159,14 @@ function handleNoteImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     const notes = getNotes();
     const note = notes.find(n => n.id === currentNoteId);
     if (!note) return;
     if (!note.images) note.images = [];
-    note.images.push(e.target.result);
+    showToast('⏳ Загрузка изображения...');
+    const url = await (window.uploadImage ? window.uploadImage(e.target.result, 'notes') : e.target.result);
+    note.images.push(url);
     saveNotes(notes);
     renderNoteImages(note.images);
     showToast(`✓ Изображение добавлено (номер ${note.images.length - 1})`);
@@ -213,10 +215,13 @@ function togglePreview() {
 }
 window.togglePreview = togglePreview;
 
-// Вставка изображения из буфера обмена
+// Вставка изображения из буфера обмена (глобально, когда открыт редактор заметок)
 document.addEventListener('DOMContentLoaded', () => {
-  const noteContent = getElement('note-content');
-  if (noteContent) noteContent.addEventListener('paste', handleNotePaste);
+  document.addEventListener('paste', (e) => {
+    const screen = document.getElementById('note-editor-screen');
+    if (!screen || !screen.classList.contains('active')) return;
+    handleNotePaste(e);
+  });
 });
 
 function handleNotePaste(e) {
@@ -227,12 +232,14 @@ function handleNotePaste(e) {
       e.preventDefault();
       const blob = items[i].getAsFile();
       const reader = new FileReader();
-      reader.onload = function(event) {
+      reader.onload = async function(event) {
         const notes = getNotes();
         const note = notes.find(n => n.id === currentNoteId);
         if (!note) return;
         if (!note.images) note.images = [];
-        note.images.push(event.target.result);
+        showToast('⏳ Загрузка изображения...');
+        const url = await (window.uploadImage ? window.uploadImage(event.target.result, 'notes') : event.target.result);
+        note.images.push(url);
         saveNotes(notes);
         renderNoteImages(note.images);
         const imageIndex = note.images.length - 1;
