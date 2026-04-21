@@ -285,7 +285,7 @@ function buildHistoryHTML() {
     const sec = calcSecondary(currentScoreSubject, prim);
     const date = new Date(v.date).toLocaleDateString('ru');
     const secColor = sec >= 61 ? 'var(--green)' : sec >= 36 ? 'var(--yellow)' : 'var(--red)';
-    html += `<div class="score-history-item">
+    html += `<div class="score-history-item" onclick="openVariantDetail('${currentScoreSubject}', ${idx})">
       <div class="history-meta">
         <div class="history-name">${window.escapeHtml(v.label || 'Вариант')}</div>
         <div class="history-date">${date}</div>
@@ -295,7 +295,7 @@ function buildHistoryHTML() {
         <span class="history-arrow">→</span>
         <span class="history-secondary" style="color:${secColor}">${sec}</span>
       </div>
-      <button class="history-del-btn" onclick="deleteVariant(${idx})">✕</button>
+      <button class="history-del-btn" onclick="event.stopPropagation();deleteVariant(${idx})">✕</button>
     </div>`;
   });
   return html + '<div style="height:8px"></div>';
@@ -354,21 +354,37 @@ window.resetCurrentScores = resetCurrentScores;
 
 function saveVariant() {
   const scores = getScoreCurrent(currentScoreSubject);
-  const primary = calcPrimary(currentScoreSubject, scores);
-  if (primary === 0 && countFilled(currentScoreSubject, scores) === 0) {
+  if (countFilled(currentScoreSubject, scores) === 0) {
     window.showToast('⚠️ Заполни хотя бы одно задание'); return;
   }
   const history = getScoreHistory(currentScoreSubject);
+  const input = document.getElementById('save-variant-label');
+  if (input) input.value = 'Вариант ' + (history.length + 1);
+  document.getElementById('save-variant-modal')?.classList.add('open');
+}
+window.saveVariant = saveVariant;
+
+function closeSaveVariantModal(e) {
+  if (!e || e.target === document.getElementById('save-variant-modal')) {
+    document.getElementById('save-variant-modal')?.classList.remove('open');
+  }
+}
+window.closeSaveVariantModal = closeSaveVariantModal;
+
+function confirmSaveVariant() {
+  const scores = getScoreCurrent(currentScoreSubject);
+  const history = getScoreHistory(currentScoreSubject);
+  const input = document.getElementById('save-variant-label');
   const defaultLabel = 'Вариант ' + (history.length + 1);
-  const label = prompt('Название варианта:', defaultLabel);
-  if (label === null) return;
-  history.push({ date: Date.now(), label: label.trim() || defaultLabel, tasks: { ...scores } });
+  const label = (input?.value.trim()) || defaultLabel;
+  history.push({ date: Date.now(), label, tasks: { ...scores } });
   if (history.length > 30) history.shift();
   saveScoreHistory(currentScoreSubject, history);
+  closeSaveVariantModal();
   window.showToast('✓ Вариант сохранён');
   renderScoresContent();
 }
-window.saveVariant = saveVariant;
+window.confirmSaveVariant = confirmSaveVariant;
 
 function deleteVariant(idx) {
   if (!confirm('Удалить этот вариант?')) return;
@@ -378,3 +394,77 @@ function deleteVariant(idx) {
   renderScoresContent();
 }
 window.deleteVariant = deleteVariant;
+
+// ==================== ДЕТАЛИЗАЦИЯ ВАРИАНТА ====================
+function openVariantDetail(subject, idx) {
+  const history = getScoreHistory(subject);
+  const v = history[idx];
+  if (!v) return;
+  const subj = EGE_SUBJECTS[subject];
+  const prim = calcPrimary(subject, v.tasks);
+  const sec = calcSecondary(subject, prim);
+  const secColor = sec >= 61 ? 'var(--green)' : sec >= 36 ? 'var(--yellow)' : 'var(--red)';
+  const date = new Date(v.date).toLocaleDateString('ru', { day:'numeric', month:'long', year:'numeric' });
+
+  document.getElementById('variant-detail-title').textContent = v.label || 'Вариант';
+  document.getElementById('variant-detail-date').textContent = date;
+
+  // Считаем выполнено / не выполнено
+  const filled = countFilled(subject, v.tasks);
+  const fullCount = subj.tasks.filter(t => (v.tasks[t.id] || 0) === t.max).length;
+  const zeroCount = subj.tasks.filter(t => t.id in v.tasks && v.tasks[t.id] === 0).length;
+
+  let html = `<div class="vd-summary">
+    <div class="vd-stat">
+      <div class="vd-stat-num">${prim}<span style="font-size:14px;color:var(--text3)">/${subj.maxPrimary}</span></div>
+      <div class="vd-stat-label">первичных</div>
+    </div>
+    <div class="vd-stat">
+      <div class="vd-stat-num" style="color:${secColor}">${sec}</div>
+      <div class="vd-stat-label">тестовых</div>
+    </div>
+    <div class="vd-stat">
+      <div class="vd-stat-num" style="color:var(--green,#22c55e)">${fullCount}</div>
+      <div class="vd-stat-label">полных</div>
+    </div>
+    <div class="vd-stat">
+      <div class="vd-stat-num" style="color:var(--red,#ef4444)">${zeroCount}</div>
+      <div class="vd-stat-label">нулевых</div>
+    </div>
+  </div>`;
+
+  for (const group of subj.groups) {
+    html += `<div class="vd-group-label">${group.label}</div>`;
+    for (const id of group.ids) {
+      const task = subj.tasks.find(t => t.id === id);
+      if (!task) continue;
+      const score = v.tasks[id] ?? null;
+      const isSet = id in v.tasks;
+      const full = isSet && score === task.max;
+      const zero = isSet && score === 0;
+      const partial = isSet && !full && !zero;
+      const rowCls = full ? 'vd-full' : zero ? 'vd-zero' : partial ? 'vd-partial' : '';
+      const scoreCls = full ? 'vd-full' : zero ? 'vd-zero' : partial ? 'vd-partial' : '';
+      const scoreText = isSet ? `${score}/${task.max}` : `—/${task.max}`;
+      const name = task.label || '';
+      html += `<div class="vd-task-row ${rowCls}">
+        <div class="vd-task-num">№${task.id}</div>
+        <div class="vd-task-name">${name || (task.max > 1 ? `max ${task.max}` : '')}</div>
+        <div class="vd-task-score">${scoreText}</div>
+      </div>`;
+    }
+  }
+
+  const body = document.getElementById('variant-detail-body');
+  body.innerHTML = html;
+  body.scrollTop = 0;
+  document.getElementById('variant-detail-modal')?.classList.add('open');
+}
+window.openVariantDetail = openVariantDetail;
+
+function closeVariantDetail(e) {
+  if (!e || e.target === document.getElementById('variant-detail-modal')) {
+    document.getElementById('variant-detail-modal')?.classList.remove('open');
+  }
+}
+window.closeVariantDetail = closeVariantDetail;

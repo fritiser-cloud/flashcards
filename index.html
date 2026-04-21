@@ -240,6 +240,9 @@
     .notes-tab.active { background: var(--yellow-light); color: #9A6F00; border-color: #F5C842; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,21,48,0.4); z-index: 100; align-items: flex-end; justify-content: center; backdrop-filter: blur(6px); }
     .modal-overlay.open { display: flex; animation: fadeIn 0.2s; }
+    .modal-card { background: var(--surface); width: 100%; border-radius: 24px 24px 0 0; padding: 0; animation: slideUp 0.3s cubic-bezier(.34,1.56,.64,1); }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 20px 12px; border-bottom: 1px solid var(--border); }
+    .modal-close { width: 32px; height: 32px; border: none; background: var(--surface2); border-radius: 50%; font-size: 14px; color: var(--text2); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .modal { background: var(--surface); width: 100%; max-width: 480px; border-radius: 36px 36px 0 0; padding: 32px 28px 48px; animation: slideUp 0.3s cubic-bezier(.34,1.56,.64,1); max-height: 85dvh; overflow-y: auto; }
     .modal-handle { width: 44px; height: 5px; background: var(--border); border-radius: 3px; margin: 0 auto 28px; }
     .modal-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; margin-bottom: 8px; }
@@ -587,7 +590,8 @@
     .analytics-bar { width:100%; border-radius:3px 3px 0 0; min-height:3px; transition:height 0.3s; }
     .analytics-col-num { font-size:9px; color:var(--text3); font-weight:600; }
 
-    .score-history-item { display:flex; align-items:center; gap:12px; padding:12px 14px; margin:0 20px 8px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; }
+    .score-history-item { display:flex; align-items:center; gap:12px; padding:12px 14px; margin:0 20px 8px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; cursor:pointer; transition:border-color 0.15s; }
+    .score-history-item:active { border-color:var(--lavender-mid); }
     .history-meta { flex:1; min-width:0; }
     .history-name { font-size:14px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .history-date { font-size:12px; color:var(--text3); margin-top:2px; }
@@ -597,6 +601,22 @@
     .history-secondary { font-size:16px; font-weight:700; }
     .history-del-btn { width:30px; height:30px; border:none; background:none; color:var(--text3); font-size:14px; cursor:pointer; border-radius:8px; flex-shrink:0; }
     .history-del-btn:active { background:var(--red-light); color:var(--red); }
+    /* Variant detail modal */
+    .vd-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:12px 0 16px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+    .vd-stat { background:var(--bg); border-radius:10px; padding:10px 6px; text-align:center; }
+    .vd-stat-num { font-size:22px; font-weight:800; color:var(--lavender-text); line-height:1; }
+    .vd-stat-label { font-size:11px; color:var(--text3); margin-top:4px; }
+    .vd-group-label { font-size:11px; font-weight:700; color:var(--text3); letter-spacing:.05em; text-transform:uppercase; padding:10px 4px 4px; }
+    .vd-task-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:8px; margin-bottom:3px; background:var(--surface); }
+    .vd-task-row.vd-full { background:#e6f9ee; }
+    .vd-task-row.vd-zero { background:#fdecea; }
+    .vd-task-row.vd-partial { background:#fff8e1; }
+    .vd-task-num { font-size:13px; font-weight:700; color:var(--text2); min-width:34px; flex-shrink:0; }
+    .vd-task-name { font-size:13px; color:var(--text3); flex:1; }
+    .vd-task-score { font-size:14px; font-weight:700; color:var(--text3); flex-shrink:0; }
+    .vd-task-row.vd-full .vd-task-score { color:#16a34a; }
+    .vd-task-row.vd-zero .vd-task-score { color:#dc2626; }
+    .vd-task-row.vd-partial .vd-task-score { color:#d97706; }
   </style>
 </head>
 <body>
@@ -1037,6 +1057,35 @@
   </div>
 </div>
 
+<!-- Модал: детализация варианта -->
+<div class="modal-overlay" id="variant-detail-modal" onclick="closeVariantDetail(event)">
+  <div class="modal-card" style="width:min(480px,calc(100vw - 32px));max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modal-header" style="flex-shrink:0">
+      <div>
+        <div class="modal-title" id="variant-detail-title">Вариант</div>
+        <div id="variant-detail-date" style="font-size:13px;color:var(--text3);margin-top:2px"></div>
+      </div>
+      <button class="modal-close" onclick="closeVariantDetail()">✕</button>
+    </div>
+    <div id="variant-detail-body" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:0 16px 16px"></div>
+  </div>
+</div>
+
+<!-- Модал: сохранить вариант -->
+<div class="modal-overlay" id="save-variant-modal" onclick="closeSaveVariantModal(event)">
+  <div class="modal-card" style="max-width:360px">
+    <div class="modal-header">
+      <div class="modal-title">Сохранить вариант</div>
+      <button class="modal-close" onclick="closeSaveVariantModal()">✕</button>
+    </div>
+    <div style="padding:0 4px 16px">
+      <label style="font-size:13px;color:var(--text2);margin-bottom:6px;display:block">Название варианта</label>
+      <input id="save-variant-label" class="settings-input" type="text" placeholder="Вариант 1" style="width:100%;margin-bottom:16px">
+      <button class="btn btn-primary" onclick="confirmSaveVariant()" style="width:100%">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
 <input type="file" id="pdf-input" accept=".pdf,application/pdf" onchange="handlePdfAdd(event)" style="display:none">
@@ -1044,16 +1093,16 @@
 <input type="file" id="note-image-input" accept="image/*" style="display:none" onchange="handleNoteImageUpload(event)">
 </div>
 
-<script src="utils.js"></script>
-<script src="database.js?v=3"></script>
-<script src="library.js"></script>
-<script src="flashcards.js"></script>
-<script src="atlas.js"></script>
-<script src="notes.js"></script>
-<script src="calendar.js"></script>
-<script src="scores.js"></script>
-<script src="yadisk.js"></script>
-<script src="app.js"></script>
+<script src="utils.js?v=4"></script>
+<script src="database.js?v=4"></script>
+<script src="library.js?v=4"></script>
+<script src="flashcards.js?v=4"></script>
+<script src="atlas.js?v=4"></script>
+<script src="notes.js?v=4"></script>
+<script src="calendar.js?v=4"></script>
+<script src="scores.js?v=7"></script>
+<script src="yadisk.js?v=4"></script>
+<script src="app.js?v=4"></script>
 <script type="module" src="firebase-module.js"></script>
 </body>
 </html>
