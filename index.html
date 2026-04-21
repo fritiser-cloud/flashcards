@@ -428,7 +428,10 @@
     .toc-item:active { background: var(--lavender); color: var(--lavender-text); }
     .toc-item.toc-item-sub { padding-left: 32px; font-size: 14px; font-weight: 400; color: var(--text2); }
     .toc-item:hover { background: var(--surface2); }
-    .pdf-frame-wrap iframe { width: 100%; height: 100%; border: none; }
+    .pdf-frame-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; }
+    .pdf-frame-wrap iframe { width: 100%; height: 100%; border: none; flex: 1; min-height: 0; }
+    #guide-pdf-content { display: none; flex: 1; flex-direction: column; min-height: 0; padding: 0 0 80px; }
+    #guide-pdf-content.visible { display: flex; }
     /* Chapters in reader */
     .guide-chapter-card { display: flex; align-items: center; gap: 14px; padding: 14px 20px; background: var(--surface); border-radius: 14px; border: 1.5px solid var(--border); margin-bottom: 10px; cursor: default; }
     .guide-chapter-num { width: 32px; height: 32px; border-radius: 50%; background: var(--lavender); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--lavender-text); flex-shrink: 0; }
@@ -649,6 +652,12 @@
     </div>
     <div id="guide-action-buttons" style="padding: 16px 24px 8px"></div>
   </div>
+  <!-- PDF viewer (shown instead of reader-content for PDF guides) -->
+  <div id="guide-pdf-content">
+    <div class="pdf-frame-wrap">
+      <iframe id="guide-pdf-iframe" src="" allowfullscreen></iframe>
+    </div>
+  </div>
   <!-- TOC bottom sheet -->
   <div class="toc-overlay" id="toc-overlay" onclick="toggleTOC()">
     <div class="toc-sheet" onclick="event.stopPropagation()">
@@ -821,6 +830,13 @@
             <div style="font-size:13px;color:var(--text2);margin-top:3px">Файл с карточками или пособием</div>
           </div>
         </button>
+        <button onclick="triggerPdfAdd()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--peach,#FDF0E8);border:1.5px solid var(--peach-deep,#e8a07a);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
+          <span style="font-size:32px;line-height:1;flex-shrink:0">📄</span>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--peach-text,#b85c2a)">Загрузить PDF</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:3px">Пособие, конспект, сборник задач</div>
+          </div>
+        </button>
 <button onclick="openSampleModal()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
           <span style="font-size:32px;line-height:1;flex-shrink:0">👀</span>
           <div>
@@ -868,6 +884,7 @@
 
 <div class="toast" id="toast"></div>
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
+<input type="file" id="pdf-input" accept=".pdf,application/pdf" onchange="handlePdfAdd(event)">
 <input type="file" id="atlas-image-input" accept="image/*" style="display:none" onchange="handleAtlasImageUpload(event)">
 <input type="file" id="note-image-input" accept="image/*" style="display:none" onchange="handleNoteImageUpload(event)">
 </div>
