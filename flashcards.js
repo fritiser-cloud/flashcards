@@ -82,6 +82,7 @@ window.renderDecks = renderDecks;
 async function openDeck(deckId) {
   try {
     currentDeckId = deckId;
+    window.currentDeckId = deckId;
     const deck = _getDeck(deckId) || await window.dbGet('decks', deckId);
     if (!deck) return;
     const isMatch = deck.type === 'match';
@@ -120,6 +121,7 @@ async function openDeck(deckId) {
         <button class="btn btn-fav" id="btn-study-fav">⭐ Избранное <span id="fav-count">${favCount ? '('+favCount+')' : ''}</span></button>
         <button class="btn btn-danger" id="btn-study-errors" ${errorCards.length ? '' : 'disabled'}>⚡ Отработать ошибки</button>
         <button class="btn btn-notes" id="btn-notes-deck">📋 Конспект ошибок</button>
+        <button class="btn btn-secondary" id="btn-edit-cards">✏️ Редактировать карточки</button>
         <button class="btn btn-secondary" id="btn-reset">↺ Сбросить прогресс</button>`;
       const studyAll = document.getElementById('btn-study-all');
       if (studyAll) studyAll.onclick = () => startStudy(deckId, false, false);
@@ -131,6 +133,8 @@ async function openDeck(deckId) {
       if (resetBtn) resetBtn.onclick = () => resetDeck(deckId);
       const notesBtn = document.getElementById('btn-notes-deck');
       if (notesBtn) notesBtn.onclick = () => window.openNotesDeck(deckId);
+      const editCardsBtn = document.getElementById('btn-edit-cards');
+      if (editCardsBtn) editCardsBtn.onclick = () => openCardsEditor(deckId);
       const hardList = document.getElementById('hard-list');
       const sorted = allStats.filter(s => (s.errors || 0) > 0).sort((a,b) => (b.errors||0) - (a.errors||0)).slice(0,5);
       if (hardList) {
@@ -616,3 +620,121 @@ async function renderErrorNotes(tab) {
   }
 }
 window.renderErrorNotes = renderErrorNotes;
+
+// ==================== РЕДАКТИРОВАНИЕ КОЛОДЫ ====================
+// Expose current deck for meta edit modal
+window._getDeckForEdit = function() {
+  return _decksCache ? _decksCache.find(d => d.id === currentDeckId) || null : null;
+};
+window.currentDeckId = currentDeckId; // keep in sync via openDeck
+
+async function saveDeckMeta(deckId, { name, icon, tags }) {
+  const deck = await window.dbGet('decks', deckId);
+  if (!deck) return;
+  const updated = { ...deck, name, icon, tags: tags || [] };
+  invalidateDecksCache();
+  await window.dbPut('decks', updated);
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
+  await openDeck(deckId);
+}
+window.saveDeckMeta = saveDeckMeta;
+
+// ==================== РЕДАКТОР КАРТОЧЕК ====================
+let _editorDeckId = null;
+let _editorCards = [];
+let _editingCardIdx = null;
+
+async function openCardsEditor(deckId) {
+  _editorDeckId = deckId;
+  const deck = await window.dbGet('decks', deckId);
+  if (!deck) return;
+  _editorCards = deck.cards.map(c => ({ ...c }));
+  const title = document.getElementById('cards-editor-title');
+  if (title) title.textContent = deck.name;
+  renderCardsEditorList();
+  window.showScreen('cards-editor-screen');
+}
+window.openCardsEditor = openCardsEditor;
+
+function renderCardsEditorList() {
+  const list = document.getElementById('cards-editor-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (_editorCards.length === 0) {
+    list.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px 0">Нет карточек. Нажми + чтобы добавить.</div>';
+    return;
+  }
+  _editorCards.forEach((card, idx) => {
+    const item = document.createElement('div');
+    item.className = 'card-editor-item';
+    item.innerHTML = `
+      <div class="card-editor-header">
+        <div class="card-editor-num">${idx + 1}</div>
+        <div class="card-editor-q">${window.escapeHtml(card.q || '—')}</div>
+        <div class="card-editor-btns">
+          <button class="card-editor-btn" onclick="openCardEditModal(${idx})" title="Редактировать">✏️</button>
+          <button class="card-editor-btn del" onclick="deleteCardFromEditor(${idx})" title="Удалить">🗑</button>
+        </div>
+      </div>
+      <div style="padding:0 16px 12px;font-size:13px;color:var(--text2);line-height:1.5">${window.escapeHtml(card.a || '—')}</div>`;
+    list.appendChild(item);
+  });
+}
+
+function openCardEditModal(idx) {
+  _editingCardIdx = idx;
+  const card = idx === -1 ? { q: '', a: '' } : _editorCards[idx];
+  document.getElementById('card-edit-title').textContent = idx === -1 ? 'Новая карточка' : `Карточка ${idx + 1}`;
+  document.getElementById('card-edit-q').value = card.q || '';
+  document.getElementById('card-edit-a').value = card.a || '';
+  document.getElementById('card-edit-modal').classList.add('open');
+}
+window.openCardEditModal = openCardEditModal;
+
+function closeCardEditModal(e) {
+  if (!e || e.target === document.getElementById('card-edit-modal'))
+    document.getElementById('card-edit-modal')?.classList.remove('open');
+}
+window.closeCardEditModal = closeCardEditModal;
+
+function saveCardEdit() {
+  const q = document.getElementById('card-edit-q').value.trim();
+  const a = document.getElementById('card-edit-a').value.trim();
+  if (!q) { window.showToast('Введи вопрос'); return; }
+  if (_editingCardIdx === -1) {
+    _editorCards.push({ q, a });
+  } else {
+    _editorCards[_editingCardIdx] = { ...(_editorCards[_editingCardIdx] || {}), q, a };
+  }
+  document.getElementById('card-edit-modal')?.classList.remove('open');
+  renderCardsEditorList();
+}
+window.saveCardEdit = saveCardEdit;
+
+function deleteCardFromEditor(idx) {
+  if (!confirm('Удалить карточку?')) return;
+  _editorCards.splice(idx, 1);
+  renderCardsEditorList();
+}
+window.deleteCardFromEditor = deleteCardFromEditor;
+
+function addNewCard() {
+  openCardEditModal(-1);
+}
+window.addNewCard = addNewCard;
+
+async function closeCardsEditor() {
+  // Save all changes
+  const deck = await window.dbGet('decks', _editorDeckId);
+  if (deck) {
+    const updated = { ...deck, cards: _editorCards };
+    invalidateDecksCache();
+    await window.dbPut('decks', updated);
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
+    window.showToast('✓ Карточки сохранены');
+    await openDeck(_editorDeckId);
+  } else {
+    window.showScreen('decks-screen');
+  }
+}
+window.closeCardsEditor = closeCardsEditor;

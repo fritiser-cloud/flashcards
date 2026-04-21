@@ -99,6 +99,7 @@ function navTo(tab) {
   
   if (tab === 'library') {
     window.showScreen('library-screen');
+    if (window.renderCategoryPills) window.renderCategoryPills();
     if (window.renderLibrary) window.renderLibrary();
   } else if (tab === 'decks') {
     window.showScreen('decks-screen');
@@ -131,6 +132,7 @@ window.navTo = navTo;
     await window.openDB();
     console.log('✓ База данных инициализирована');
 
+    if (window.renderCategoryPills) window.renderCategoryPills();
     if (window.renderLibrary) window.renderLibrary();
     if (window.renderDecks) await window.renderDecks();
     if (window.renderAtlas) window.renderAtlas();

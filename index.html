@@ -428,10 +428,41 @@
     .toc-item:active { background: var(--lavender); color: var(--lavender-text); }
     .toc-item.toc-item-sub { padding-left: 32px; font-size: 14px; font-weight: 400; color: var(--text2); }
     .toc-item:hover { background: var(--surface2); }
-    .pdf-frame-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; }
-    .pdf-frame-wrap iframe { width: 100%; height: 100%; border: none; flex: 1; min-height: 0; }
-    #guide-pdf-content { display: none; flex: 1; flex-direction: column; min-height: 0; padding: 0 0 80px; }
+    #guide-pdf-content { display: none; flex: 1; flex-direction: column; min-height: 0; background: #f0f0f0; }
     #guide-pdf-content.visible { display: flex; }
+    .pdf-toolbar { display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--surface); border-bottom: 1.5px solid var(--border); flex-shrink: 0; }
+    .pdf-tb-btn { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface2); font-size: 18px; font-weight: 700; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
+    .pdf-tb-btn:active { background: var(--lavender); color: var(--lavender-text); }
+    .pdf-tb-btn:disabled { opacity: 0.35; cursor: default; }
+    .pdf-page-info { font-family: var(--font); font-size: 14px; font-weight: 600; color: var(--text2); padding: 0 6px; white-space: nowrap; }
+    .pdf-tb-sep { flex: 1; }
+    .pdf-canvas-wrap { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; padding: 16px 8px 80px; min-height: 0; }
+    #pdf-canvas { max-width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.18); border-radius: 4px; }
+    .pdf-loading { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 60px 0; }
+    .pdf-spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--lavender-deep); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .pdf-loading-text { font-family: var(--font); font-size: 15px; color: var(--text2); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Cards editor */
+    .card-editor-item { background: var(--surface); border-radius: 16px; border: 1.5px solid var(--border); margin-bottom: 10px; overflow: hidden; }
+    .card-editor-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
+    .card-editor-num { width: 28px; height: 28px; border-radius: 50%; background: var(--lavender); color: var(--lavender-text); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .card-editor-q { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-editor-btns { display: flex; gap: 6px; }
+    .card-editor-btn { width: 32px; height: 32px; border-radius: 10px; border: none; background: var(--surface2); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .card-editor-btn.del { background: var(--peach,#FDF0E8); color: var(--peach-text,#b85c2a); }
+    /* Meta edit cat pills */
+    .meta-cat-pill { padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface2); font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .meta-cat-pill.selected { background: var(--lavender-deep); color: #fff; border-color: var(--lavender-deep); }
+    /* Cats modal list */
+    .cat-manage-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1.5px solid var(--border); }
+    .cat-manage-item:last-child { border-bottom: none; }
+    .cat-manage-icon { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; }
+    .cat-manage-name { flex: 1; font-size: 15px; font-weight: 600; color: var(--text); }
+    .cat-manage-btn { width: 32px; height: 32px; border-radius: 10px; border: none; background: var(--surface2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .cat-manage-btn.del { background: var(--peach,#FDF0E8); }
+    /* Guide action btn */
+    .guide-action-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--surface2); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .guide-action-btn:active { background: var(--lavender); }
     /* Chapters in reader */
     .guide-chapter-card { display: flex; align-items: center; gap: 14px; padding: 14px 20px; background: var(--surface); border-radius: 14px; border: 1.5px solid var(--border); margin-bottom: 10px; cursor: default; }
     .guide-chapter-num { width: 32px; height: 32px; border-radius: 50%; background: var(--lavender); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--lavender-text); flex-shrink: 0; }
@@ -585,12 +616,7 @@
     <div class="search-box"><input type="text" class="search-input" id="library-search" placeholder="Поиск пособий..." oninput="searchLibrary()"></div>
     <button class="fab-header" onclick="openAddModal('guide')">＋</button>
   </div>
-  <div class="cats" id="cats-row">
-    <button class="cat-pill active" onclick="filterCat('all',this)">Все</button>
-    <button class="cat-pill" onclick="filterCat('bio',this)">🧬 Биология</button>
-    <button class="cat-pill" onclick="filterCat('ru',this)">✍️ Русский</button>
-    <button class="cat-pill" onclick="filterCat('phys',this)">⚗️ Химия/Физика</button>
-  </div>
+  <div class="cats" id="cats-row"></div>
   <div class="scroll" id="guides-list"><div class="empty"><div class="empty-icon">📚</div><div class="empty-text">Библиотека пуста.<br>Нажми + чтобы добавить пособие</div></div></div>
 </div>
 
@@ -622,6 +648,7 @@
     </div>
     <div class="guide-header-actions">
       <button class="guide-action-btn" id="toc-toggle-btn" onclick="toggleTOC()" title="Оглавление" style="display:none">☰</button>
+      <button class="guide-action-btn" onclick="openMetaEditModal('guide')" title="Редактировать">✏️</button>
       <button class="guide-action-btn" id="guide-delete-btn" title="Удалить">🗑</button>
     </div>
   </div>
@@ -654,8 +681,22 @@
   </div>
   <!-- PDF viewer (shown instead of reader-content for PDF guides) -->
   <div id="guide-pdf-content">
-    <div class="pdf-frame-wrap">
-      <iframe id="guide-pdf-iframe" src="" allowfullscreen></iframe>
+    <div class="pdf-toolbar">
+      <button class="pdf-tb-btn" onclick="pdfPrevPage()" id="pdf-btn-prev">‹</button>
+      <span class="pdf-page-info" id="pdf-page-info">— / —</span>
+      <button class="pdf-tb-btn" onclick="pdfNextPage()" id="pdf-btn-next">›</button>
+      <div class="pdf-tb-sep"></div>
+      <button class="pdf-tb-btn" onclick="pdfZoomOut()">−</button>
+      <button class="pdf-tb-btn" onclick="pdfZoomIn()">+</button>
+      <button class="pdf-tb-btn" onclick="pdfFitWidth()" id="pdf-btn-fit" title="По ширине">⤢</button>
+      <button class="pdf-tb-btn" onclick="pdfToggleSpread()" id="pdf-btn-spread" title="Двустраничный режим">⊞</button>
+    </div>
+    <div class="pdf-canvas-wrap" id="pdf-canvas-wrap">
+      <div class="pdf-loading" id="pdf-loading">
+        <div class="pdf-spinner"></div>
+        <div class="pdf-loading-text">Загружаю PDF…</div>
+      </div>
+      <canvas id="pdf-canvas" style="display:none"></canvas>
     </div>
   </div>
   <!-- TOC bottom sheet -->
@@ -672,7 +713,7 @@
 
 <!-- ДЕТАЛИ КОЛОДЫ -->
 <div id="deck-detail-screen" class="screen">
-  <div class="nav"><button class="nav-btn" onclick="showScreen('decks-screen')">←</button><div class="nav-title" id="deck-detail-nav-title">Колода</div><button class="nav-btn" id="deck-delete-btn">🗑</button></div>
+  <div class="nav"><button class="nav-btn" onclick="showScreen('decks-screen')">←</button><div class="nav-title" id="deck-detail-nav-title">Колода</div><button class="nav-btn" onclick="openMetaEditModal('deck')" title="Редактировать">✏️</button><button class="nav-btn" id="deck-delete-btn">🗑</button></div>
   <div class="scroll">
     <div style="display: flex; align-items: center; gap: 20px;"><div style="width: 70px; height: 70px; border-radius: 20px; background: var(--lavender); display: flex; align-items: center; justify-content: center; font-size: 36px;" id="deck-detail-icon">📚</div><div style="flex:1;"><div style="font-family: var(--font-display); font-size: 28px; font-weight: 700;" id="deck-detail-name">—</div><div style="font-size: 15px; color: var(--text3); margin-top: 4px;" id="deck-detail-sub">—</div></div></div>
     <div class="big-stat-row" id="deck-stats-row"><div class="big-stat good"><div class="num" id="deck-known">0</div><div class="lbl">Знаю</div></div><div class="big-stat bad"><div class="num" id="deck-errors">0</div><div class="lbl">Ошибок</div></div></div>
@@ -815,29 +856,59 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-title">Добавить</div>
-    <div class="modal-sub" id="modal-sub">Загрузи файл или выбери из GitHub</div>
+    <div class="modal-sub" id="modal-sub"></div>
     <div class="modal-tabs">
       <button class="modal-tab active" onclick="switchAddTab('file',this)">📂 Файл</button>
-      <button class="modal-tab" onclick="switchAddTab('github',this)">🐙 GitHub</button>
-      <button class="modal-tab" onclick="switchAddTab('yadisk',this)">☁️ Яндекс</button>
+      <button class="modal-tab" onclick="switchAddTab('yadisk',this)">☁️ Яндекс Диск</button>
     </div>
+
+    <!-- Вкладка: Файл -->
     <div id="add-tab-file">
       <div style="display:flex;flex-direction:column;gap:12px;padding:4px 0 8px">
+
+        <!-- Загрузить JSON (файл) -->
         <button onclick="triggerFileAdd()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--lavender);border:1.5px solid var(--lavender-deep);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
           <span style="font-size:32px;line-height:1;flex-shrink:0">📂</span>
           <div>
-            <div style="font-size:16px;font-weight:700;color:var(--lavender-text)">Загрузить JSON</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:3px">Файл с карточками или пособием</div>
+            <div style="font-size:16px;font-weight:700;color:var(--lavender-text)" id="btn-upload-json-label">Загрузить JSON</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:3px" id="btn-upload-json-sub">Файл с пособием</div>
           </div>
         </button>
-        <button onclick="triggerPdfAdd()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--peach,#FDF0E8);border:1.5px solid var(--peach-deep,#e8a07a);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
+
+        <!-- Вставить JSON (только для колод) -->
+        <div id="paste-json-section" style="display:none">
+          <button onclick="togglePasteJson()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--sage,#E8F4EE);border:1.5px solid var(--sage-deep,#5c9e72);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
+            <span style="font-size:32px;line-height:1;flex-shrink:0">📋</span>
+            <div>
+              <div style="font-size:16px;font-weight:700;color:var(--sage-text,#2e6647)">Вставить JSON</div>
+              <div style="font-size:13px;color:var(--text2);margin-top:3px">Скопировать текст напрямую</div>
+            </div>
+          </button>
+          <div id="paste-json-area" style="display:none;margin-top:10px">
+            <textarea id="paste-json-input" class="settings-input" placeholder='{"name":"Моя колода","type":"flashcard","cards":[{"q":"Вопрос","a":"Ответ"}]}' style="width:100%;min-height:140px;resize:vertical;font-family:monospace;font-size:12px;line-height:1.5;margin-bottom:10px"></textarea>
+            <button class="btn btn-primary" onclick="importPastedJson()" style="width:100%">✓ Импортировать</button>
+          </div>
+        </div>
+
+        <!-- Загрузить PDF (только для пособий) -->
+        <button id="pdf-upload-btn" onclick="triggerPdfAdd()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--peach,#FDF0E8);border:1.5px solid var(--peach-deep,#e8a07a);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
           <span style="font-size:32px;line-height:1;flex-shrink:0">📄</span>
           <div>
             <div style="font-size:16px;font-weight:700;color:var(--peach-text,#b85c2a)">Загрузить PDF</div>
             <div style="font-size:13px;color:var(--text2);margin-top:3px">Пособие, конспект, сборник задач</div>
           </div>
         </button>
-<button onclick="openSampleModal()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
+
+        <!-- Создать конспект (только для пособий) -->
+        <button id="create-guide-btn" onclick="openCreateGuideModal()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--sage,#E8F4EE);border:1.5px solid var(--sage-deep,#5c9e72);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
+          <span style="font-size:32px;line-height:1;flex-shrink:0">✏️</span>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--sage-text,#2e6647)">Создать конспект</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:3px">Написать пособие прямо здесь</div>
+          </div>
+        </button>
+
+        <button onclick="openSampleModal()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
           <span style="font-size:32px;line-height:1;flex-shrink:0">👀</span>
           <div>
             <div style="font-size:16px;font-weight:700;color:var(--text)">Формат файла</div>
@@ -846,16 +917,14 @@
         </button>
       </div>
     </div>
-    <div id="add-tab-github" style="display:none">
-      <div class="gh-loading" id="gh-loading">Загружаю список…</div>
-      <div id="gh-list"></div>
-      <div id="gh-error" style="display:none; color:var(--peach-text)"></div>
-    </div>
+
+    <!-- Вкладка: Яндекс Диск -->
     <div id="add-tab-yadisk" style="display:none">
       <div class="gh-loading" id="yadisk-loading">Загружаю с Яндекс Диска…</div>
       <div id="yadisk-list"></div>
       <div id="yadisk-error" style="display:none; color:var(--peach-text)"></div>
     </div>
+
     <button class="modal-cancel" onclick="closeAddModal()">Отмена</button>
   </div>
 </div>
@@ -882,15 +951,101 @@
   <div class="modal"><div class="modal-handle"></div><div class="modal-title">Новая тема для повторения</div><div class="modal-sub">Добавьте тему, которую хотите запомнить надолго</div><input type="text" class="settings-input" id="topic-name" placeholder="Название темы (например: Плоские черви)" style="width:100%; margin-bottom:16px"><select class="settings-input" id="topic-subject" style="width:100%; margin-bottom:16px"><option value="bio">🧬 Биология</option><option value="ru">📖 Русский язык</option><option value="phys">⚛️ Физика</option><option value="chem">🧪 Химия</option></select><div class="settings-row" style="padding:0 0 16px 0"><div><div class="settings-row-label">Дата первого изучения</div></div><input type="date" class="settings-input" id="topic-first-review" style="width:auto"></div><button class="btn btn-primary" onclick="saveTopic()" style="width:100%">➕ Добавить тему</button><button class="modal-cancel" onclick="closeTopicModal()">Отмена</button></div>
 </div>
 
+<!-- ЭКРАН РЕДАКТОРА КАРТОЧЕК -->
+<div id="cards-editor-screen" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="closeCardsEditor()">←</button>
+    <div class="nav-title" id="cards-editor-title">Карточки</div>
+    <button class="nav-btn" onclick="addNewCard()" title="Добавить карточку">＋</button>
+  </div>
+  <div class="scroll" id="cards-editor-list" style="padding:16px 16px 100px"></div>
+</div>
+
+<!-- МОДАЛКА: редактировать метаданные пособия/колоды -->
+<div class="modal-overlay" id="meta-edit-modal" onclick="closeMetaEditModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="meta-edit-title">Редактировать</div>
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center">
+      <button id="meta-icon-btn" onclick="focusIconInput()" style="width:64px;height:64px;border-radius:18px;border:1.5px solid var(--border);background:var(--surface2);font-size:32px;cursor:pointer;flex-shrink:0">📖</button>
+      <input class="settings-input" id="meta-name-input" placeholder="Название" style="flex:1;margin:0">
+    </div>
+    <input class="settings-input" id="meta-icon-input" placeholder="Иконка (эмодзи)" style="width:100%;margin-bottom:12px;font-size:20px;text-align:center" maxlength="4" oninput="document.getElementById('meta-icon-btn').textContent=this.value||'📖'">
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px">Категория</div>
+    <div id="meta-cat-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px">Теги <span style="font-weight:400;color:var(--text3)">(через запятую)</span></div>
+    <input class="settings-input" id="meta-tags-input" placeholder="ЕГЭ 2026, Задание 23, …" style="width:100%;margin-bottom:16px">
+    <div id="meta-desc-row" style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px">Описание</div>
+      <input class="settings-input" id="meta-desc-input" placeholder="Краткое описание…" style="width:100%">
+    </div>
+    <button class="btn btn-primary" onclick="saveMetaEdit()" style="width:100%;margin-bottom:12px">Сохранить</button>
+    <button class="modal-cancel" onclick="closeMetaEditModal()">Отмена</button>
+  </div>
+</div>
+
+<!-- МОДАЛКА: создать пособие/конспект -->
+<div class="modal-overlay" id="create-guide-modal" onclick="closeCreateGuideModal(event)">
+  <div class="modal" style="max-height:95dvh">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Создать пособие</div>
+    <div class="modal-sub">Напиши конспект прямо здесь</div>
+    <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center">
+      <button id="cg-icon-btn" onclick="focusCgIconInput()" style="width:56px;height:56px;border-radius:16px;border:1.5px solid var(--border);background:var(--surface2);font-size:28px;cursor:pointer;flex-shrink:0">📖</button>
+      <input class="settings-input" id="cg-name-input" placeholder="Название пособия" style="flex:1;margin:0">
+    </div>
+    <input class="settings-input" id="cg-icon-input" placeholder="Иконка (эмодзи)" style="width:100%;margin-bottom:10px;font-size:18px;text-align:center" maxlength="4" oninput="document.getElementById('cg-icon-btn').textContent=this.value||'📖'">
+    <div id="cg-cat-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+    <input class="settings-input" id="cg-tags-input" placeholder="Теги через запятую" style="width:100%;margin-bottom:10px">
+    <input class="settings-input" id="cg-desc-input" placeholder="Описание" style="width:100%;margin-bottom:10px">
+    <textarea class="settings-input" id="cg-content-input" placeholder="Содержимое конспекта (поддерживается Markdown)&#10;&#10;## Заголовок&#10;**Жирный** текст&#10;- Список" style="width:100%;min-height:200px;resize:vertical;line-height:1.6;font-family:monospace;font-size:14px;margin-bottom:16px"></textarea>
+    <button class="btn btn-primary" onclick="saveCreateGuide()" style="width:100%;margin-bottom:12px">✓ Создать пособие</button>
+    <button class="modal-cancel" onclick="closeCreateGuideModal()">Отмена</button>
+  </div>
+</div>
+
+<!-- МОДАЛКА: управление категориями -->
+<div class="modal-overlay" id="cats-modal" onclick="closeCatsModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Категории</div>
+    <div class="modal-sub">Создавай и редактируй категории для библиотеки</div>
+    <div id="cats-modal-list" style="margin-bottom:16px"></div>
+    <button class="btn btn-secondary" onclick="openAddCatForm()" style="width:100%;margin-bottom:12px">＋ Добавить категорию</button>
+    <div id="add-cat-form" style="display:none;margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+        <input class="settings-input" id="new-cat-icon" placeholder="🏷️" style="width:60px;text-align:center;font-size:20px;margin:0;flex-shrink:0" maxlength="4">
+        <input class="settings-input" id="new-cat-name" placeholder="Название категории" style="flex:1;margin:0">
+      </div>
+      <button class="btn btn-primary" onclick="saveNewCat()" style="width:100%">Добавить</button>
+    </div>
+    <button class="modal-cancel" onclick="closeCatsModal()">Закрыть</button>
+  </div>
+</div>
+
+<!-- МОДАЛКА: редактировать карточку -->
+<div class="modal-overlay" id="card-edit-modal" onclick="closeCardEditModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="card-edit-title">Карточка</div>
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px">Вопрос / Термин</div>
+    <textarea class="settings-input" id="card-edit-q" style="width:100%;min-height:80px;resize:vertical;margin-bottom:12px;line-height:1.5" placeholder="Вопрос или термин"></textarea>
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px">Ответ</div>
+    <textarea class="settings-input" id="card-edit-a" style="width:100%;min-height:100px;resize:vertical;margin-bottom:16px;line-height:1.5" placeholder="Ответ"></textarea>
+    <button class="btn btn-primary" onclick="saveCardEdit()" style="width:100%;margin-bottom:12px">Сохранить</button>
+    <button class="modal-cancel" onclick="closeCardEditModal()">Отмена</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <input type="file" id="file-input" accept=".json,application/json,text/plain,text/*" onchange="handleFileAdd(event)">
-<input type="file" id="pdf-input" accept=".pdf,application/pdf" onchange="handlePdfAdd(event)">
+<input type="file" id="pdf-input" accept=".pdf,application/pdf" onchange="handlePdfAdd(event)" style="display:none">
 <input type="file" id="atlas-image-input" accept="image/*" style="display:none" onchange="handleAtlasImageUpload(event)">
 <input type="file" id="note-image-input" accept="image/*" style="display:none" onchange="handleNoteImageUpload(event)">
 </div>
 
 <script src="utils.js"></script>
-<script src="database.js"></script>
+<script src="database.js?v=3"></script>
 <script src="library.js"></script>
 <script src="flashcards.js"></script>
 <script src="atlas.js"></script>

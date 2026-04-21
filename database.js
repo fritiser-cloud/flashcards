@@ -129,5 +129,21 @@ function getGuides() { try { return JSON.parse(localStorage.getItem('bio_guides'
 function saveNotes(notes) { localStorage.setItem('notes', JSON.stringify(notes)); if (window.autoSaveToCloud) window.autoSaveToCloud(); }
 function saveAtlasItems(items) { localStorage.setItem('atlas', JSON.stringify(items)); if (window.autoSaveToCloud) window.autoSaveToCloud(); }
 function saveGuides(guides) { localStorage.setItem('bio_guides', JSON.stringify(guides)); if (window.autoSaveToCloud) window.autoSaveToCloud(); }
+const DEFAULT_CATEGORIES = [
+  { id: 'bio', name: 'Биология', icon: '🧬' },
+  { id: 'ru',  name: 'Русский язык', icon: '✍️' },
+  { id: 'phys', name: 'Химия/Физика', icon: '⚗️' }
+];
+function getCategories() {
+  try {
+    const raw = localStorage.getItem('lib_categories');
+    return raw ? JSON.parse(raw) : DEFAULT_CATEGORIES.map(c => ({ ...c }));
+  } catch { return DEFAULT_CATEGORIES.map(c => ({ ...c })); }
+}
+function saveCategories(cats) { localStorage.setItem('lib_categories', JSON.stringify(cats)); }
+window.getCategories = getCategories;
+window.saveCategories = saveCategories;
+window.DEFAULT_CATEGORIES = DEFAULT_CATEGORIES;
+
 window.getNotes = getNotes; window.getAtlasItems = getAtlasItems; window.getGuides = getGuides;
 window.saveNotes = saveNotes; window.saveAtlasItems = saveAtlasItems; window.saveGuides = saveGuides;

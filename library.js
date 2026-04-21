@@ -2,9 +2,6 @@
 let currentCat = 'all';
 let currentGuideId = null;
 let currentAddType = 'guide';
-let ghTabLoaded = false;
-let GITHUB_USER = localStorage.getItem('gh_user') || 'fritiser-cloud';
-let GITHUB_REPO = localStorage.getItem('gh_repo') || 'flashcards';
 let librarySearchQuery = '';
 
 function searchLibrary() {
@@ -14,6 +11,37 @@ function searchLibrary() {
 }
 window.searchLibrary = searchLibrary;
 
+// ==================== ДИНАМИЧЕСКИЕ КАТЕГОРИИ ====================
+function renderCategoryPills() {
+  const row = document.getElementById('cats-row');
+  if (!row) return;
+  const cats = window.getCategories ? window.getCategories() : [];
+  row.innerHTML = '';
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'cat-pill' + (currentCat === 'all' ? ' active' : '');
+  allBtn.textContent = 'Все';
+  allBtn.onclick = () => filterCat('all', allBtn);
+  row.appendChild(allBtn);
+
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-pill' + (currentCat === cat.id ? ' active' : '');
+    btn.textContent = (cat.icon ? cat.icon + ' ' : '') + cat.name;
+    btn.onclick = () => filterCat(cat.id, btn);
+    row.appendChild(btn);
+  });
+
+  // ⚙️ кнопка управления категориями
+  const mgBtn = document.createElement('button');
+  mgBtn.className = 'cat-pill';
+  mgBtn.textContent = '⚙️';
+  mgBtn.title = 'Управление категориями';
+  mgBtn.onclick = openCatsModal;
+  row.appendChild(mgBtn);
+}
+window.renderCategoryPills = renderCategoryPills;
+
 function filterCat(cat, btn) {
   currentCat = cat;
   document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
@@ -21,6 +49,99 @@ function filterCat(cat, btn) {
   renderLibrary();
 }
 window.filterCat = filterCat;
+
+// ==================== УПРАВЛЕНИЕ КАТЕГОРИЯМИ ====================
+function openCatsModal() {
+  renderCatsModalList();
+  const modal = document.getElementById('cats-modal');
+  if (modal) modal.classList.add('open');
+}
+window.openCatsModal = openCatsModal;
+
+function closeCatsModal(e) {
+  if (!e || e.target === document.getElementById('cats-modal')) {
+    document.getElementById('cats-modal')?.classList.remove('open');
+    document.getElementById('add-cat-form').style.display = 'none';
+  }
+}
+window.closeCatsModal = closeCatsModal;
+
+function renderCatsModalList() {
+  const list = document.getElementById('cats-modal-list');
+  if (!list) return;
+  const cats = window.getCategories();
+  if (cats.length === 0) { list.innerHTML = '<div style="color:var(--text3);font-size:14px;padding:8px 0">Нет категорий</div>'; return; }
+  list.innerHTML = '';
+  cats.forEach((cat, idx) => {
+    const item = document.createElement('div');
+    item.className = 'cat-manage-item';
+    item.innerHTML = `
+      <span class="cat-manage-icon">${cat.icon || '🏷️'}</span>
+      <span class="cat-manage-name">${window.escapeHtml(cat.name)}</span>
+      <button class="cat-manage-btn" onclick="editCatInline(${idx})" title="Переименовать">✏️</button>
+      <button class="cat-manage-btn del" onclick="deleteCat('${cat.id}')" title="Удалить">🗑</button>`;
+    list.appendChild(item);
+  });
+}
+
+function openAddCatForm() {
+  document.getElementById('add-cat-form').style.display = '';
+  document.getElementById('new-cat-name').focus();
+}
+window.openAddCatForm = openAddCatForm;
+
+function saveNewCat() {
+  const icon = (document.getElementById('new-cat-icon').value || '🏷️').trim();
+  const name = (document.getElementById('new-cat-name').value || '').trim();
+  if (!name) { window.showToast('Введи название'); return; }
+  const cats = window.getCategories();
+  if (_editingCatIdx >= 0) {
+    // Editing existing
+    cats[_editingCatIdx] = { ...cats[_editingCatIdx], icon, name };
+    _editingCatIdx = -1;
+  } else {
+    cats.push({ id: 'cat_' + Date.now(), name, icon });
+  }
+  window.saveCategories(cats);
+  document.getElementById('new-cat-icon').value = '';
+  document.getElementById('new-cat-name').value = '';
+  const form = document.getElementById('add-cat-form');
+  form.style.display = 'none';
+  const saveBtn = form.querySelector('button');
+  if (saveBtn) saveBtn.textContent = 'Добавить';
+  renderCatsModalList();
+  renderCategoryPills();
+  window.showToast(`✓ Категория «${name}» сохранена`);
+}
+window.saveNewCat = saveNewCat;
+
+function deleteCat(id) {
+  const cats = window.getCategories().filter(c => c.id !== id);
+  window.saveCategories(cats);
+  if (currentCat === id) { currentCat = 'all'; }
+  renderCatsModalList();
+  renderCategoryPills();
+}
+window.deleteCat = deleteCat;
+
+let _editingCatIdx = -1;
+
+function editCatInline(idx) {
+  const cats = window.getCategories();
+  const cat = cats[idx];
+  if (!cat) return;
+  _editingCatIdx = idx;
+  // Populate the add-cat-form with existing values for editing
+  document.getElementById('new-cat-icon').value = cat.icon || '';
+  document.getElementById('new-cat-name').value = cat.name;
+  const form = document.getElementById('add-cat-form');
+  form.style.display = '';
+  // Change button text temporarily
+  const saveBtn = form.querySelector('button');
+  if (saveBtn) saveBtn.textContent = 'Сохранить изменения';
+  document.getElementById('new-cat-name').focus();
+}
+window.editCatInline = editCatInline;
 
 function renderLibrary() {
   const guides = window.getGuides ? window.getGuides() : [];
@@ -61,7 +182,11 @@ function renderLibrary() {
 }
 window.renderLibrary = renderLibrary;
 
-const CAT_NAMES = { bio: '🧬 Биология', ru: '✍️ Русский язык', phys: '⚗️ Химия / Физика' };
+function getCatName(catId) {
+  const cats = window.getCategories ? window.getCategories() : [];
+  const cat = cats.find(c => c.id === catId);
+  return cat ? (cat.icon ? cat.icon + ' ' + cat.name : cat.name) : (catId || '📖 Пособие');
+}
 
 function openGuide(id) {
   currentGuideId = id;
@@ -70,7 +195,7 @@ function openGuide(id) {
   if (!guide) return;
 
   // Breadcrumb
-  const catName = CAT_NAMES[guide.category] || '📖 Пособие';
+  const catName = getCatName(guide.category);
   const bcCat = document.getElementById('breadcrumb-category');
   if (bcCat) bcCat.textContent = catName;
   const bcTitle = document.getElementById('breadcrumb-title');
@@ -166,22 +291,186 @@ function openGuide(id) {
 }
 window.openGuide = openGuide;
 
+// ==================== PDF.js VIEWER ====================
+const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs';
+const PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs';
+
+let _pdfDoc = null;
+let _pdfPage = 1;
+let _pdfScale = 1.5;
+let _pdfRendering = false;
+let _pdfRenderPending = false;
+let _pdfSpread = false;
+
+async function _ensurePdfJs() {
+  if (window.pdfjsLib) return;
+  const mod = await import(PDFJS_CDN);
+  window.pdfjsLib = mod;
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+}
+
 async function loadPdfInViewer(pdfUrl) {
-  const iframe = document.getElementById('guide-pdf-iframe');
-  if (!iframe) return;
-  iframe.src = '';
+  const canvas = document.getElementById('pdf-canvas');
+  const loading = document.getElementById('pdf-loading');
+  if (!canvas || !loading) return;
+
+  // Reset state
+  _pdfDoc = null;
+  _pdfPage = 1;
+  canvas.style.display = 'none';
+  loading.style.display = 'flex';
+  _updatePdfNav();
+
   try {
+    await _ensurePdfJs();
+
     const dlUrl = await window.getYadiskDownloadUrl(pdfUrl);
     const res = await fetch(dlUrl);
-    if (!res.ok) throw new Error('fetch failed');
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    iframe.src = objectUrl;
-  } catch {
+    if (!res.ok) throw new Error('fetch ' + res.status);
+    const arrayBuffer = await res.arrayBuffer();
+
+    _pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    _pdfPage = 1;
+    _updatePdfNav();
+
+    // Auto-fit to screen width on first load
+    await _pdfAutoFitScale();
+    await _renderPdfPage();
+  } catch (err) {
+    loading.style.display = 'none';
     window.showToast('⚠️ Не удалось загрузить PDF');
+    console.error('PDF error:', err);
   }
 }
 window.loadPdfInViewer = loadPdfInViewer;
+
+async function _pdfAutoFitScale() {
+  if (!_pdfDoc) return;
+  const wrap = document.getElementById('pdf-canvas-wrap');
+  if (!wrap) return;
+  const page = await _pdfDoc.getPage(1);
+  const vp = page.getViewport({ scale: 1 });
+  const availW = wrap.clientWidth - 16;
+  _pdfScale = Math.max(0.5, availW / vp.width);
+}
+
+async function _renderPdfPage() {
+  if (!_pdfDoc || _pdfRendering) { _pdfRenderPending = true; return; }
+  _pdfRendering = true;
+  _pdfRenderPending = false;
+
+  const canvas = document.getElementById('pdf-canvas');
+  const loading = document.getElementById('pdf-loading');
+  if (!canvas) { _pdfRendering = false; return; }
+
+  try {
+    const deviceRatio = window.devicePixelRatio || 1;
+
+    if (_pdfSpread && _pdfPage < _pdfDoc.numPages) {
+      // Two-page spread
+      const [pageL, pageR] = await Promise.all([
+        _pdfDoc.getPage(_pdfPage),
+        _pdfDoc.getPage(_pdfPage + 1)
+      ]);
+      const vpL = pageL.getViewport({ scale: _pdfScale });
+      const vpR = pageR.getViewport({ scale: _pdfScale });
+      const gap = 8;
+      const totalW = vpL.width + gap + vpR.width;
+      const totalH = Math.max(vpL.height, vpR.height);
+
+      canvas.width = totalW * deviceRatio;
+      canvas.height = totalH * deviceRatio;
+      canvas.style.width = totalW + 'px';
+      canvas.style.height = totalH + 'px';
+
+      const ctx = canvas.getContext('2d');
+      ctx.scale(deviceRatio, deviceRatio);
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(0, 0, totalW, totalH);
+
+      await pageL.render({ canvasContext: ctx, viewport: vpL }).promise;
+      ctx.save();
+      ctx.translate(vpL.width + gap, 0);
+      await pageR.render({ canvasContext: ctx, viewport: vpR }).promise;
+      ctx.restore();
+    } else {
+      const page = await _pdfDoc.getPage(_pdfPage);
+      const viewport = page.getViewport({ scale: _pdfScale });
+
+      canvas.width = viewport.width * deviceRatio;
+      canvas.height = viewport.height * deviceRatio;
+      canvas.style.width = viewport.width + 'px';
+      canvas.style.height = viewport.height + 'px';
+
+      const ctx = canvas.getContext('2d');
+      ctx.scale(deviceRatio, deviceRatio);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+    }
+
+    if (loading) loading.style.display = 'none';
+    canvas.style.display = 'block';
+
+    const wrap = document.getElementById('pdf-canvas-wrap');
+    if (wrap) wrap.scrollTop = 0;
+  } finally {
+    _pdfRendering = false;
+    if (_pdfRenderPending) _renderPdfPage();
+  }
+}
+
+function _updatePdfNav() {
+  const info = document.getElementById('pdf-page-info');
+  const btnPrev = document.getElementById('pdf-btn-prev');
+  const btnNext = document.getElementById('pdf-btn-next');
+  const spreadBtn = document.getElementById('pdf-btn-spread');
+  const total = _pdfDoc ? _pdfDoc.numPages : 0;
+  const step = _pdfSpread ? 2 : 1;
+  if (info) info.textContent = total ? (_pdfSpread && _pdfPage < total ? `${_pdfPage}-${_pdfPage+1} / ${total}` : `${_pdfPage} / ${total}`) : '— / —';
+  if (btnPrev) btnPrev.disabled = _pdfPage <= 1;
+  if (btnNext) btnNext.disabled = !_pdfDoc || _pdfPage + step - 1 >= total;
+  if (spreadBtn) { spreadBtn.style.background = _pdfSpread ? 'var(--lavender)' : ''; spreadBtn.style.color = _pdfSpread ? 'var(--lavender-text)' : ''; }
+}
+
+function pdfNextPage() {
+  if (!_pdfDoc) return;
+  const step = _pdfSpread ? 2 : 1;
+  if (_pdfPage + step - 1 >= _pdfDoc.numPages) return;
+  _pdfPage += step;
+  _updatePdfNav();
+  _renderPdfPage();
+}
+function pdfPrevPage() {
+  if (!_pdfDoc || _pdfPage <= 1) return;
+  const step = _pdfSpread ? 2 : 1;
+  _pdfPage = Math.max(1, _pdfPage - step);
+  _updatePdfNav();
+  _renderPdfPage();
+}
+function pdfToggleSpread() {
+  _pdfSpread = !_pdfSpread;
+  // Align page to even boundary in spread mode
+  if (_pdfSpread && _pdfPage % 2 === 0) _pdfPage = Math.max(1, _pdfPage - 1);
+  _updatePdfNav();
+  _renderPdfPage();
+}
+window.pdfToggleSpread = pdfToggleSpread;
+function pdfZoomIn() {
+  _pdfScale = Math.min(_pdfScale + 0.25, 4);
+  _renderPdfPage();
+}
+function pdfZoomOut() {
+  _pdfScale = Math.max(_pdfScale - 0.25, 0.5);
+  _renderPdfPage();
+}
+async function pdfFitWidth() {
+  await _pdfAutoFitScale();
+  _renderPdfPage();
+}
+window.pdfNextPage = pdfNextPage;
+window.pdfPrevPage = pdfPrevPage;
+window.pdfZoomIn = pdfZoomIn;
+window.pdfZoomOut = pdfZoomOut;
+window.pdfFitWidth = pdfFitWidth;
 
 function updateReadingProgress() {
   const el = document.getElementById('guide-reader-content');
@@ -293,34 +582,187 @@ async function handlePdfAdd(event) {
 }
 window.handlePdfAdd = handlePdfAdd;
 
+// ==================== РЕДАКТИРОВАНИЕ МЕТАДАННЫХ ====================
+let _metaEditTarget = null; // { type: 'guide'|'deck', id }
+let _metaSelectedCat = '';
+
+function openMetaEditModal(type) {
+  _metaEditTarget = { type };
+  let name, icon, category, tags, desc;
+
+  if (type === 'guide') {
+    const guides = window.getGuides ? window.getGuides() : [];
+    const g = guides.find(g => g.id === currentGuideId);
+    if (!g) return;
+    _metaEditTarget.id = currentGuideId;
+    name = g.name; icon = g.icon || '📖'; category = g.category || 'bio';
+    tags = (g.tags || []).join(', '); desc = g.desc || '';
+    document.getElementById('meta-edit-title').textContent = 'Редактировать пособие';
+    document.getElementById('meta-desc-row').style.display = '';
+  } else {
+    // deck — id comes from currentDeckId (flashcards.js)
+    _metaEditTarget.id = window.currentDeckId;
+    const deck = window._getDeckForEdit ? window._getDeckForEdit() : null;
+    if (!deck) return;
+    name = deck.name; icon = deck.icon || '📚'; category = deck.category || '';
+    tags = (deck.tags || []).join(', '); desc = '';
+    document.getElementById('meta-edit-title').textContent = 'Редактировать колоду';
+    document.getElementById('meta-desc-row').style.display = 'none';
+  }
+
+  document.getElementById('meta-name-input').value = name;
+  document.getElementById('meta-icon-input').value = icon;
+  document.getElementById('meta-icon-btn').textContent = icon;
+  document.getElementById('meta-tags-input').value = tags;
+  document.getElementById('meta-desc-input').value = desc;
+
+  _metaSelectedCat = category;
+  renderMetaCatPills('meta-cat-pills');
+  document.getElementById('meta-edit-modal').classList.add('open');
+}
+window.openMetaEditModal = openMetaEditModal;
+
+// containerId: DOM id; getSelected/setSelected: getter/setter functions
+function renderMetaCatPills(containerId, getSelected, setSelected) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  // Default to _metaSelectedCat for backward compat
+  if (!getSelected) { getSelected = () => _metaSelectedCat; setSelected = v => { _metaSelectedCat = v; }; }
+  const cats = window.getCategories ? window.getCategories() : [];
+  container.innerHTML = '';
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'meta-cat-pill' + (cat.id === getSelected() ? ' selected' : '');
+    btn.textContent = (cat.icon ? cat.icon + ' ' : '') + cat.name;
+    btn.onclick = () => {
+      setSelected(cat.id);
+      container.querySelectorAll('.meta-cat-pill').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    container.appendChild(btn);
+  });
+}
+
+function focusIconInput() { document.getElementById('meta-icon-input').focus(); }
+window.focusIconInput = focusIconInput;
+
+function focusCgIconInput() { document.getElementById('cg-icon-input').focus(); }
+window.focusCgIconInput = focusCgIconInput;
+
+function closeMetaEditModal(e) {
+  if (!e || e.target === document.getElementById('meta-edit-modal'))
+    document.getElementById('meta-edit-modal')?.classList.remove('open');
+}
+window.closeMetaEditModal = closeMetaEditModal;
+
+async function saveMetaEdit() {
+  const name = document.getElementById('meta-name-input').value.trim();
+  if (!name) { window.showToast('Введи название'); return; }
+  const icon = document.getElementById('meta-icon-input').value.trim() || (
+    _metaEditTarget.type === 'guide' ? '📖' : '📚');
+  const tags = document.getElementById('meta-tags-input').value.split(',').map(t => t.trim()).filter(Boolean);
+  const desc = document.getElementById('meta-desc-input').value.trim();
+
+  if (_metaEditTarget.type === 'guide') {
+    const guides = window.getGuides();
+    const idx = guides.findIndex(g => g.id === _metaEditTarget.id);
+    if (idx >= 0) {
+      guides[idx] = { ...guides[idx], name, icon, category: _metaSelectedCat || guides[idx].category, tags, desc };
+      window.saveGuides(guides);
+      renderLibrary();
+      openGuide(_metaEditTarget.id); // refresh guide detail
+    }
+  } else {
+    // deck
+    if (window.saveDeckMeta) await window.saveDeckMeta(_metaEditTarget.id, { name, icon, tags });
+  }
+  document.getElementById('meta-edit-modal')?.classList.remove('open');
+  window.showToast('✓ Сохранено');
+}
+window.saveMetaEdit = saveMetaEdit;
+
+// ==================== СОЗДАНИЕ ПОСОБИЯ В ПРИЛОЖЕНИИ ====================
+let _cgSelectedCat = 'bio';
+
+function openCreateGuideModal() {
+  closeAddModal();
+  _cgSelectedCat = 'bio';
+  document.getElementById('cg-name-input').value = '';
+  document.getElementById('cg-icon-input').value = '';
+  document.getElementById('cg-icon-btn').textContent = '📖';
+  document.getElementById('cg-tags-input').value = '';
+  document.getElementById('cg-desc-input').value = '';
+  document.getElementById('cg-content-input').value = '';
+  renderMetaCatPills('cg-cat-pills', () => _cgSelectedCat, v => { _cgSelectedCat = v; });
+  document.getElementById('create-guide-modal').classList.add('open');
+}
+window.openCreateGuideModal = openCreateGuideModal;
+
+
+function closeCreateGuideModal(e) {
+  if (!e || e.target === document.getElementById('create-guide-modal'))
+    document.getElementById('create-guide-modal')?.classList.remove('open');
+}
+window.closeCreateGuideModal = closeCreateGuideModal;
+
+function saveCreateGuide() {
+  const name = document.getElementById('cg-name-input').value.trim();
+  if (!name) { window.showToast('Введи название'); return; }
+  const icon = document.getElementById('cg-icon-input').value.trim() || '📖';
+  const tags = document.getElementById('cg-tags-input').value.split(',').map(t => t.trim()).filter(Boolean);
+  const desc = document.getElementById('cg-desc-input').value.trim();
+  const content = document.getElementById('cg-content-input').value;
+
+  const guide = {
+    id: Date.now(), name, icon, type: 'guide',
+    category: _cgSelectedCat || 'bio', tags, desc, content,
+    sourceFile: 'local', createdAt: Date.now()
+  };
+  const guides = window.getGuides();
+  guides.push(guide);
+  window.saveGuides(guides);
+  renderLibrary();
+  closeCreateGuideModal();
+  window.showToast(`✓ «${name}» создан`);
+}
+window.saveCreateGuide = saveCreateGuide;
+
 // ==================== МОДАЛЬНЫЕ ОКНА ИМПОРТА ====================
 function openAddModal(type) {
   currentAddType = type;
-  ghTabLoaded = false;
-  const modalTitle = document.getElementById('modal-title');
-  if (modalTitle) modalTitle.textContent = type === 'guide' ? 'Добавить пособие' : 'Добавить колоду';
-  const modalSub = document.getElementById('modal-sub');
-  if (modalSub) modalSub.textContent = type === 'guide' ? 'Загрузи JSON или PDF-файл' : 'Загрузи JSON с карточками или паронимами';
-  const addModal = document.getElementById('add-modal');
-  if (addModal) addModal.classList.add('open');
+  const isGuide = type === 'guide';
+
+  document.getElementById('modal-title').textContent = isGuide ? 'Добавить пособие' : 'Добавить колоду';
+  document.getElementById('modal-sub').textContent = isGuide
+    ? 'Загрузи JSON или PDF, создай конспект'
+    : 'Загрузи или вставь JSON с карточками';
+
+  // Switch to file tab by default
   document.querySelectorAll('.modal-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
-  const tabFile = document.getElementById('add-tab-file');
-  if (tabFile) tabFile.style.display = '';
-  const tabGithub = document.getElementById('add-tab-github');
-  if (tabGithub) tabGithub.style.display = 'none';
-  const loading = document.getElementById('gh-loading');
-  if (loading) loading.style.display = '';
-  const list = document.getElementById('gh-list');
-  if (list) list.innerHTML = '';
-  const error = document.getElementById('gh-error');
-  if (error) error.style.display = 'none';
+  document.getElementById('add-tab-file').style.display = '';
+  document.getElementById('add-tab-yadisk').style.display = 'none';
+  // Reset paste area
+  const pasteArea = document.getElementById('paste-json-area');
+  if (pasteArea) pasteArea.style.display = 'none';
+  const pasteInput = document.getElementById('paste-json-input');
+  if (pasteInput) pasteInput.value = '';
+
+  // Show/hide type-specific buttons
+  document.getElementById('pdf-upload-btn').style.display    = isGuide ? '' : 'none';
+  document.getElementById('create-guide-btn').style.display  = isGuide ? '' : 'none';
+  document.getElementById('paste-json-section').style.display = isGuide ? 'none' : '';
+
+  // Update upload JSON label
+  document.getElementById('btn-upload-json-label').textContent = isGuide ? 'Загрузить JSON' : 'Загрузить JSON';
+  document.getElementById('btn-upload-json-sub').textContent = isGuide ? 'Файл с пособием' : 'Файл с карточками';
+
+  document.getElementById('add-modal').classList.add('open');
 }
 window.openAddModal = openAddModal;
 
 function closeAddModal(e) {
   if (!e || e.target === document.getElementById('add-modal')) {
-    const modal = document.getElementById('add-modal');
-    if (modal) modal.classList.remove('open');
+    document.getElementById('add-modal')?.classList.remove('open');
   }
 }
 window.closeAddModal = closeAddModal;
@@ -328,13 +770,47 @@ window.closeAddModal = closeAddModal;
 function switchAddTab(tab, btn) {
   document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('add-tab-file').style.display    = tab === 'file'    ? '' : 'none';
-  document.getElementById('add-tab-github').style.display  = tab === 'github'  ? '' : 'none';
-  document.getElementById('add-tab-yadisk').style.display  = tab === 'yadisk'  ? '' : 'none';
-  if (tab === 'github' && !ghTabLoaded) { ghTabLoaded = true; loadGithubList(); }
+  document.getElementById('add-tab-file').style.display   = tab === 'file'   ? '' : 'none';
+  document.getElementById('add-tab-yadisk').style.display = tab === 'yadisk' ? '' : 'none';
   if (tab === 'yadisk') loadYadiskList();
 }
 window.switchAddTab = switchAddTab;
+
+function togglePasteJson() {
+  const area = document.getElementById('paste-json-area');
+  if (!area) return;
+  area.style.display = area.style.display === 'none' ? '' : 'none';
+  if (area.style.display !== 'none') document.getElementById('paste-json-input').focus();
+}
+window.togglePasteJson = togglePasteJson;
+
+async function importPastedJson() {
+  const input = document.getElementById('paste-json-input');
+  const text = input?.value.trim();
+  if (!text) { window.showToast('Вставь JSON'); return; }
+  try {
+    const data = JSON.parse(text);
+    if (!data.name || !Array.isArray(data.cards)) throw new Error('bad format');
+    const colors = ['#E8F4EE', '#FDF0E8', '#FEF9E7', '#EEF0FD', '#FDE8F0'];
+    const filename = data.name.toLowerCase().replace(/[^а-яёa-z0-9]+/gi, '_') + '.json';
+    const yadiskUrl = await pushJsonToYadisk(filename, data, 'decks');
+    const sourceFile = yadiskUrl || ('decks/' + filename);
+    const deck = {
+      name: data.name, icon: data.icon || '📚', type: data.type || 'flashcard',
+      color: data.color || colors[Math.floor(Math.random() * colors.length)],
+      cards: data.cards, sourceFile, createdAt: Date.now()
+    };
+    if (window.invalidateDecksCache) window.invalidateDecksCache();
+    await window.dbPut('decks', deck);
+    if (window.autoSaveToCloud) window.autoSaveToCloud();
+    if (window.renderDecks) window.renderDecks();
+    closeAddModal();
+    window.showToast(`✓ «${data.name}» импортировано (${data.cards.length} карточек)`);
+  } catch {
+    window.showToast('⚠️ Неверный формат JSON. Проверь структуру.');
+  }
+}
+window.importPastedJson = importPastedJson;
 
 function triggerFileAdd() {
   closeAddModal();
@@ -513,87 +989,6 @@ async function importFromYadisk(data, publicUrl) {
 }
 window.importFromYadisk = importFromYadisk;
 
-async function loadGithubList() {
-  const loading = document.getElementById('gh-loading');
-  const errEl = document.getElementById('gh-error');
-  const list = document.getElementById('gh-list');
-  try {
-    const folderPath = currentAddType === 'deck' ? 'decks/' : 'guides/';
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${folderPath}`, {
-      headers: { 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (!res.ok) throw new Error(res.status);
-    const files = await res.json();
-    const jsonFiles = files.filter(f => f.name.endsWith('.json') && f.name !== 'manifest.json' && f.type === 'file');
-    if (loading) loading.style.display = 'none';
-    const filtered = [];
-    for (const f of jsonFiles) {
-      try {
-        const subPath = currentAddType === 'deck' ? 'decks/' : 'guides/';
-        const rawUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${subPath}${f.name}`;
-        const resp = await fetch(rawUrl);
-        const data = await resp.json();
-        if ((currentAddType === 'guide' && data.type === 'guide') ||
-            (currentAddType === 'deck' && (data.type === 'flashcard' || data.type === 'match'))) {
-          filtered.push({ ...f, data });
-        }
-      } catch (e) { /* skip */ }
-    }
-    if (filtered.length === 0) {
-      if (list) list.innerHTML = '<div class="gh-loading">Нет подходящих JSON файлов</div>';
-      return;
-    }
-    if (list) {
-      list.innerHTML = '';
-      for (const f of filtered) {
-        const existing = currentAddType === 'guide'
-          ? (window.getGuides ? window.getGuides().find(g => g.sourceFile === 'guides/' + f.name || g.sourceFile === f.name) : null)
-          : (await window.dbGetAll('decks')).find(d => d.sourceFile === 'decks/' + f.name || d.sourceFile === f.name);
-        const el = document.createElement('div');
-        el.className = 'gh-item' + (existing ? ' loaded' : '');
-        el.innerHTML = `
-          <div class="gh-item-icon">${existing ? '✓' : '📄'}</div>
-          <div class="gh-item-info">
-            <div class="gh-item-name">${window.escapeHtml(f.data.name || f.name)}</div>
-            <div class="gh-item-sub">${(f.size / 1024).toFixed(1)} КБ</div>
-          </div>
-          <div class="gh-item-btn">${existing ? 'Добавлено' : 'Добавить'}</div>`;
-        el.onclick = () => importFromGithub(f.data, f.name, existing);
-        list.appendChild(el);
-      }
-    }
-  } catch (e) {
-    if (loading) loading.style.display = 'none';
-    if (errEl) {
-      errEl.textContent = `Ошибка загрузки: ${e.message}`;
-      errEl.style.display = '';
-    }
-  }
-}
-window.loadGithubList = loadGithubList;
-
-async function importFromGithub(data, filename, alreadyExists) {
-  if (alreadyExists) return;
-  if (currentAddType === 'guide') {
-    const sourceFile = 'guides/' + filename;
-    const guides = window.getGuides ? window.getGuides() : [];
-    const existing = guides.findIndex(g => g.name === data.name);
-    if (existing >= 0) guides[existing] = { ...data, sourceFile };
-    else guides.push({ ...data, id: Date.now(), sourceFile });
-    window.saveGuides(guides);
-    renderLibrary();
-  } else {
-    const sourceFile = 'decks/' + filename;
-    const deck = { ...data, sourceFile, createdAt: Date.now() };
-    if (window.invalidateDecksCache) window.invalidateDecksCache();
-    await window.dbPut('decks', deck);
-    if (window.autoSaveToCloud) window.autoSaveToCloud();
-    if (window.renderDecks) window.renderDecks();
-  }
-  closeAddModal();
-  window.showToast(`✓ ${data.name || filename} добавлено`);
-}
-window.importFromGithub = importFromGithub;
 
 const DECK_AI_PROMPT = `Создай набор флеш-карточек для подготовки к ЕГЭ по биологии на тему: "[ТЕМА]"
 
@@ -684,149 +1079,3 @@ function closeSampleModal(e) {
   }
 }
 window.closeSampleModal = closeSampleModal;
-
-// ==================== АВТОЗАГРУЗКА ПОСОБИЙ ИЗ GITHUB ====================
-async function autoLoadGithubGuides() {
-  const user = localStorage.getItem('gh_user') || 'fritiser-cloud';
-  const repo = localStorage.getItem('gh_repo') || 'flashcards';
-  if (!user || !repo) return;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/guides/`, {
-      headers: { 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (!res.ok) return;
-    const files = await res.json();
-    if (!Array.isArray(files)) return;
-    const jsonFiles = files.filter(f => f.name.endsWith('.json') && f.type === 'file');
-    const existingGuides = window.getGuides ? window.getGuides() : [];
-    let added = 0;
-    for (const f of jsonFiles) {
-      const sourceFile = 'guides/' + f.name;
-      if (existingGuides.find(g => g.sourceFile === sourceFile || g.sourceFile === f.name)) continue;
-      try {
-        const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/guides/${f.name}`;
-        const resp = await fetch(rawUrl);
-        if (!resp.ok) continue;
-        const data = await resp.json();
-        if (!data.name || !data.category) continue;
-        const guides = window.getGuides ? window.getGuides() : [];
-        guides.push({ ...data, id: Date.now() + added, sourceFile });
-        window.saveGuides(guides);
-        added++;
-      } catch (e) { /* skip bad files */ }
-    }
-    if (added > 0) {
-      if (window.renderLibrary) window.renderLibrary();
-      window.showToast(`📥 Загружено ${added} ${added === 1 ? 'пособие' : 'пособий'} из GitHub`);
-    }
-  } catch (e) { /* network unavailable, skip silently */ }
-}
-window.autoLoadGithubGuides = autoLoadGithubGuides;
-
-async function pushGuideToGithub(filename, data) {
-  const user = localStorage.getItem('gh_user') || 'fritiser-cloud';
-  const repo = localStorage.getItem('gh_repo') || 'flashcards';
-  const token = localStorage.getItem('gh_token');
-  if (!token) return false;
-  const path = `guides/${filename}`;
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-  let sha;
-  try {
-    const check = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
-      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (check.ok) { const existing = await check.json(); sha = existing.sha; }
-  } catch (e) {}
-  const body = { message: `Add guide: ${data.name}`, content };
-  if (sha) body.sha = sha;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-    return res.ok;
-  } catch (e) { return false; }
-}
-window.pushGuideToGithub = pushGuideToGithub;
-
-// ==================== АВТОЗАГРУЗКА КОЛОД ИЗ GITHUB ====================
-async function autoLoadGithubDecks() {
-  const user = localStorage.getItem('gh_user') || 'fritiser-cloud';
-  const repo = localStorage.getItem('gh_repo') || 'flashcards';
-  if (!user || !repo) return;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/decks/`, {
-      headers: { 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (!res.ok) return;
-    const files = await res.json();
-    if (!Array.isArray(files)) return;
-    const jsonFiles = files.filter(f => f.name.endsWith('.json') && f.type === 'file');
-    const existingDecks = await window.dbGetAll('decks');
-    let added = 0;
-    for (const f of jsonFiles) {
-      const sourceFile = 'decks/' + f.name;
-      if (existingDecks.find(d => d.sourceFile === sourceFile || d.sourceFile === f.name)) continue;
-      try {
-        const rawUrl = `https://raw.githubusercontent.com/${user}/${repo}/main/decks/${f.name}`;
-        const resp = await fetch(rawUrl);
-        if (!resp.ok) continue;
-        const data = await resp.json();
-        if (!data.name || !Array.isArray(data.cards)) continue;
-        const colors = ['#E8F4EE', '#FDF0E8', '#FEF9E7', '#EEF0FD', '#FDE8F0'];
-        const deck = {
-          name: data.name, icon: data.icon || '📚',
-          type: data.type || 'flashcard',
-          color: data.color || colors[Math.floor(Math.random() * colors.length)],
-          cards: data.cards, sourceFile, createdAt: Date.now()
-        };
-        if (window.invalidateDecksCache) window.invalidateDecksCache();
-        await window.dbPut('decks', deck);
-        added++;
-      } catch (e) { /* skip bad files */ }
-    }
-    if (added > 0) {
-      if (window.autoSaveToCloud) window.autoSaveToCloud();
-      if (window.renderDecks) await window.renderDecks();
-      window.showToast(`📥 Загружено ${added} ${added === 1 ? 'колода' : 'колод'} из GitHub`);
-    }
-  } catch (e) { /* network unavailable, skip silently */ }
-}
-window.autoLoadGithubDecks = autoLoadGithubDecks;
-
-// ==================== ЗАГРУЗКА ФАЙЛА В GITHUB ====================
-async function pushDeckToGithub(filename, data) {
-  const user = localStorage.getItem('gh_user') || 'fritiser-cloud';
-  const repo = localStorage.getItem('gh_repo') || 'flashcards';
-  const token = localStorage.getItem('gh_token');
-  if (!token) return false;
-  const path = `decks/${filename}`;
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-  let sha;
-  try {
-    const check = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
-      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (check.ok) { const existing = await check.json(); sha = existing.sha; }
-  } catch (e) {}
-  const body = { message: `Add deck: ${data.name}`, content };
-  if (sha) body.sha = sha;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-    return res.ok;
-  } catch (e) { return false; }
-}
-window.pushDeckToGithub = pushDeckToGithub;
