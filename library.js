@@ -268,224 +268,13 @@ function openGuide(id) {
   const content = document.getElementById('guide-reader-content');
   if (content) content.scrollTop = 0;
 
-  // PDF vs Markdown view
-  const readerContent = document.getElementById('guide-reader-content');
-  const pdfContent = document.getElementById('guide-pdf-content');
-  const tocBtn = document.getElementById('toc-toggle-btn');
-  // Всегда сбрасываем тулбар и iframe при открытии
-  const toolbar = document.querySelector('.pdf-toolbar');
-  if (toolbar) toolbar.style.display = '';
-  const pdfIframe = document.getElementById('pdf-iframe');
-  if (pdfIframe) { pdfIframe.src = ''; pdfIframe.style.display = 'none'; }
-
-  if (guide.type === 'pdf') {
-    if (readerContent) readerContent.style.display = 'none';
-    if (pdfContent) pdfContent.classList.add('visible');
-    if (tocBtn) tocBtn.style.display = 'none';
-    loadPdfInViewer(guide.pdfUrl);
-  } else {
-    if (readerContent) readerContent.style.display = '';
-    if (pdfContent) pdfContent.classList.remove('visible');
-  }
-
   window.showScreen('guide-detail-screen');
 
   // Build TOC after render
-  if (guide.type !== 'pdf') requestAnimationFrame(() => buildTOC());
+  requestAnimationFrame(() => buildTOC());
 }
 window.openGuide = openGuide;
 
-// ==================== PDF.js VIEWER ====================
-const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs';
-const PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs';
-
-let _pdfDoc = null;
-let _pdfPage = 1;
-let _pdfScale = 1.5;
-let _pdfRendering = false;
-let _pdfRenderPending = false;
-let _pdfSpread = false;
-
-async function _ensurePdfJs() {
-  if (window.pdfjsLib) return;
-  const mod = await import(PDFJS_CDN);
-  window.pdfjsLib = mod;
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
-}
-
-const _isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-
-async function loadPdfInViewer(pdfUrl) {
-  const canvas = document.getElementById('pdf-canvas');
-  const iframe = document.getElementById('pdf-iframe');
-  const loading = document.getElementById('pdf-loading');
-  if (!canvas || !loading) return;
-
-  _pdfDoc = null;
-  _pdfPage = 1;
-  canvas.style.display = 'none';
-  if (iframe) iframe.src = '';
-  loading.style.display = 'flex';
-  _updatePdfNav();
-
-  try {
-    const dlUrl = await window.getYadiskDownloadUrl(pdfUrl);
-
-    if (_isLocalhost) {
-      // Localhost: грузим через PDF.js напрямую
-      await _ensurePdfJs();
-      const res = await fetch(dlUrl);
-      if (!res.ok) throw new Error('fetch ' + res.status);
-      const arrayBuffer = await res.arrayBuffer();
-      _pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      _pdfPage = 1;
-      _updatePdfNav();
-      await _pdfAutoFitScale();
-      await _renderPdfPage();
-    } else {
-      // Production: Google Docs Viewer (обходит CORS)
-      loading.style.display = 'none';
-      const toolbar = document.getElementById('pdf-toolbar');
-      if (toolbar) toolbar.style.display = 'none';
-      if (iframe) iframe.src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(dlUrl) + '&embedded=true';
-    }
-  } catch (err) {
-    loading.style.display = 'none';
-    window.showToast('⚠️ Не удалось загрузить PDF');
-    console.error('PDF error:', err);
-  }
-}
-window.loadPdfInViewer = loadPdfInViewer;
-
-async function _pdfAutoFitScale() {
-  if (!_pdfDoc) return;
-  const wrap = document.getElementById('pdf-canvas-wrap');
-  if (!wrap) return;
-  const page = await _pdfDoc.getPage(1);
-  const vp = page.getViewport({ scale: 1 });
-  const availW = wrap.clientWidth - 16;
-  _pdfScale = Math.max(0.5, availW / vp.width);
-}
-
-async function _renderPdfPage() {
-  if (!_pdfDoc || _pdfRendering) { _pdfRenderPending = true; return; }
-  _pdfRendering = true;
-  _pdfRenderPending = false;
-
-  const canvas = document.getElementById('pdf-canvas');
-  const loading = document.getElementById('pdf-loading');
-  if (!canvas) { _pdfRendering = false; return; }
-
-  try {
-    const deviceRatio = window.devicePixelRatio || 1;
-
-    if (_pdfSpread && _pdfPage < _pdfDoc.numPages) {
-      // Two-page spread
-      const [pageL, pageR] = await Promise.all([
-        _pdfDoc.getPage(_pdfPage),
-        _pdfDoc.getPage(_pdfPage + 1)
-      ]);
-      const vpL = pageL.getViewport({ scale: _pdfScale });
-      const vpR = pageR.getViewport({ scale: _pdfScale });
-      const gap = 8;
-      const totalW = vpL.width + gap + vpR.width;
-      const totalH = Math.max(vpL.height, vpR.height);
-
-      canvas.width = totalW * deviceRatio;
-      canvas.height = totalH * deviceRatio;
-      canvas.style.width = totalW + 'px';
-      canvas.style.height = totalH + 'px';
-
-      const ctx = canvas.getContext('2d');
-      ctx.scale(deviceRatio, deviceRatio);
-      ctx.fillStyle = '#f0f0f0';
-      ctx.fillRect(0, 0, totalW, totalH);
-
-      await pageL.render({ canvasContext: ctx, viewport: vpL }).promise;
-      ctx.save();
-      ctx.translate(vpL.width + gap, 0);
-      await pageR.render({ canvasContext: ctx, viewport: vpR }).promise;
-      ctx.restore();
-    } else {
-      const page = await _pdfDoc.getPage(_pdfPage);
-      const viewport = page.getViewport({ scale: _pdfScale });
-
-      canvas.width = viewport.width * deviceRatio;
-      canvas.height = viewport.height * deviceRatio;
-      canvas.style.width = viewport.width + 'px';
-      canvas.style.height = viewport.height + 'px';
-
-      const ctx = canvas.getContext('2d');
-      ctx.scale(deviceRatio, deviceRatio);
-      await page.render({ canvasContext: ctx, viewport }).promise;
-    }
-
-    if (loading) loading.style.display = 'none';
-    canvas.style.display = 'block';
-
-    const wrap = document.getElementById('pdf-canvas-wrap');
-    if (wrap) wrap.scrollTop = 0;
-  } finally {
-    _pdfRendering = false;
-    if (_pdfRenderPending) _renderPdfPage();
-  }
-}
-
-function _updatePdfNav() {
-  const curEl = document.getElementById('pdf-page-cur');
-  const totalEl = document.getElementById('pdf-page-total');
-  const btnPrev = document.getElementById('pdf-btn-prev');
-  const btnNext = document.getElementById('pdf-btn-next');
-  const spreadBtn = document.getElementById('pdf-btn-spread');
-  const total = _pdfDoc ? _pdfDoc.numPages : 0;
-  const step = _pdfSpread ? 2 : 1;
-  if (curEl) curEl.textContent = total ? (_pdfSpread && _pdfPage < total ? `${_pdfPage}–${_pdfPage+1}` : `${_pdfPage}`) : '—';
-  if (totalEl) totalEl.textContent = total || '—';
-  if (btnPrev) btnPrev.disabled = _pdfPage <= 1;
-  if (btnNext) btnNext.disabled = !_pdfDoc || _pdfPage + step - 1 >= total;
-  if (spreadBtn) spreadBtn.classList.toggle('active', _pdfSpread);
-}
-
-function pdfNextPage() {
-  if (!_pdfDoc) return;
-  const step = _pdfSpread ? 2 : 1;
-  if (_pdfPage + step - 1 >= _pdfDoc.numPages) return;
-  _pdfPage += step;
-  _updatePdfNav();
-  _renderPdfPage();
-}
-function pdfPrevPage() {
-  if (!_pdfDoc || _pdfPage <= 1) return;
-  const step = _pdfSpread ? 2 : 1;
-  _pdfPage = Math.max(1, _pdfPage - step);
-  _updatePdfNav();
-  _renderPdfPage();
-}
-function pdfToggleSpread() {
-  _pdfSpread = !_pdfSpread;
-  // Align page to even boundary in spread mode
-  if (_pdfSpread && _pdfPage % 2 === 0) _pdfPage = Math.max(1, _pdfPage - 1);
-  _updatePdfNav();
-  _renderPdfPage();
-}
-window.pdfToggleSpread = pdfToggleSpread;
-function pdfZoomIn() {
-  _pdfScale = Math.min(_pdfScale + 0.25, 4);
-  _renderPdfPage();
-}
-function pdfZoomOut() {
-  _pdfScale = Math.max(_pdfScale - 0.25, 0.5);
-  _renderPdfPage();
-}
-async function pdfFitWidth() {
-  await _pdfAutoFitScale();
-  _renderPdfPage();
-}
-window.pdfNextPage = pdfNextPage;
-window.pdfPrevPage = pdfPrevPage;
-window.pdfZoomIn = pdfZoomIn;
-window.pdfZoomOut = pdfZoomOut;
-window.pdfFitWidth = pdfFitWidth;
 
 function updateReadingProgress() {
   const el = document.getElementById('guide-reader-content');
@@ -560,42 +349,6 @@ function deleteGuide(id) {
   renderLibrary();
   window.showToast('✓ Пособие удалено');
 }
-
-// ==================== PDF ====================
-function triggerPdfAdd() {
-  closeAddModal();
-  const pdfInput = document.getElementById('pdf-input');
-  if (pdfInput) pdfInput.click();
-}
-window.triggerPdfAdd = triggerPdfAdd;
-
-async function handlePdfAdd(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  event.target.value = '';
-  const token = window.getYadiskToken ? window.getYadiskToken() : '';
-  if (!token) {
-    window.showToast('⚠️ Нужен токен Яндекс Диска для загрузки PDF');
-    return;
-  }
-  window.showToast('⏳ Загружаю PDF на Яндекс Диск…');
-  try {
-    const pdfUrl = await window.uploadFileToYadisk(file, file.name, 'pdfs');
-    if (!pdfUrl) throw new Error('no url');
-    const name = file.name.replace(/\.pdf$/i, '');
-    const guides = window.getGuides ? window.getGuides() : [];
-    const existing = guides.findIndex(g => g.name === name && g.type === 'pdf');
-    const entry = { name, type: 'pdf', category: 'bio', icon: '📄', pdfUrl, sourceFile: pdfUrl, id: Date.now() };
-    if (existing >= 0) guides[existing] = { ...guides[existing], ...entry };
-    else guides.push(entry);
-    window.saveGuides(guides);
-    renderLibrary();
-    window.showToast(`✓ ${name} добавлен`);
-  } catch {
-    window.showToast('⚠️ Ошибка загрузки PDF');
-  }
-}
-window.handlePdfAdd = handlePdfAdd;
 
 // ==================== РЕДАКТИРОВАНИЕ МЕТАДАННЫХ ====================
 let _metaEditTarget = null; // { type: 'guide'|'deck', id }
@@ -749,7 +502,7 @@ function openAddModal(type) {
 
   document.getElementById('modal-title').textContent = isGuide ? 'Добавить пособие' : 'Добавить колоду';
   document.getElementById('modal-sub').textContent = isGuide
-    ? 'Загрузи JSON или PDF, создай конспект'
+    ? 'Загрузи JSON или создай конспект'
     : 'Загрузи или вставь JSON с карточками';
 
   // Switch to file tab by default
@@ -763,7 +516,6 @@ function openAddModal(type) {
   if (pasteInput) pasteInput.value = '';
 
   // Show/hide type-specific buttons
-  document.getElementById('pdf-upload-btn').style.display    = isGuide ? '' : 'none';
   document.getElementById('create-guide-btn').style.display  = isGuide ? '' : 'none';
   document.getElementById('paste-json-section').style.display = isGuide ? 'none' : '';
 
@@ -909,17 +661,13 @@ async function loadYadiskList() {
   list.innerHTML = '';
 
   const folder = currentAddType === 'deck' ? 'decks' : 'guides';
-  const [items, pdfItems] = await Promise.all([
-    window.listYadiskFolder ? window.listYadiskFolder(folder) : [],
-    currentAddType === 'guide' && window.listYadiskFolder ? window.listYadiskFolder('pdfs') : []
-  ]);
+  const items = await (window.listYadiskFolder ? window.listYadiskFolder(folder) : Promise.resolve([]));
 
   if (loading) loading.style.display = 'none';
 
   const jsonItems = items.filter(i => i.name.endsWith('.json') && i.type === 'file');
-  const pdfFiles = pdfItems.filter(i => i.name.toLowerCase().endsWith('.pdf') && i.type === 'file');
 
-  if (jsonItems.length === 0 && pdfFiles.length === 0) {
+  if (jsonItems.length === 0) {
     list.innerHTML = '<div class="gh-loading">Нет файлов на Яндекс Диске</div>';
     return;
   }
@@ -949,33 +697,6 @@ async function loadYadiskList() {
     } catch { /* пропустить плохой файл */ }
   }
 
-  // PDF files (only for guides tab)
-  for (const item of pdfFiles) {
-    const name = item.name.replace(/\.pdf$/i, '');
-    const publicUrl = item.public_url || item.path;
-    const existing = (window.getGuides ? window.getGuides() : []).find(g => g.name === name && g.type === 'pdf');
-    const el = document.createElement('div');
-    el.className = 'gh-item' + (existing ? ' loaded' : '');
-    el.innerHTML = `
-      <div class="gh-item-icon">${existing ? '✓' : '📄'}</div>
-      <div class="gh-item-info">
-        <div class="gh-item-name">${window.escapeHtml(name)}</div>
-        <div class="gh-item-sub">PDF · ${(item.size / 1024).toFixed(0)} КБ</div>
-      </div>
-      <div class="gh-item-btn">${existing ? 'Добавлено' : 'Добавить'}</div>`;
-    if (!existing) {
-      el.onclick = async () => {
-        const dlUrl = await window.getYadiskDownloadUrl(publicUrl);
-        const guides = window.getGuides ? window.getGuides() : [];
-        guides.push({ id: Date.now(), name, type: 'pdf', category: 'bio', icon: '📄', pdfUrl: publicUrl, sourceFile: publicUrl });
-        window.saveGuides(guides);
-        renderLibrary();
-        closeAddModal();
-        window.showToast(`✓ ${name} добавлен`);
-      };
-    }
-    list.appendChild(el);
-  }
 }
 window.loadYadiskList = loadYadiskList;
 
