@@ -299,16 +299,6 @@ window.openGuide = openGuide;
 const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs';
 const PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs';
 
-// CORS прокси (Cloudflare Worker). Установи свой URL в Настройках приложения.
-// Пока не настроен — PDFs отображаются через Google Docs Viewer (менее надёжно).
-function _getCorsProxy() {
-  return localStorage.getItem('pdf_cors_proxy') || '';
-}
-function _proxyUrl(url) {
-  const proxy = _getCorsProxy();
-  return proxy ? proxy + '?url=' + encodeURIComponent(url) : url;
-}
-
 let _pdfDoc = null;
 let _pdfPage = 1;
 let _pdfScale = 1.5;
@@ -340,14 +330,11 @@ async function loadPdfInViewer(pdfUrl) {
 
   try {
     const dlUrl = await window.getYadiskDownloadUrl(pdfUrl);
-    const proxy = _getCorsProxy();
-    const canUsePdfJs = _isLocalhost || !!proxy;
 
-    if (canUsePdfJs) {
-      // Localhost или настроен CORS прокси — используем PDF.js (полный функционал)
+    if (_isLocalhost) {
+      // Localhost: грузим через PDF.js напрямую
       await _ensurePdfJs();
-      const fetchUrl = _isLocalhost ? dlUrl : _proxyUrl(dlUrl);
-      const res = await fetch(fetchUrl);
+      const res = await fetch(dlUrl);
       if (!res.ok) throw new Error('fetch ' + res.status);
       const arrayBuffer = await res.arrayBuffer();
       _pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -356,7 +343,7 @@ async function loadPdfInViewer(pdfUrl) {
       await _pdfAutoFitScale();
       await _renderPdfPage();
     } else {
-      // Нет прокси — Google Docs Viewer (ограниченный, без навигации)
+      // Production: Google Docs Viewer (обходит CORS)
       loading.style.display = 'none';
       const toolbar = document.getElementById('pdf-toolbar');
       if (toolbar) toolbar.style.display = 'none';
@@ -563,26 +550,15 @@ function openGuideUrl() {
 }
 window.openGuideUrl = openGuideUrl;
 
-async function deleteGuide(id) {
+function deleteGuide(id) {
   if (!confirm('Удалить пособие?')) return;
   const guides = window.getGuides ? window.getGuides() : [];
   const guide = guides.find(g => g.id === id);
-  if (!guide) return;
-
-  guide.deleted = true;
-  guide.updatedAt = Date.now();
+  if (guide) { guide.deleted = true; guide.updatedAt = Date.now(); }
   window.saveGuides(guides);
   window.showScreen('library-screen');
   renderLibrary();
-
-  // Удаляем PDF файл с Яндекс Диска
-  if (guide.type === 'pdf' && guide.pdfUrl && window.deleteFileFromYadisk) {
-    window.showToast('⏳ Удаляю файл с Яндекс Диска…');
-    const ok = await window.deleteFileFromYadisk(guide.pdfUrl);
-    window.showToast(ok ? '✓ Пособие и файл удалены' : '✓ Пособие удалено (файл на диске остался)');
-  } else {
-    window.showToast('✓ Пособие удалено');
-  }
+  window.showToast('✓ Пособие удалено');
 }
 
 // ==================== PDF ====================

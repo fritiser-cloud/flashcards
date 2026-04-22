@@ -33,8 +33,6 @@ function renderSettings() {
   if (ghUserInput) ghUserInput.value = localStorage.getItem('gh_user') || 'fritiser-cloud';
   if (ghRepoInput) ghRepoInput.value = localStorage.getItem('gh_repo') || 'flashcards';
   if (yadiskTokenInput) yadiskTokenInput.value = localStorage.getItem('yadisk_token') || '';
-  const proxyInput = document.getElementById('pdf-proxy-input');
-  if (proxyInput) proxyInput.value = localStorage.getItem('pdf_cors_proxy') || '';
   updateSettingsStats();
 }
 window.renderSettings = renderSettings;
@@ -47,9 +45,6 @@ function saveSettings() {
   localStorage.setItem('gh_repo', ghRepo);
   if (yadiskToken) localStorage.setItem('yadisk_token', yadiskToken);
   else localStorage.removeItem('yadisk_token');
-  const proxyUrl = document.getElementById('pdf-proxy-input')?.value.trim() || '';
-  if (proxyUrl) localStorage.setItem('pdf_cors_proxy', proxyUrl);
-  else localStorage.removeItem('pdf_cors_proxy');
   window.showToast('✓ Настройки сохранены');
 }
 window.saveSettings = saveSettings;

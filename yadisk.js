@@ -165,49 +165,8 @@ window.loadYadiskImage = async function(url, imgEl) {
   }
 };
 
-// Удалить файл с Яндекс Диска по public_url
-// Ищем файл среди опубликованных ресурсов, получаем его disk-путь, затем удаляем
-async function deleteFileFromYadisk(publicUrl) {
-  const token = getYadiskToken();
-  if (!token || !publicUrl) return false;
-  try {
-    // Перебираем опубликованные файлы, ищем совпадение по public_url
-    let diskPath = null;
-    let offset = 0;
-    while (!diskPath) {
-      const res = await fetch(
-        `${YADISK_BASE}/resources/public-resources?type=file&limit=100&offset=${offset}&fields=items.path,items.public_url,total`,
-        { headers: yadiskHeaders() }
-      );
-      if (!res.ok) break;
-      const data = await res.json();
-      const items = data.items || [];
-      const found = items.find(item => item.public_url === publicUrl);
-      if (found) { diskPath = found.path; break; }
-      if (items.length < 100 || offset + 100 >= data.total) break;
-      offset += 100;
-    }
-
-    if (!diskPath) {
-      console.warn('Файл не найден среди опубликованных:', publicUrl);
-      return false;
-    }
-
-    // Удаляем файл без корзины
-    const delRes = await fetch(
-      `${YADISK_BASE}/resources?path=${encodeURIComponent(diskPath)}&permanently=true`,
-      { method: 'DELETE', headers: yadiskHeaders() }
-    );
-    return delRes.status === 204 || delRes.status === 202 || delRes.ok;
-  } catch (err) {
-    console.error('Ошибка удаления с Яндекс Диска:', err);
-    return false;
-  }
-}
-
 window.getYadiskToken = getYadiskToken;
 window.uploadFileToYadisk = uploadFileToYadisk;
 window.getYadiskDownloadUrl = getYadiskDownloadUrl;
 window.listYadiskFolder = listYadiskFolder;
 window.fetchYadiskJson = fetchYadiskJson;
-window.deleteFileFromYadisk = deleteFileFromYadisk;
