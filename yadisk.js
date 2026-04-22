@@ -165,8 +165,35 @@ window.loadYadiskImage = async function(url, imgEl) {
   }
 };
 
+// Удалить файл с Яндекс Диска по public_url (сначала получаем путь, потом удаляем)
+async function deleteFileFromYadisk(publicUrl) {
+  const token = getYadiskToken();
+  if (!token || !publicUrl) return false;
+  try {
+    // Получаем мета-информацию о файле по public_key чтобы узнать path
+    const metaRes = await fetch(
+      `${YADISK_BASE}/public/resources?public_key=${encodeURIComponent(publicUrl)}&fields=path`,
+      { headers: yadiskHeaders() }
+    );
+    if (!metaRes.ok) return false;
+    const { path } = await metaRes.json();
+    if (!path) return false;
+
+    // Удаляем файл (permanently=true — без корзины)
+    const delRes = await fetch(
+      `${YADISK_BASE}/resources?path=${encodeURIComponent(path)}&permanently=true`,
+      { method: 'DELETE', headers: yadiskHeaders() }
+    );
+    return delRes.ok || delRes.status === 204 || delRes.status === 202;
+  } catch (err) {
+    console.error('Ошибка удаления с Яндекс Диска:', err);
+    return false;
+  }
+}
+
 window.getYadiskToken = getYadiskToken;
 window.uploadFileToYadisk = uploadFileToYadisk;
 window.getYadiskDownloadUrl = getYadiskDownloadUrl;
 window.listYadiskFolder = listYadiskFolder;
 window.fetchYadiskJson = fetchYadiskJson;
+window.deleteFileFromYadisk = deleteFileFromYadisk;

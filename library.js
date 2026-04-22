@@ -313,50 +313,41 @@ async function _ensurePdfJs() {
   window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
 }
 
+const _isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
 async function loadPdfInViewer(pdfUrl) {
   const canvas = document.getElementById('pdf-canvas');
   const iframe = document.getElementById('pdf-iframe');
   const loading = document.getElementById('pdf-loading');
   if (!canvas || !loading) return;
 
-  // Reset state
   _pdfDoc = null;
   _pdfPage = 1;
   canvas.style.display = 'none';
-  if (iframe) iframe.style.display = 'none';
+  if (iframe) iframe.src = '';
   loading.style.display = 'flex';
   _updatePdfNav();
 
   try {
-    await _ensurePdfJs();
     const dlUrl = await window.getYadiskDownloadUrl(pdfUrl);
 
-    // Пробуем загрузить через PDF.js (работает если нет CORS ограничений)
-    let corsOk = false;
-    try {
-      const res = await fetch(dlUrl, { mode: 'cors' });
-      if (res.ok) {
-        const arrayBuffer = await res.arrayBuffer();
-        _pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        corsOk = true;
-      }
-    } catch { /* CORS заблокирован */ }
-
-    if (corsOk) {
+    if (_isLocalhost) {
+      // Localhost: грузим через PDF.js (нет CORS ограничений)
+      await _ensurePdfJs();
+      const res = await fetch(dlUrl);
+      if (!res.ok) throw new Error('fetch ' + res.status);
+      const arrayBuffer = await res.arrayBuffer();
+      _pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       _pdfPage = 1;
       _updatePdfNav();
       await _pdfAutoFitScale();
       await _renderPdfPage();
     } else {
-      // Fallback: Google Docs Viewer — работает без CORS
+      // Production: сразу Google Docs Viewer — без CORS ошибок
       loading.style.display = 'none';
-      if (iframe) {
-        iframe.src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(dlUrl) + '&embedded=true';
-        iframe.style.display = 'block';
-        // Скрыть PDF.js тулбар — управление берёт Google Docs
-        const toolbar = document.querySelector('.pdf-toolbar');
-        if (toolbar) toolbar.style.display = 'none';
-      }
+      const toolbar = document.getElementById('pdf-toolbar');
+      if (toolbar) toolbar.style.display = 'none';
+      if (iframe) iframe.src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(dlUrl) + '&embedded=true';
     }
   } catch (err) {
     loading.style.display = 'none';
@@ -441,16 +432,18 @@ async function _renderPdfPage() {
 }
 
 function _updatePdfNav() {
-  const info = document.getElementById('pdf-page-info');
+  const curEl = document.getElementById('pdf-page-cur');
+  const totalEl = document.getElementById('pdf-page-total');
   const btnPrev = document.getElementById('pdf-btn-prev');
   const btnNext = document.getElementById('pdf-btn-next');
   const spreadBtn = document.getElementById('pdf-btn-spread');
   const total = _pdfDoc ? _pdfDoc.numPages : 0;
   const step = _pdfSpread ? 2 : 1;
-  if (info) info.textContent = total ? (_pdfSpread && _pdfPage < total ? `${_pdfPage}-${_pdfPage+1} / ${total}` : `${_pdfPage} / ${total}`) : '— / —';
+  if (curEl) curEl.textContent = total ? (_pdfSpread && _pdfPage < total ? `${_pdfPage}–${_pdfPage+1}` : `${_pdfPage}`) : '—';
+  if (totalEl) totalEl.textContent = total || '—';
   if (btnPrev) btnPrev.disabled = _pdfPage <= 1;
   if (btnNext) btnNext.disabled = !_pdfDoc || _pdfPage + step - 1 >= total;
-  if (spreadBtn) { spreadBtn.style.background = _pdfSpread ? 'var(--lavender)' : ''; spreadBtn.style.color = _pdfSpread ? 'var(--lavender-text)' : ''; }
+  if (spreadBtn) spreadBtn.classList.toggle('active', _pdfSpread);
 }
 
 function pdfNextPage() {
@@ -557,15 +550,26 @@ function openGuideUrl() {
 }
 window.openGuideUrl = openGuideUrl;
 
-function deleteGuide(id) {
+async function deleteGuide(id) {
   if (!confirm('Удалить пособие?')) return;
   const guides = window.getGuides ? window.getGuides() : [];
   const guide = guides.find(g => g.id === id);
-  if (guide) { guide.deleted = true; guide.updatedAt = Date.now(); }
+  if (!guide) return;
+
+  guide.deleted = true;
+  guide.updatedAt = Date.now();
   window.saveGuides(guides);
   window.showScreen('library-screen');
   renderLibrary();
-  window.showToast('Пособие удалено');
+
+  // Удаляем PDF файл с Яндекс Диска
+  if (guide.type === 'pdf' && guide.pdfUrl && window.deleteFileFromYadisk) {
+    window.showToast('⏳ Удаляю файл с Яндекс Диска…');
+    const ok = await window.deleteFileFromYadisk(guide.pdfUrl);
+    window.showToast(ok ? '✓ Пособие и файл удалены' : '✓ Пособие удалено (файл на диске остался)');
+  } else {
+    window.showToast('✓ Пособие удалено');
+  }
 }
 
 // ==================== PDF ====================

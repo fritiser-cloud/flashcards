@@ -431,19 +431,34 @@
     .toc-item:active { background: var(--lavender); color: var(--lavender-text); }
     .toc-item.toc-item-sub { padding-left: 32px; font-size: 14px; font-weight: 400; color: var(--text2); }
     .toc-item:hover { background: var(--surface2); }
-    #guide-pdf-content { display: none; flex: 1; flex-direction: column; min-height: 0; background: #f0f0f0; }
+    #guide-pdf-content { display: none; flex: 1; flex-direction: column; min-height: 0; background: #e8e8ed; }
     #guide-pdf-content.visible { display: flex; }
-    .pdf-toolbar { display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--surface); border-bottom: 1.5px solid var(--border); flex-shrink: 0; }
-    .pdf-tb-btn { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface2); font-size: 18px; font-weight: 700; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
-    .pdf-tb-btn:active { background: var(--lavender); color: var(--lavender-text); }
-    .pdf-tb-btn:disabled { opacity: 0.35; cursor: default; }
-    .pdf-page-info { font-family: var(--font); font-size: 14px; font-weight: 600; color: var(--text2); padding: 0 6px; white-space: nowrap; }
+    /* PDF Toolbar */
+    .pdf-toolbar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: var(--surface); border-bottom: 1.5px solid var(--border); flex-shrink: 0; }
+    .pdf-nav-group { display: flex; align-items: center; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .pdf-tb-btn { width: 38px; height: 36px; border: none; background: transparent; font-size: 16px; font-weight: 700; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.12s, color 0.12s; flex-shrink: 0; }
+    .pdf-tb-btn:hover { background: var(--lavender); color: var(--lavender-text); }
+    .pdf-tb-btn:active { background: var(--lavender-mid); }
+    .pdf-tb-btn:disabled { opacity: 0.3; cursor: default; }
+    .pdf-tb-btn:disabled:hover { background: transparent; color: var(--text2); }
+    .pdf-page-pill { display: flex; align-items: center; gap: 2px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 10px; padding: 0 10px; height: 36px; }
+    .pdf-page-cur { font-family: var(--font); font-size: 14px; font-weight: 700; color: var(--text); }
+    .pdf-page-sep { font-size: 13px; color: var(--text3); margin: 0 4px; }
+    .pdf-page-total { font-family: var(--font); font-size: 13px; color: var(--text3); }
     .pdf-tb-sep { flex: 1; }
-    .pdf-canvas-wrap { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; padding: 16px 8px 80px; min-height: 0; }
-    #pdf-canvas { max-width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.18); border-radius: 4px; }
-    .pdf-loading { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 60px 0; }
-    .pdf-spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--lavender-deep); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    .pdf-loading-text { font-family: var(--font); font-size: 15px; color: var(--text2); }
+    .pdf-zoom-group { display: flex; align-items: center; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .pdf-tb-icon-btn { width: 36px; height: 36px; border: none; background: transparent; font-size: 14px; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.12s; flex-shrink: 0; border-radius: 10px; }
+    .pdf-tb-icon-btn:hover { background: var(--lavender); color: var(--lavender-text); }
+    .pdf-tb-icon-btn.active { background: var(--lavender); color: var(--lavender-text); }
+    /* Canvas area */
+    .pdf-canvas-wrap { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; padding: 20px 12px 80px; min-height: 0; gap: 12px; }
+    #pdf-canvas { max-width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.22); border-radius: 3px; }
+    /* Loading */
+    .pdf-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; flex: 1; }
+    .pdf-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--lavender-deep); border-radius: 50%; animation: spin 0.75s linear infinite; }
+    .pdf-loading-text { font-family: var(--font); font-size: 14px; color: var(--text3); }
+    /* iframe mode */
+    #pdf-iframe { display: none; width: 100%; flex: 1; border: none; min-height: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
     /* Cards editor */
     .card-editor-item { background: var(--surface); border-radius: 16px; border: 1.5px solid var(--border); margin-bottom: 10px; overflow: hidden; }
@@ -701,15 +716,26 @@
   </div>
   <!-- PDF viewer (shown instead of reader-content for PDF guides) -->
   <div id="guide-pdf-content">
-    <div class="pdf-toolbar">
-      <button class="pdf-tb-btn" onclick="pdfPrevPage()" id="pdf-btn-prev">‹</button>
-      <span class="pdf-page-info" id="pdf-page-info">— / —</span>
-      <button class="pdf-tb-btn" onclick="pdfNextPage()" id="pdf-btn-next">›</button>
+    <div class="pdf-toolbar" id="pdf-toolbar">
+      <!-- Навигация по страницам -->
+      <div class="pdf-nav-group">
+        <button class="pdf-tb-btn" onclick="pdfPrevPage()" id="pdf-btn-prev" title="Назад">‹</button>
+        <div class="pdf-page-pill">
+          <span class="pdf-page-cur" id="pdf-page-cur">—</span>
+          <span class="pdf-page-sep">/</span>
+          <span class="pdf-page-total" id="pdf-page-total">—</span>
+        </div>
+        <button class="pdf-tb-btn" onclick="pdfNextPage()" id="pdf-btn-next" title="Вперёд">›</button>
+      </div>
       <div class="pdf-tb-sep"></div>
-      <button class="pdf-tb-btn" onclick="pdfZoomOut()">−</button>
-      <button class="pdf-tb-btn" onclick="pdfZoomIn()">+</button>
-      <button class="pdf-tb-btn" onclick="pdfFitWidth()" id="pdf-btn-fit" title="По ширине">⤢</button>
-      <button class="pdf-tb-btn" onclick="pdfToggleSpread()" id="pdf-btn-spread" title="Двустраничный режим">⊞</button>
+      <!-- Масштаб -->
+      <div class="pdf-zoom-group">
+        <button class="pdf-tb-btn" onclick="pdfZoomOut()" title="Уменьшить">−</button>
+        <button class="pdf-tb-btn" onclick="pdfZoomIn()" title="Увеличить">+</button>
+      </div>
+      <!-- Доп. кнопки -->
+      <button class="pdf-tb-icon-btn" onclick="pdfFitWidth()" id="pdf-btn-fit" title="По ширине">⤢</button>
+      <button class="pdf-tb-icon-btn" onclick="pdfToggleSpread()" id="pdf-btn-spread" title="Двустраничный режим">⊞</button>
     </div>
     <div class="pdf-canvas-wrap" id="pdf-canvas-wrap">
       <div class="pdf-loading" id="pdf-loading">
@@ -717,7 +743,7 @@
         <div class="pdf-loading-text">Загружаю PDF…</div>
       </div>
       <canvas id="pdf-canvas" style="display:none"></canvas>
-      <iframe id="pdf-iframe" style="display:none;width:100%;height:100%;border:none;flex:1" allowfullscreen></iframe>
+      <iframe id="pdf-iframe" allowfullscreen></iframe>
     </div>
   </div>
   <!-- TOC bottom sheet -->
@@ -1096,13 +1122,13 @@
 
 <script src="utils.js?v=4"></script>
 <script src="database.js?v=4"></script>
-<script src="library.js?v=6"></script>
+<script src="library.js?v=8"></script>
 <script src="flashcards.js?v=4"></script>
 <script src="atlas.js?v=4"></script>
 <script src="notes.js?v=4"></script>
 <script src="calendar.js?v=4"></script>
 <script src="scores.js?v=7"></script>
-<script src="yadisk.js?v=4"></script>
+<script src="yadisk.js?v=5"></script>
 <script src="app.js?v=4"></script>
 <script type="module" src="firebase-module.js"></script>
 </body>
