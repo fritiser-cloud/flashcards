@@ -325,11 +325,19 @@ async function loadPdfInViewer(pdfUrl) {
     await _ensurePdfJs();
 
     const dlUrl = await window.getYadiskDownloadUrl(pdfUrl);
-    const res = await fetch(dlUrl);
-    if (!res.ok) throw new Error('fetch ' + res.status);
-    const arrayBuffer = await res.arrayBuffer();
+    // Пробуем fetch с явным cors; если CORS заблокирован — передаём URL напрямую в PDF.js
+    let docSource;
+    try {
+      const res = await fetch(dlUrl, { mode: 'cors' });
+      if (!res.ok) throw new Error('fetch ' + res.status);
+      const arrayBuffer = await res.arrayBuffer();
+      docSource = { data: arrayBuffer };
+    } catch {
+      // CORS недоступен — загружаем через PDF.js напрямую по URL
+      docSource = { url: dlUrl, withCredentials: false };
+    }
 
-    _pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    _pdfDoc = await window.pdfjsLib.getDocument(docSource).promise;
     _pdfPage = 1;
     _updatePdfNav();
 
