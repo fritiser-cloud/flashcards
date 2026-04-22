@@ -299,6 +299,16 @@ window.openGuide = openGuide;
 const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs';
 const PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs';
 
+// CORS прокси (Cloudflare Worker). Установи свой URL в Настройках приложения.
+// Пока не настроен — PDFs отображаются через Google Docs Viewer (менее надёжно).
+function _getCorsProxy() {
+  return localStorage.getItem('pdf_cors_proxy') || '';
+}
+function _proxyUrl(url) {
+  const proxy = _getCorsProxy();
+  return proxy ? proxy + '?url=' + encodeURIComponent(url) : url;
+}
+
 let _pdfDoc = null;
 let _pdfPage = 1;
 let _pdfScale = 1.5;
@@ -330,11 +340,14 @@ async function loadPdfInViewer(pdfUrl) {
 
   try {
     const dlUrl = await window.getYadiskDownloadUrl(pdfUrl);
+    const proxy = _getCorsProxy();
+    const canUsePdfJs = _isLocalhost || !!proxy;
 
-    if (_isLocalhost) {
-      // Localhost: грузим через PDF.js (нет CORS ограничений)
+    if (canUsePdfJs) {
+      // Localhost или настроен CORS прокси — используем PDF.js (полный функционал)
       await _ensurePdfJs();
-      const res = await fetch(dlUrl);
+      const fetchUrl = _isLocalhost ? dlUrl : _proxyUrl(dlUrl);
+      const res = await fetch(fetchUrl);
       if (!res.ok) throw new Error('fetch ' + res.status);
       const arrayBuffer = await res.arrayBuffer();
       _pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -343,7 +356,7 @@ async function loadPdfInViewer(pdfUrl) {
       await _pdfAutoFitScale();
       await _renderPdfPage();
     } else {
-      // Production: сразу Google Docs Viewer — без CORS ошибок
+      // Нет прокси — Google Docs Viewer (ограниченный, без навигации)
       loading.style.display = 'none';
       const toolbar = document.getElementById('pdf-toolbar');
       if (toolbar) toolbar.style.display = 'none';
