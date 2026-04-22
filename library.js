@@ -272,6 +272,12 @@ function openGuide(id) {
   const readerContent = document.getElementById('guide-reader-content');
   const pdfContent = document.getElementById('guide-pdf-content');
   const tocBtn = document.getElementById('toc-toggle-btn');
+  // Всегда сбрасываем тулбар и iframe при открытии
+  const toolbar = document.querySelector('.pdf-toolbar');
+  if (toolbar) toolbar.style.display = '';
+  const pdfIframe = document.getElementById('pdf-iframe');
+  if (pdfIframe) { pdfIframe.src = ''; pdfIframe.style.display = 'none'; }
+
   if (guide.type === 'pdf') {
     if (readerContent) readerContent.style.display = 'none';
     if (pdfContent) pdfContent.classList.add('visible');
@@ -280,8 +286,6 @@ function openGuide(id) {
   } else {
     if (readerContent) readerContent.style.display = '';
     if (pdfContent) pdfContent.classList.remove('visible');
-    const iframe = document.getElementById('guide-pdf-iframe');
-    if (iframe) iframe.src = '';
   }
 
   window.showScreen('guide-detail-screen');
@@ -311,6 +315,7 @@ async function _ensurePdfJs() {
 
 async function loadPdfInViewer(pdfUrl) {
   const canvas = document.getElementById('pdf-canvas');
+  const iframe = document.getElementById('pdf-iframe');
   const loading = document.getElementById('pdf-loading');
   if (!canvas || !loading) return;
 
@@ -318,32 +323,41 @@ async function loadPdfInViewer(pdfUrl) {
   _pdfDoc = null;
   _pdfPage = 1;
   canvas.style.display = 'none';
+  if (iframe) iframe.style.display = 'none';
   loading.style.display = 'flex';
   _updatePdfNav();
 
   try {
     await _ensurePdfJs();
-
     const dlUrl = await window.getYadiskDownloadUrl(pdfUrl);
-    // Пробуем fetch с явным cors; если CORS заблокирован — передаём URL напрямую в PDF.js
-    let docSource;
+
+    // Пробуем загрузить через PDF.js (работает если нет CORS ограничений)
+    let corsOk = false;
     try {
       const res = await fetch(dlUrl, { mode: 'cors' });
-      if (!res.ok) throw new Error('fetch ' + res.status);
-      const arrayBuffer = await res.arrayBuffer();
-      docSource = { data: arrayBuffer };
-    } catch {
-      // CORS недоступен — загружаем через PDF.js напрямую по URL
-      docSource = { url: dlUrl, withCredentials: false };
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        _pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        corsOk = true;
+      }
+    } catch { /* CORS заблокирован */ }
+
+    if (corsOk) {
+      _pdfPage = 1;
+      _updatePdfNav();
+      await _pdfAutoFitScale();
+      await _renderPdfPage();
+    } else {
+      // Fallback: Google Docs Viewer — работает без CORS
+      loading.style.display = 'none';
+      if (iframe) {
+        iframe.src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(dlUrl) + '&embedded=true';
+        iframe.style.display = 'block';
+        // Скрыть PDF.js тулбар — управление берёт Google Docs
+        const toolbar = document.querySelector('.pdf-toolbar');
+        if (toolbar) toolbar.style.display = 'none';
+      }
     }
-
-    _pdfDoc = await window.pdfjsLib.getDocument(docSource).promise;
-    _pdfPage = 1;
-    _updatePdfNav();
-
-    // Auto-fit to screen width on first load
-    await _pdfAutoFitScale();
-    await _renderPdfPage();
   } catch (err) {
     loading.style.display = 'none';
     window.showToast('⚠️ Не удалось загрузить PDF');
