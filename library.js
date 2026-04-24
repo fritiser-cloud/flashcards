@@ -27,7 +27,7 @@ function renderCategoryPills() {
   cats.forEach(cat => {
     const btn = document.createElement('button');
     btn.className = 'cat-pill' + (currentCat === cat.id ? ' active' : '');
-    btn.textContent = (cat.icon ? cat.icon + ' ' : '') + cat.name;
+    btn.textContent = cat.name;
     btn.onclick = () => filterCat(cat.id, btn);
     row.appendChild(btn);
   });
@@ -35,7 +35,7 @@ function renderCategoryPills() {
   // ⚙️ кнопка управления категориями
   const mgBtn = document.createElement('button');
   mgBtn.className = 'cat-pill';
-  mgBtn.textContent = '⚙️';
+  mgBtn.textContent = '···';
   mgBtn.title = 'Управление категориями';
   mgBtn.onclick = openCatsModal;
   row.appendChild(mgBtn);
@@ -401,7 +401,7 @@ function renderMetaCatPills(containerId, getSelected, setSelected) {
   cats.forEach(cat => {
     const btn = document.createElement('button');
     btn.className = 'meta-cat-pill' + (cat.id === getSelected() ? ' selected' : '');
-    btn.textContent = (cat.icon ? cat.icon + ' ' : '') + cat.name;
+    btn.textContent = cat.name;
     btn.onclick = () => {
       setSelected(cat.id);
       container.querySelectorAll('.meta-cat-pill').forEach(b => b.classList.remove('selected'));

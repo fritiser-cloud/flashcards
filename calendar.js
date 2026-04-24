@@ -166,7 +166,7 @@ async function renderUpcomingReviews() {
     return;
   }
   container.innerHTML = '';
-  const subjectNames = { bio: '🧬 Биология', ru: '📖 Русский', phys: '⚛️ Физика', chem: '🧪 Химия' };
+  const subjectNames = { bio: 'Биология', ru: 'Русский', phys: 'Физика', chem: 'Химия' };
   upcoming.forEach(review => {
     const date = new Date(review.next_review_date);
     const isOverdue = date < new Date();
@@ -175,7 +175,7 @@ async function renderUpcomingReviews() {
     item.innerHTML = `
       <div class="review-item-info">
         <div class="review-item-name">${window.escapeHtml(review.name)}</div>
-        <div class="review-item-subject">${subjectNames[review.subject] || '📚 Другое'}</div>
+        <div class="review-item-subject">${subjectNames[review.subject] || 'Другое'}</div>
       </div>
       <div class="review-item-date">${date.toLocaleDateString('ru')}</div>
       <button class="review-item-btn" onclick="window.startReview(${review.id})">Повторить</button>
