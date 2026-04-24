@@ -216,37 +216,27 @@ function openGuide(id) {
   const deleteBtn = document.getElementById('guide-delete-btn');
   if (deleteBtn) deleteBtn.onclick = () => deleteGuide(id);
 
-  // Chapters
-  const chapters = guide.chapters || [];
+  // Hide chapters/stats UI
   const statsEl = document.getElementById('guide-stats');
+  if (statsEl) statsEl.style.display = 'none';
   const chapEl = document.getElementById('guide-chapters-list');
-  if (chapters.length) {
-    if (statsEl) statsEl.style.display = 'grid';
-    const chaptersCount = document.getElementById('stat-chapters');
-    if (chaptersCount) chaptersCount.textContent = chapters.length;
-    const tasksCount = document.getElementById('stat-tasks');
-    if (tasksCount) tasksCount.textContent = chapters.reduce((s,c) => s + (c.tasks || 0), 0);
-    if (chapEl) {
-      chapEl.innerHTML = `<div class="guide-sections-title">Содержание</div>` +
-        chapters.map((ch,i) => `
-          <div class="guide-chapter-card" style="margin: 0 24px 10px">
-            <div class="guide-chapter-num">${i+1}</div>
-            <div class="guide-chapter-info">
-              <div class="guide-chapter-name">${window.escapeHtml(ch.title)}</div>
-              <div class="guide-chapter-tasks">${ch.tasks ? ch.tasks + ' задач' : 'Теория'}</div>
-            </div>
-          </div>`).join('');
-    }
-  } else {
-    if (statsEl) statsEl.style.display = 'none';
-    if (chapEl) chapEl.innerHTML = '';
-  }
+  if (chapEl) chapEl.innerHTML = '';
 
-  // Markdown content
+  // Markdown content: merge guide.content + all chapters content
+  const chapters = guide.chapters || [];
   const mdContainer = document.getElementById('guide-markdown-content');
   if (mdContainer) {
-    if (guide.content) {
-      mdContainer.innerHTML = window.safeMarkdown(guide.content);
+    let fullText = guide.content || '';
+    if (chapters.length) {
+      const chaptersText = chapters.map(ch => {
+        const heading = ch.name || ch.title || '';
+        const body = ch.content || '';
+        return heading ? `# ${heading}\n\n${body}` : body;
+      }).join('\n\n---\n\n');
+      fullText = fullText ? fullText + '\n\n---\n\n' + chaptersText : chaptersText;
+    }
+    if (fullText) {
+      mdContainer.innerHTML = window.safeMarkdown(fullText);
       mdContainer.style.display = '';
     } else {
       mdContainer.innerHTML = '';
@@ -747,29 +737,42 @@ const DECK_AI_PROMPT = `Создай набор флеш-карточек для
 - Охвати все ключевые понятия темы, типичные для заданий ЕГЭ
 - Не добавляй никакого текста вне JSON`;
 
-const GUIDE_AI_PROMPT = `Создай подробный конспект для подготовки к ЕГЭ по биологии на тему: "[ТЕМА]"
+const GUIDE_AI_PROMPT = `Ты — опытный репетитор по ЕГЭ. Создай подробный конспект на тему: "[ТЕМА]"
+
+Заполни все поля ниже самостоятельно: выбери подходящий предмет (category), иконку, теги и разбей материал на логичные разделы.
 
 Верни результат строго в формате JSON (без лишнего текста до и после):
 
 {
-  "name": "Название конспекта",
+  "name": "Краткое название конспекта",
   "type": "guide",
   "category": "bio",
   "icon": "🧬",
-  "color": "lavender",
-  "desc": "Краткое описание (1–2 предложения)",
-  "tags": ["ЕГЭ 2026", "Задание X", "ключевое слово"],
+  "desc": "1–2 предложения: что охватывает конспект и для каких заданий ЕГЭ он полезен",
+  "tags": ["ЕГЭ 2026", "Задание X", "ключевое слово темы"],
   "chapters": [
-    { "title": "Название раздела", "tasks": 5 }
+    { "name": "Название раздела 1", "tasks": 5 },
+    { "name": "Название раздела 2", "tasks": 4 }
   ],
-  "content": "# Заголовок\\n\\nТекст конспекта в формате Markdown.\\n\\n## Раздел 1\\n\\nСодержимое...\\n\\n## Раздел 2\\n\\nСодержимое..."
+  "content": "# [ТЕМА]\\n\\n## Раздел 1\\n\\nСодержимое...\\n\\n## Раздел 2\\n\\nСодержимое..."
 }
 
+Правила для поля category — выбери одно:
+- "bio" — биология
+- "chem" — химия
+- "ru" — русский язык
+- "phys" — физика
+- "math" — математика
+- "hist" — история/обществознание
+
+Правила для поля icon — подбери подходящий эмодзи по теме.
+
 Требования к полю content:
-- Используй Markdown: ## для разделов, ### для подразделов, **жирный** для терминов, - для списков
-- Включи: определения, классификации, схемы в виде списков, типичные задания ЕГЭ и разбор ошибок
-- Объём: не менее 1500 слов
-- Все \\n внутри строки JSON должны быть экранированы как \\\\n
+- Только Markdown: ## разделы, ### подразделы, **жирный** для терминов, - для списков, | таблицы |
+- Структура: определения → классификации/схемы → механизмы/процессы → исключения и ловушки → типичные задания ЕГЭ с разбором
+- Обязательно включи раздел "## Типичные ошибки и ловушки ЕГЭ" и "## Как решать задание X"
+- Объём: не менее 2000 слов, не менее 5 разделов ##
+- Все переносы строк внутри JSON-строки — экранируй как \\n
 - Не добавляй никакого текста вне JSON`;
 
 function openSampleModal() {

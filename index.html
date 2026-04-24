@@ -424,12 +424,30 @@
     /* scores hero badge */
     #scores-screen .home-label { background: var(--peach); color: var(--peach-text); }
     .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 16px; }
-    .hard-item { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 12px; }
-    .hard-rank { font-family: var(--font-display); font-size: 26px; color: var(--accent2); min-width: 40px; }
+    .hard-item { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; }
+    .hard-rank { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--accent2); min-width: 32px; }
     .hard-info { flex: 1; min-width: 0; }
     .hard-q { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hard-stat { font-size: 13px; color: var(--text3); margin-top: 4px; }
-    .hard-badge { background: var(--accent2-light); color: var(--accent2); font-size: 13px; font-weight: 700; padding: 5px 10px; border-radius: 20px; white-space: nowrap; }
+    .hard-badge { background: var(--accent2-light); color: var(--accent2); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+    /* Deck detail hero */
+    .deck-hero { display: flex; align-items: center; gap: 18px; padding: 8px 0 4px; }
+    .deck-hero-icon { width: 68px; height: 68px; border-radius: 20px; background: linear-gradient(135deg, var(--lavender), var(--lavender-mid)); display: flex; align-items: center; justify-content: center; font-size: 34px; flex-shrink: 0; }
+    .deck-hero-name { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .deck-hero-sub { font-size: 14px; color: var(--text3); margin-top: 5px; }
+    /* Deck action groups */
+    .deck-action-group { display: flex; flex-direction: column; gap: 10px; }
+    .deck-action-group + .deck-action-group { margin-top: 4px; }
+    .btn-deck-primary { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 17px 24px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 16px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; background: linear-gradient(135deg, var(--lavender-deep), #7C5CBF); color: #fff; box-shadow: 0 4px 20px rgba(149,117,205,0.35); }
+    .btn-deck-primary:active { box-shadow: none; transform: scale(0.98); }
+    .btn-deck-fav { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 15px 24px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: var(--yellow-light); color: #9A6F00; border: 1.5px solid #F5C842; }
+    .btn-deck-errors { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 15px 24px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: var(--accent2-light); color: var(--accent2); border: 1.5px solid #F9CEB3; }
+    .btn-deck-errors:disabled { opacity: 0.4; cursor: default; }
+    .btn-deck-secondary { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px 24px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; background: var(--surface); color: var(--text2); border: 1.5px solid var(--border); }
+    .btn-deck-secondary:active { background: var(--surface2); }
+    .btn-deck-secondary svg { width: 17px; height: 17px; stroke: var(--text3); stroke-width: 2; fill: none; }
+    .btn-deck-primary svg, .btn-deck-fav svg, .btn-deck-errors svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .deck-divider { height: 1px; background: var(--border); margin: 4px 0; }
     .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .stat-box { background: linear-gradient(135deg, var(--lavender), var(--lavender-mid)); border-radius: var(--radius-sm); padding: 18px 20px; box-shadow: 0 2px 12px rgba(149,117,205,0.15); }
     .stat-box.sage { background: linear-gradient(135deg, var(--sage), var(--sage-mid)); box-shadow: 0 2px 12px rgba(102,187,106,0.15); }
@@ -737,9 +755,9 @@
 <div id="deck-detail-screen" class="screen">
   <div class="nav"><button class="nav-btn" onclick="showScreen('decks-screen')"><i data-lucide="arrow-left"></i></button><div class="nav-title" id="deck-detail-nav-title">Колода</div><button class="nav-btn" onclick="openMetaEditModal('deck')" title="Редактировать"><i data-lucide="pencil"></i></button><button class="nav-btn" id="deck-delete-btn"><i data-lucide="trash-2"></i></button></div>
   <div class="scroll">
-    <div style="display: flex; align-items: center; gap: 20px;"><div style="width: 70px; height: 70px; border-radius: 20px; background: var(--lavender); display: flex; align-items: center; justify-content: center; font-size: 36px;" id="deck-detail-icon">📚</div><div style="flex:1;"><div style="font-family: var(--font-display); font-size: 28px; font-weight: 700;" id="deck-detail-name">—</div><div style="font-size: 15px; color: var(--text3); margin-top: 4px;" id="deck-detail-sub">—</div></div></div>
+    <div class="deck-hero"><div class="deck-hero-icon" id="deck-detail-icon">📚</div><div><div class="deck-hero-name" id="deck-detail-name">—</div><div class="deck-hero-sub" id="deck-detail-sub">—</div></div></div>
     <div class="big-stat-row" id="deck-stats-row"><div class="big-stat good"><div class="num" id="deck-known">0</div><div class="lbl">Знаю</div></div><div class="big-stat bad"><div class="num" id="deck-errors">0</div><div class="lbl">Ошибок</div></div></div>
-    <div class="action-btns" id="deck-actions"></div>
+    <div id="deck-actions"></div>
     <div id="hard-section"><div class="section-title">Сложные карточки</div><div id="hard-list"></div></div>
   </div>
 </div>
@@ -1088,7 +1106,7 @@
 <script src="utils.js?v=4"></script>
 <script src="database.js?v=4"></script>
 <script src="library.js?v=12"></script>
-<script src="flashcards.js?v=4"></script>
+<script src="flashcards.js?v=5"></script>
 <script src="atlas.js?v=4"></script>
 <script src="notes.js?v=4"></script>
 <script src="calendar.js?v=5"></script>

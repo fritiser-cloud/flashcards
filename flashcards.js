@@ -66,7 +66,7 @@ async function renderDecks() {
           <div class="deck-meta">${total} ${isMatch ? 'блоков' : 'карточек'}${!isMatch ? ' · ' + pct + '% освоено' : ''}</div>
           ${!isMatch ? `<div class="deck-progress"><div class="deck-progress-fill" style="width:${pct}%"></div></div>` : ''}
         </div>
-        <span class="deck-type-badge ${isMatch ? 'match' : ''}">${isMatch ? '🔗 Паронимы' : '📋 Карточки'}</span>
+        ${isMatch ? '<span class="deck-type-badge match">Паронимы</span>' : ''}
         <div class="deck-arrow">›</div>`;
       el.onclick = () => openDeck(deck.id);
       list.appendChild(el);
@@ -102,7 +102,7 @@ async function openDeck(deckId) {
     if (isMatch) {
       if (statsRow) statsRow.style.display = 'none';
       if (hardSection) hardSection.style.display = 'none';
-      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" onclick="window.startMatch(${deckId})">▶ Начать тренировку</button><button class="btn btn-secondary" onclick="deleteDeck(${deckId})">🗑 Удалить колоду</button>`;
+      if (actionsEl) actionsEl.innerHTML = `<div class="deck-action-group"><button class="btn-deck-primary" onclick="window.startMatch(${deckId})"><i data-lucide="play"></i> Начать тренировку</button></div><div class="deck-action-group"><button class="btn-deck-secondary" onclick="deleteDeck(${deckId})"><i data-lucide="trash-2"></i> Удалить колоду</button></div>`;
     } else {
       if (statsRow) statsRow.style.display = 'grid';
       if (hardSection) hardSection.style.display = 'block';
@@ -117,12 +117,17 @@ async function openDeck(deckId) {
       const errorsEl = document.getElementById('deck-errors');
       if (errorsEl) errorsEl.textContent = errors;
       if (actionsEl) actionsEl.innerHTML = `
-        <button class="btn btn-primary" id="btn-study-all">▶ Учить все</button>
-        <button class="btn btn-fav" id="btn-study-fav">⭐ Избранное <span id="fav-count">${favCount ? '('+favCount+')' : ''}</span></button>
-        <button class="btn btn-danger" id="btn-study-errors" ${errorCards.length ? '' : 'disabled'}>⚡ Отработать ошибки</button>
-        <button class="btn btn-notes" id="btn-notes-deck">📋 Конспект ошибок</button>
-        <button class="btn btn-secondary" id="btn-edit-cards">✏️ Редактировать карточки</button>
-        <button class="btn btn-secondary" id="btn-reset">↺ Сбросить прогресс</button>`;
+        <div class="deck-action-group">
+          <button class="btn-deck-primary" id="btn-study-all"><i data-lucide="play"></i> Учить все</button>
+          <button class="btn-deck-fav" id="btn-study-fav"><i data-lucide="star"></i> Избранное${favCount ? ' <span style="opacity:0.7;font-size:13px">('+favCount+')</span>' : ''}</button>
+          <button class="btn-deck-errors" id="btn-study-errors" ${errorCards.length ? '' : 'disabled'}><i data-lucide="zap"></i> Отработать ошибки</button>
+        </div>
+        <div class="deck-divider"></div>
+        <div class="deck-action-group">
+          <button class="btn-deck-secondary" id="btn-notes-deck"><i data-lucide="clipboard-list"></i> Конспект ошибок</button>
+          <button class="btn-deck-secondary" id="btn-edit-cards"><i data-lucide="pencil"></i> Редактировать карточки</button>
+          <button class="btn-deck-secondary" id="btn-reset"><i data-lucide="rotate-ccw"></i> Сбросить прогресс</button>
+        </div>`;
       const studyAll = document.getElementById('btn-study-all');
       if (studyAll) studyAll.onclick = () => startStudy(deckId, false, false);
       const studyFav = document.getElementById('btn-study-fav');
@@ -135,6 +140,7 @@ async function openDeck(deckId) {
       if (notesBtn) notesBtn.onclick = () => window.openNotesDeck(deckId);
       const editCardsBtn = document.getElementById('btn-edit-cards');
       if (editCardsBtn) editCardsBtn.onclick = () => openCardsEditor(deckId);
+      if (window.lucide) window.lucide.createIcons();
       const hardList = document.getElementById('hard-list');
       const sorted = allStats.filter(s => (s.errors || 0) > 0).sort((a,b) => (b.errors||0) - (a.errors||0)).slice(0,5);
       if (hardList) {
