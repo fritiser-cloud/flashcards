@@ -43,7 +43,17 @@ function renderAtlas() {
     const card = document.createElement('div');
     card.className = 'atlas-card';
     const imgHtml = item.image ? `<img id="atlas-img-${item.id}" alt="${window.escapeHtml(item.title)}">` : '🖼️';
-    card.innerHTML = `<div class="atlas-card-img">${imgHtml}</div><div class="atlas-card-content"><div class="atlas-card-title">${window.escapeHtml(item.title)}</div><div class="atlas-card-category">${categoryLabels[item.category]}</div></div>`;
+    // Пытаемся найти нумерованные подписи (1 – текст / 1. текст)
+    const descLines = (item.description || '').split('\n').map(l => l.trim()).filter(Boolean);
+    const numberedLines = descLines.filter(l => /^\d+[\s–\-\.]/.test(l)).slice(0, 8);
+    // Если нет нумерованных — берём первые строки описания
+    const labelSource = numberedLines.length ? numberedLines : descLines.slice(0, 4);
+    const labelsHtml = labelSource.length ? `<div class="atlas-card-labels">${labelSource.map(l => {
+      const m = l.match(/^(\d+)([\s–\-\.]+)(.+)/);
+      return m ? `<div class="atlas-card-label-item"><span class="atlas-card-label-num">${m[1]}.</span>${window.escapeHtml(m[3])}</div>`
+               : `<div class="atlas-card-label-item">${window.escapeHtml(l)}</div>`;
+    }).join('')}</div>` : '';
+    card.innerHTML = `<div class="atlas-card-img">${imgHtml}</div><div class="atlas-card-content"><div class="atlas-card-title">${window.escapeHtml(item.title)}</div><div class="atlas-card-category">${categoryLabels[item.category]}</div></div>${labelsHtml}`;
     if (item.image) {
       const imgEl = card.querySelector(`#atlas-img-${item.id}`);
       if (imgEl) window.loadYadiskImage ? window.loadYadiskImage(item.image, imgEl) : (imgEl.src = item.image);

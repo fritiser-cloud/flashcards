@@ -148,7 +148,8 @@ function renderLibrary() {
   const list = document.getElementById('guides-list');
   if (!list) return;
   
-  let filtered = currentCat === 'all' ? guides : guides.filter(g => g.category === currentCat);
+  let filtered = guides.filter(g => !g.deleted);
+  if (currentCat !== 'all') filtered = filtered.filter(g => g.category === currentCat);
   if (librarySearchQuery) {
     filtered = filtered.filter(g => 
       (g.name && g.name.toLowerCase().includes(librarySearchQuery)) || 
@@ -190,6 +191,7 @@ function getCatName(catId) {
 
 function openGuide(id) {
   currentGuideId = id;
+  window._currentGuideId = id;
   const guides = window.getGuides ? window.getGuides() : [];
   const guide = guides.find(g => g.id === id);
   if (!guide) return;
@@ -236,8 +238,24 @@ function openGuide(id) {
       fullText = fullText ? fullText + '\n\n---\n\n' + chaptersText : chaptersText;
     }
     if (fullText) {
+      // Resolve image:N references from _writerImages
+      const writerImages = guide._writerImages || [];
+      fullText = fullText.replace(/!\[([^\]]*)\]\(image:(\d+)\)/g, (match, alt, idx) => {
+        const img = writerImages[parseInt(idx)];
+        return img ? `![${alt}](${img.url || img})` : match;
+      });
       mdContainer.innerHTML = window.safeMarkdown(fullText);
       mdContainer.style.display = '';
+      // Load images — loadYadiskImage handles both regular and YaDisk URLs
+      mdContainer.querySelectorAll('img').forEach(imgEl => {
+        const src = imgEl.getAttribute('src') || '';
+        if (!src) return;
+        if (window.loadYadiskImage) {
+          window.loadYadiskImage(src, imgEl);
+        } else {
+          imgEl.src = src;
+        }
+      });
     } else {
       mdContainer.innerHTML = '';
       mdContainer.style.display = 'none';
@@ -332,9 +350,9 @@ window.openGuideUrl = openGuideUrl;
 function deleteGuide(id) {
   if (!confirm('Удалить пособие?')) return;
   const guides = window.getGuides ? window.getGuides() : [];
-  const guide = guides.find(g => g.id === id);
-  if (guide) { guide.deleted = true; guide.updatedAt = Date.now(); }
-  window.saveGuides(guides);
+  const updated = guides.filter(g => g.id !== id);
+  window.saveGuides(updated);
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
   window.showScreen('library-screen');
   renderLibrary();
   window.showToast('✓ Пособие удалено');
@@ -484,6 +502,284 @@ function saveCreateGuide() {
   window.showToast(`✓ «${name}» создан`);
 }
 window.saveCreateGuide = saveCreateGuide;
+
+// ==================== ПОЛНОЭКРАННЫЙ РЕДАКТОР ПОСОБИЙ ====================
+let _gwImages = []; // {url, name}
+let _gwEditId = null; // id редактируемого пособия (null = новое)
+let _gwPreviewOn = false;
+let _gwSplitMode = false;
+
+function openGuideWriter(editId) {
+  _gwEditId = editId || null;
+  _gwImages = [];
+  _gwPreviewOn = false;
+
+  const titleEl = document.getElementById('gw-title');
+  const contentEl = document.getElementById('gw-content');
+  const iconBtn = document.getElementById('gw-icon-btn');
+  const iconInput = document.getElementById('gw-icon-input');
+  const catEl = document.getElementById('gw-cat');
+  const previewEl = document.getElementById('gw-preview');
+  const imagesBar = document.getElementById('gw-images-bar');
+
+  if (previewEl) { previewEl.innerHTML = ''; previewEl.classList.remove('visible'); }
+  if (imagesBar) imagesBar.classList.remove('visible');
+
+  if (editId) {
+    const guide = (window.getGuides ? window.getGuides() : []).find(g => g.id === editId);
+    if (guide) {
+      if (titleEl) titleEl.value = guide.name || '';
+      if (contentEl) contentEl.value = guide.content || '';
+      if (iconBtn) iconBtn.textContent = guide.icon || '📖';
+      if (iconInput) iconInput.value = guide.icon || '';
+      if (catEl) catEl.value = guide.category || 'bio';
+      // Восстанавливаем изображения если есть
+      _gwImages = guide._writerImages || [];
+    }
+  } else {
+    if (titleEl) titleEl.value = '';
+    if (contentEl) contentEl.value = '';
+    if (iconBtn) iconBtn.textContent = '📖';
+    if (iconInput) iconInput.value = '';
+    if (catEl) catEl.value = 'bio';
+  }
+
+  gwRenderImages();
+  window.showScreen('guide-writer-screen');
+  if (lucide) lucide.createIcons();
+  setTimeout(() => contentEl?.focus(), 100);
+
+  // Ctrl+V для картинок
+  document.getElementById('gw-content')?.addEventListener('paste', gwHandlePaste, { once: false });
+}
+window.openGuideWriter = openGuideWriter;
+
+function closeGuideWriter() {
+  window.showScreen('library-screen');
+}
+window.closeGuideWriter = closeGuideWriter;
+
+function saveGuideWriter(silent) {
+  const name = (document.getElementById('gw-title')?.value || '').trim();
+  if (!name) { if (!silent) window.showToast('Введи название'); return; }
+  const content = document.getElementById('gw-content')?.value || '';
+  const icon = document.getElementById('gw-icon-input')?.value.trim() || document.getElementById('gw-icon-btn')?.textContent || '📖';
+  const category = document.getElementById('gw-cat')?.value || 'bio';
+
+  const guides = window.getGuides ? window.getGuides() : [];
+  if (_gwEditId) {
+    const g = guides.find(g => g.id === _gwEditId);
+    if (g) { g.name = name; g.content = content; g.icon = icon; g.category = category; g._writerImages = _gwImages; g.updatedAt = Date.now(); }
+  } else {
+    guides.push({ id: Date.now(), name, icon, type: 'guide', category, content, _writerImages: _gwImages, sourceFile: 'local', createdAt: Date.now() });
+  }
+  // При автосохранении нового пособия — запомнить id чтобы следующие автосейвы обновляли его
+  if (!_gwEditId && !silent) {
+    // Будет добавлен с новым id при первом явном сохранении
+  }
+  window.saveGuides(guides);
+  if (window.autoSaveToCloud && !silent) window.autoSaveToCloud();
+  renderLibrary();
+  if (!silent) {
+    closeGuideWriter();
+    window.showToast(`✓ «${name}» сохранён`);
+  }
+}
+window.saveGuideWriter = saveGuideWriter;
+
+let _gwAutoSaveTimer = null;
+
+function gwOnInput() {
+  // Счётчик слов
+  const val = document.getElementById('gw-content')?.value || '';
+  const words = val.trim() ? val.trim().split(/\s+/).length : 0;
+  const wc = document.getElementById('gw-wordcount');
+  if (wc) wc.textContent = `${words} ${words === 1 ? 'слово' : words < 5 ? 'слова' : 'слов'}`;
+
+  // Статус
+  const status = document.getElementById('gw-autosave-status');
+  const gwStatus = document.getElementById('gw-status');
+  if (status) { status.textContent = 'Изменено'; status.className = 'gw-autosave-status'; }
+  if (gwStatus) gwStatus.textContent = 'Черновик';
+
+  // Автосохранение через 2.5с
+  clearTimeout(_gwAutoSaveTimer);
+  _gwAutoSaveTimer = setTimeout(() => {
+    if (status) { status.textContent = 'Сохраняю...'; status.className = 'gw-autosave-status saving'; }
+    saveGuideWriter(true);
+    if (status) { status.textContent = '✓ Сохранено'; status.className = 'gw-autosave-status saved'; }
+    if (gwStatus) gwStatus.textContent = 'Сохранено';
+    setTimeout(() => { if (status) status.textContent = ''; }, 3000);
+  }, 2500);
+}
+window.gwOnInput = gwOnInput;
+
+function gwTogglePreview() {
+  _gwPreviewOn = !_gwPreviewOn;
+  const content = document.getElementById('gw-content');
+  const preview = document.getElementById('gw-preview');
+  const btn = document.getElementById('gw-preview-btn');
+  if (!preview) return;
+
+  if (_gwPreviewOn) {
+    let md = content?.value || '';
+    md = md.replace(/!\[([^\]]*)\]\(image:(\d+)\)/g, (_, alt, i) => {
+      const img = _gwImages[parseInt(i)];
+      return img ? `![${alt}](${img.url})` : `![${alt}](image:${i})`;
+    });
+    preview.innerHTML = window.safeMarkdown ? window.safeMarkdown(md) : md;
+    preview.classList.add('visible');
+    if (content) content.style.display = 'none';
+    if (btn) btn.classList.add('active');
+  } else {
+    preview.classList.remove('visible');
+    if (content) content.style.display = '';
+    if (btn) btn.classList.remove('active');
+  }
+}
+window.gwTogglePreview = gwTogglePreview;
+
+function gwFmt(before, after, linePrefix) {
+  const ta = document.getElementById('gw-content');
+  if (!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const sel = ta.value.substring(start, end);
+  let insert;
+  if (linePrefix) {
+    // Добавить в начало строки
+    const lineStart = ta.value.lastIndexOf('\n', start - 1) + 1;
+    const lineText = ta.value.substring(lineStart, end || ta.value.length);
+    const already = lineText.startsWith(before);
+    const newText = already ? lineText.slice(before.length) : before + lineText;
+    ta.value = ta.value.substring(0, lineStart) + newText + ta.value.substring(end || ta.value.length);
+    ta.selectionStart = ta.selectionEnd = lineStart + newText.length;
+  } else {
+    insert = before + (sel || 'текст') + after;
+    ta.value = ta.value.substring(0, start) + insert + ta.value.substring(end);
+    ta.selectionStart = start + before.length;
+    ta.selectionEnd = start + before.length + (sel || 'текст').length;
+  }
+  ta.focus();
+}
+window.gwFmt = gwFmt;
+
+function gwInsertTable() {
+  const ta = document.getElementById('gw-content');
+  if (!ta) return;
+  const table = '\n| Столбец 1 | Столбец 2 | Столбец 3 |\n|-----------|-----------|------------|\n| Ячейка    | Ячейка    | Ячейка     |\n';
+  const pos = ta.selectionStart;
+  ta.value = ta.value.substring(0, pos) + table + ta.value.substring(pos);
+  ta.selectionStart = ta.selectionEnd = pos + table.length;
+  ta.focus();
+}
+window.gwInsertTable = gwInsertTable;
+
+function gwInsertDivider() {
+  const ta = document.getElementById('gw-content');
+  if (!ta) return;
+  const pos = ta.selectionStart;
+  const div = '\n\n---\n\n';
+  ta.value = ta.value.substring(0, pos) + div + ta.value.substring(pos);
+  ta.selectionStart = ta.selectionEnd = pos + div.length;
+  ta.focus();
+}
+window.gwInsertDivider = gwInsertDivider;
+
+function gwUploadImage() { document.getElementById('gw-image-input')?.click(); }
+window.gwUploadImage = gwUploadImage;
+
+function gwHandleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    window.showToast('⏳ Загрузка...');
+    const url = await (window.uploadImage ? window.uploadImage(e.target.result, 'guides') : e.target.result);
+    gwAddImage(url, file.name);
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+window.gwHandleImageUpload = gwHandleImageUpload;
+
+function gwHandlePaste(e) {
+  const screen = document.getElementById('guide-writer-screen');
+  if (!screen || !screen.classList.contains('active')) return;
+  const hasImage = Array.from(e.clipboardData?.items || []).some(i => i.type.startsWith('image/'));
+  if (!hasImage) return;
+  e.preventDefault();
+  const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+  if (!item) return;
+  const blob = item.getAsFile();
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    window.showToast('⏳ Загрузка изображения...');
+    const url = await (window.uploadImage ? window.uploadImage(ev.target.result, 'guides') : ev.target.result);
+    gwAddImage(url, 'Изображение');
+  };
+  reader.readAsDataURL(blob);
+}
+window.gwHandlePaste = gwHandlePaste;
+
+function gwAddImage(url, name) {
+  _gwImages.push({ url, name: name || `Изображение ${_gwImages.length + 1}` });
+  const idx = _gwImages.length - 1;
+  gwRenderImages();
+  // Вставить в текст
+  gwInsertImageMd(idx);
+  document.getElementById('gw-images-bar')?.classList.add('visible');
+  window.showToast('✓ Изображение добавлено');
+}
+
+function gwInsertImageMd(idx) {
+  const ta = document.getElementById('gw-content');
+  if (!ta) return;
+  const pos = ta.selectionStart;
+  const before = ta.value.substring(0, pos);
+  const needNl = before.length > 0 && !before.endsWith('\n');
+  const md = (needNl ? '\n' : '') + `![Изображение](image:${idx})\n`;
+  ta.value = before + md + ta.value.substring(pos);
+  ta.selectionStart = ta.selectionEnd = pos + md.length;
+  ta.focus();
+}
+window.gwInsertImageMd = gwInsertImageMd;
+
+function gwRenderImages() {
+  const list = document.getElementById('gw-images-list');
+  if (!list) return;
+  if (_gwImages.length === 0) { list.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:4px 0">Нет изображений. Вставь Ctrl+V или нажми иконку.</div>'; return; }
+  list.innerHTML = _gwImages.map((img, i) => `
+    <div class="gw-img-item">
+      <img class="gw-img-thumb" src="${img.url}" alt="">
+      <span class="gw-img-label">${window.escapeHtml(img.name || 'Изображение ' + (i+1))}</span>
+      <button class="gw-img-insert" onclick="gwInsertImageMd(${i})">Вставить</button>
+      <button class="gw-img-del" onclick="gwDeleteImage(${i})">✕</button>
+    </div>`).join('');
+}
+window.gwRenderImages = gwRenderImages;
+
+function gwDeleteImage(idx) {
+  _gwImages.splice(idx, 1);
+  gwRenderImages();
+}
+window.gwDeleteImage = gwDeleteImage;
+
+function gwToggleImagesBar() {
+  const bar = document.getElementById('gw-images-bar');
+  if (!bar) return;
+  bar.classList.toggle('visible');
+  gwRenderImages();
+}
+window.gwToggleImagesBar = gwToggleImagesBar;
+
+// Добавить пасте-листенер при открытии экрана
+document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('paste', (e) => {
+    const screen = document.getElementById('guide-writer-screen');
+    if (!screen || !screen.classList.contains('active')) return;
+    gwHandlePaste(e);
+  });
+});
 
 // ==================== МОДАЛЬНЫЕ ОКНА ИМПОРТА ====================
 function openAddModal(type) {

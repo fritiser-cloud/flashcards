@@ -266,10 +266,26 @@
     .modal-handle { width: 44px; height: 5px; background: var(--border); border-radius: 3px; margin: 0 auto 28px; }
     .modal-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; margin-bottom: 8px; }
     .modal-sub { font-size: 15px; color: var(--text3); margin-bottom: 24px; line-height: 1.6; }
-    .modal-tabs { display: flex; gap: 10px; margin-bottom: 24px; }
-    .modal-tab { flex: 1; padding: 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface2); font-family: var(--font); font-size: 15px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; }
-    .modal-tab.active { background: var(--lavender-deep); color: #fff; border-color: var(--lavender-deep); }
-    .modal-cancel { width: 100%; padding: 16px; border: none; background: none; font-family: var(--font); font-size: 16px; font-weight: 600; color: var(--text3); cursor: pointer; margin-top: 8px; }
+    .modal-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .modal-tab { flex: 1; padding: 11px 10px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface2); font-family: var(--font); font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; display:flex; align-items:center; justify-content:center; gap:6px; }
+    .modal-tab svg { width:16px; height:16px; stroke:currentColor; stroke-width:2; fill:none; }
+    .modal-tab.active { background: var(--lavender); color: var(--lavender-text); border-color: var(--lavender-mid); }
+    .modal-cancel { width: 100%; padding: 14px; border: none; background: none; font-family: var(--font); font-size: 15px; font-weight: 600; color: var(--text3); cursor: pointer; margin-top: 4px; }
+    /* Кнопки опций в модальном окне */
+    .add-option-btn { display:flex; align-items:center; gap:14px; padding:16px 18px; border-radius:18px; cursor:pointer; text-align:left; width:100%; transition:all 0.18s; border: 1.5px solid transparent; }
+    .add-option-btn:active { transform: scale(0.97); }
+    .add-option-btn.opt-purple { background:var(--lavender); border-color:var(--lavender-mid); }
+    .add-option-btn.opt-green { background:var(--sage); border-color:var(--sage-mid); }
+    .add-option-btn.opt-neutral { background:var(--surface2); border-color:var(--border); }
+    .add-option-icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+    .add-option-icon.ic-purple { background:var(--lavender-mid); }
+    .add-option-icon.ic-green { background:var(--sage-mid); }
+    .add-option-icon.ic-neutral { background:var(--border); }
+    .add-option-label { font-size:15px; font-weight:700; line-height:1.3; }
+    .add-option-label.lbl-purple { color:var(--lavender-text); }
+    .add-option-label.lbl-green { color:var(--sage-text); }
+    .add-option-label.lbl-neutral { color:var(--text); }
+    .add-option-sub { font-size:12px; color:var(--text3); margin-top:2px; font-weight:400; }
     .gh-item { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
     .gh-item:active { background: var(--lavender); }
     .gh-item.loaded { border-color: var(--sage-deep); background: var(--sage); }
@@ -360,6 +376,67 @@
     .editor-btn:active { background: var(--lavender); transform: scale(0.96); }
     .editor-btn:hover { background: var(--lavender); border-color: var(--lavender-deep); color: var(--lavender-text); }
     .editor-btn svg { width:16px; height:16px; stroke:currentColor; stroke-width:2; }
+    /* Guide writer — полноэкранный редактор */
+    #guide-writer-screen { background: var(--bg); }
+    /* Nav */
+    .gw-nav { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1.5px solid var(--border); flex-shrink: 0; }
+    .gw-status { flex: 1; font-size: 13px; color: var(--text3); font-weight: 500; text-align: center; }
+    .gw-preview-pill { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface2); font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .gw-preview-pill.active { background: var(--lavender); border-color: var(--lavender-mid); color: var(--lavender-text); }
+    .gw-preview-pill svg { width:14px; height:14px; stroke:currentColor; stroke-width:2; }
+    .gw-save-pill { padding: 7px 18px; border-radius: 20px; border: none; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .gw-save-pill:active { transform: scale(0.96); }
+    /* Header: title + meta */
+    .gw-header { padding: 20px 20px 0; flex-shrink: 0; }
+    .gw-header-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .gw-icon-btn { width: 44px; height: 44px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface2); font-size: 22px; cursor: pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: all 0.15s; position:relative; }
+    .gw-icon-btn:active { transform: scale(0.93); }
+    /* Emoji picker popup */
+    .emoji-picker-overlay { display:none; position:fixed; inset:0; z-index:200; background:rgba(26,21,48,0.35); backdrop-filter:blur(4px); align-items:flex-end; justify-content:center; }
+    .emoji-picker-overlay.open { display:flex; animation:fadeIn 0.15s; }
+    .emoji-picker { background:var(--surface); border-radius:28px 28px 0 0; width:100%; max-width:480px; padding:20px 20px 40px; animation:slideUp 0.25s cubic-bezier(.34,1.56,.64,1); }
+    .emoji-picker-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 16px; }
+    .emoji-picker-title { font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--text); margin-bottom:14px; }
+    .emoji-picker-cats { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+    .emoji-cat-pill { padding:5px 12px; border-radius:20px; border:1.5px solid var(--border); background:var(--surface2); font-size:12px; font-weight:600; color:var(--text2); cursor:pointer; transition:all 0.15s; }
+    .emoji-cat-pill.active { background:var(--lavender); border-color:var(--lavender-mid); color:var(--lavender-text); }
+    .emoji-picker-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:4px; max-height:240px; overflow-y:auto; }
+    .emoji-picker-grid button { font-size:26px; padding:6px; border:none; background:transparent; border-radius:10px; cursor:pointer; transition:all 0.1s; line-height:1; }
+    .emoji-picker-grid button:active { background:var(--lavender); transform:scale(0.88); }
+    .emoji-picker-cancel { width:100%; margin-top:14px; padding:12px; border:none; background:none; font-size:15px; font-weight:600; color:var(--text3); cursor:pointer; }
+    .gw-cat-select { height: 36px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 13px; font-weight: 500; padding: 0 12px; outline: none; cursor: pointer; }
+    .gw-title-input { width: 100%; font-family: var(--font-display); font-size: 26px; font-weight: 700; border: none; background: transparent; color: var(--text); outline: none; resize: none; line-height: 1.3; padding: 0; min-height: 36px; overflow: hidden; letter-spacing: -0.3px; }
+    .gw-title-input::placeholder { color: var(--text3); }
+    /* Toolbar */
+    .gw-toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 10px; background: var(--surface); border-top: 1.5px solid var(--border); border-bottom: 1.5px solid var(--border); flex-shrink: 0; overflow-x: auto; margin-top: 14px; }
+    .gw-toolbar::-webkit-scrollbar { display: none; }
+    .gw-btn { min-width: 34px; height: 32px; border-radius: 8px; border: none; background: transparent; font-size: 13px; font-weight: 700; color: var(--text2); cursor: pointer; transition: all 0.12s; display:inline-flex; align-items:center; justify-content:center; gap: 3px; padding: 0 7px; white-space: nowrap; flex-shrink: 0; }
+    .gw-btn:hover { background: var(--surface2); color: var(--text); }
+    .gw-btn:active { background: var(--lavender); color: var(--lavender-deep); transform: scale(0.94); }
+    .gw-btn.active { background: var(--lavender); color: var(--lavender-deep); }
+    .gw-btn svg { width:14px; height:14px; stroke:currentColor; stroke-width:2.2; fill:none; flex-shrink:0; }
+    .gw-sep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; flex-shrink:0; }
+    /* Body */
+    .gw-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+    .gw-editor-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .gw-textarea { flex: 1; padding: 18px 20px 20px; border: none; background: var(--bg); font-family: 'DM Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.85; color: var(--text); resize: none; outline: none; overflow-y: auto; }
+    .gw-textarea::placeholder { color: var(--text3); line-height: 2; }
+    .gw-preview-pane { flex: 1; overflow-y: auto; padding: 20px 24px 80px; border-left: 1.5px solid var(--border); display: none; }
+    .gw-preview-pane.visible { display: block; }
+    /* Status bar */
+    .gw-statusbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+    .gw-wordcount { font-size: 12px; color: var(--text3); font-weight: 500; }
+    .gw-autosave-status { font-size: 12px; color: var(--text3); font-weight: 500; }
+    .gw-autosave-status.saving { color: var(--lavender-deep); }
+    .gw-autosave-status.saved { color: var(--accent); }
+    /* Images bar */
+    .gw-images-bar { display: none; padding: 10px 16px; background: var(--surface2); border-top: 1px solid var(--border); flex-shrink: 0; max-height: 180px; overflow-y: auto; }
+    .gw-images-bar.visible { display: block; }
+    .gw-img-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .gw-img-thumb { width: 48px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); flex-shrink:0; }
+    .gw-img-label { font-size: 13px; color: var(--text2); flex: 1; }
+    .gw-img-insert { font-size: 12px; font-weight: 600; color: var(--lavender-deep); background: var(--lavender); border: none; border-radius: 6px; padding: 3px 10px; cursor: pointer; flex-shrink:0; }
+    .gw-img-del { font-size: 12px; font-weight: 600; color: var(--accent2); background: var(--accent2-light); border: none; border-radius: 6px; padding: 3px 10px; cursor: pointer; flex-shrink:0; }
     .btn svg { width:16px; height:16px; stroke:currentColor; stroke-width:2.2; vertical-align:middle; margin-right:2px; }
     .editor-content { flex: 1; padding: 24px 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
     .empty-state { text-align: center; padding: 80px 32px; color: var(--text3); }
@@ -374,16 +451,17 @@
     .notes-header-row { display: flex; align-items: center; gap: 12px; padding: 12px 24px; }
     .notes-header-row .search-box { flex: 1; padding: 0; }
     .notes-header-row .search-input { padding: 16px 20px 16px 48px; background-position: 16px center; }
-    .note-image-item { position: relative; width: 90px; height: 90px; border-radius: var(--radius-sm); overflow: hidden; border: 1.5px solid var(--border); background: var(--surface2); }
-    .note-image-item img { width: 100%; height: 100%; object-fit: cover; }
-    .note-image-delete { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.7); color: white; border: none; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.8; transition: opacity 0.2s; }
-    .note-image-delete:hover { opacity: 1; }
-    .note-image-number { position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.7); color: white; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px; }
-    .atlas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 18px; padding: 0; }
+    .note-image-item { position: relative; border-radius: var(--radius-sm); overflow: hidden; border: 1.5px solid var(--border); background: var(--surface2); margin-bottom: 10px; max-width: 100%; }
+    .note-image-item img { width: 100%; max-width: 100%; max-height: 260px; object-fit: contain; display: block; background: var(--surface2); }
+    .note-image-toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--surface); border-top: 1px solid var(--border); }
+    .note-image-label { font-size: 12px; color: var(--text3); flex: 1; font-weight: 500; }
+    .note-image-insert { font-size: 12px; font-weight: 600; color: var(--lavender-deep); cursor: pointer; background: var(--lavender); border: none; border-radius: 8px; padding: 4px 10px; }
+    .note-image-delete { font-size: 12px; font-weight: 600; color: var(--accent2); cursor: pointer; background: var(--accent2-light); border: none; border-radius: 8px; padding: 4px 10px; }
+    .atlas-grid { display: grid; grid-template-columns: 1fr; gap: 20px; padding: 0; }
     .atlas-card { background: var(--surface); border-radius: var(--radius); border: 1.5px solid var(--border); overflow: hidden; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow); }
-    .atlas-card:active { transform: scale(0.97); }
-    .atlas-card-img { width: 100%; min-height: 180px; object-fit: contain; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 56px; border-bottom: 1.5px solid var(--border); padding: 16px; }
-    .atlas-card-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .atlas-card:active { transform: scale(0.98); }
+    .atlas-card-img { width: 100%; min-height: 280px; object-fit: contain; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 72px; border-bottom: 1.5px solid var(--border); padding: 20px; }
+    .atlas-card-img img { max-width: 100%; max-height: 340px; object-fit: contain; }
     .atlas-card-content { padding: 16px; display: flex; flex-direction: column; gap: 6px; }
     .atlas-card-title { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.4; word-break: break-word; }
     .atlas-card-category { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); }
@@ -391,6 +469,11 @@
     .atlas-detail-title { font-family: var(--font-display); font-size: 30px; font-weight: 600; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
     .atlas-detail-category { display: inline-block; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; background: var(--lavender); color: var(--lavender-text); margin-bottom: 20px; }
     .atlas-detail-desc { font-size: 16px; line-height: 1.8; color: var(--text2); }
+    #atlas-detail-screen .reader-content { padding: 24px 24px 80px; }
+    /* Atlas card labels */
+    .atlas-card-labels { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); background: var(--surface); }
+    .atlas-card-label-item { font-size: 14px; color: var(--text2); line-height: 1.5; }
+    .atlas-card-label-num { font-weight: 700; color: var(--lavender-deep); margin-right: 6px; }
     .atlas-categories { display: flex; gap: 10px; overflow-x: auto; padding: 16px 24px; scrollbar-width: none; background: transparent; }
     .atlas-categories::-webkit-scrollbar { display: none; }
     .atlas-cat-pill { flex-shrink: 0; padding: 10px 20px; border-radius: 30px; border: 1.5px solid var(--border); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; white-space: nowrap; box-shadow: var(--shadow); }
@@ -554,13 +637,15 @@
       body { background: #F0F0ED; }
       .scroll, .reader-content, .editor-content { padding-left: 32px; padding-right: 32px; }
       .bottom-nav { max-width: calc(1200px - 20px); margin: 0 auto max(14px, env(safe-area-inset-bottom)); }
-      .atlas-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
-      .atlas-card-img { min-height: 200px; padding: 20px; }
+      .atlas-grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 24px; }
+      .atlas-card-img { min-height: 320px; padding: 24px; }
       .note-editor, .flashcard-container { max-width: 1200px; margin: 0 auto; }
       #note-editor-screen .note-editor { max-width: 1200px; margin: 0 auto; width: 100%; }
       #note-editor-screen .editor-content, #note-editor-screen .editor-toolbar, #note-editor-screen .editor-title-input { max-width: 100%; }
+      .note-view-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--text); padding: 16px 24px 8px; line-height: 1.3; }
       #atlas-editor-screen .note-editor { max-width: 1200px; margin: 0 auto; width: 100%; }
     }
+    .note-view-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--text); padding: 16px 24px 8px; line-height: 1.3; }
     .atlas-card { display: flex; flex-direction: column; }
     .atlas-card-img { display: flex; align-items: center; justify-content: center; background: var(--surface2); }
     .atlas-card-title, .atlas-card-category { white-space: normal; word-break: break-word; }
@@ -708,7 +793,7 @@
     </div>
     <div class="guide-header-actions">
       <button class="guide-action-btn" id="toc-toggle-btn" onclick="toggleTOC()" title="Оглавление" style="display:none"><i data-lucide="list"></i></button>
-      <button class="guide-action-btn" onclick="openMetaEditModal('guide')" title="Редактировать"><i data-lucide="pencil"></i></button>
+      <button class="guide-action-btn" id="guide-edit-btn" onclick="window.openGuideWriter(window._currentGuideId)" title="Редактировать"><i data-lucide="pencil"></i></button>
       <button class="guide-action-btn" id="guide-delete-btn" title="Удалить"><i data-lucide="trash-2"></i></button>
     </div>
   </div>
@@ -806,10 +891,26 @@
 <!-- РЕДАКТОР ЗАМЕТКИ -->
 <div id="note-editor-screen" class="screen">
   <div class="note-editor">
-    <div class="nav"><button class="nav-btn" onclick="closeNoteEditor()"><i data-lucide="arrow-left"></i></button><div class="nav-title"></div><button class="nav-btn" onclick="saveNote()"><i data-lucide="check"></i></button></div>
-    <input type="text" class="editor-title-input" id="note-title" placeholder="Название заметки">
-    <div class="editor-toolbar"><button class="editor-btn" onclick="togglePreview()"><span id="preview-toggle-text"><i data-lucide="eye"></i> Превью</span></button><button class="editor-btn" onclick="triggerNoteImageUpload()"><i data-lucide="image"></i> Картинка</button><select class="folder-select" id="note-folder"><option value="work">Работа</option><option value="study">Учёба</option><option value="personal">Личное</option><option value="ideas">Идеи</option></select><button class="editor-btn" onclick="deleteNote()" style="margin-left:auto;color:var(--red)"><i data-lucide="trash-2"></i></button></div>
-    <div class="editor-content"><div id="note-images-gallery" style="display:none; margin-bottom:20px"><div style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text3); margin-bottom:10px">Изображения</div><div id="note-images-container" style="display:flex; gap:12px; flex-wrap:wrap"></div></div><textarea class="editor-textarea" id="note-content" placeholder="Начни писать свою заметку..."></textarea><div class="editor-preview markdown-body" id="note-preview" style="display:none"></div></div>
+    <div class="nav">
+      <button class="nav-btn" onclick="closeNoteEditor()"><i data-lucide="arrow-left"></i></button>
+      <div class="nav-title"></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="nav-btn" id="note-mode-btn" onclick="toggleNoteMode()" title="Редактировать"><i data-lucide="pencil"></i></button>
+        <button class="nav-btn" id="note-save-btn" onclick="saveNote()" style="display:none; color:var(--accent)"><i data-lucide="check"></i></button>
+        <button class="nav-btn" onclick="deleteNote()" style="color:var(--red,#c00)"><i data-lucide="trash-2"></i></button>
+      </div>
+    </div>
+    <div id="note-title-view" class="note-view-title" style="display:none"></div>
+    <input type="text" class="editor-title-input" id="note-title" placeholder="Название заметки" style="display:none">
+    <div class="editor-toolbar" id="note-editor-toolbar" style="display:none">
+      <button class="editor-btn" onclick="triggerNoteImageUpload()"><i data-lucide="image"></i> Картинка</button>
+      <select class="folder-select" id="note-folder"><option value="work">Работа</option><option value="study">Учёба</option><option value="personal">Личное</option><option value="ideas">Идеи</option></select>
+    </div>
+    <div class="editor-content">
+      <div id="note-images-gallery" style="display:none; padding: 0 20px 4px;"><div id="note-images-container"></div></div>
+      <textarea class="editor-textarea" id="note-content" placeholder="Начни писать свою заметку...&#10;&#10;Вставь изображение: Ctrl+V или кнопка «Картинка»" style="display:none"></textarea>
+      <div class="editor-preview markdown-body" id="note-preview" style="display:none; padding: 20px 24px 80px;"></div>
+    </div>
   </div>
 </div>
 
@@ -898,30 +999,40 @@
     <div class="modal-title" id="modal-title">Добавить</div>
     <div class="modal-sub" id="modal-sub"></div>
     <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchAddTab('file',this)">📂 Файл</button>
-      <button class="modal-tab" onclick="switchAddTab('yadisk',this)">☁️ Яндекс Диск</button>
+      <button class="modal-tab active" onclick="switchAddTab('file',this)">
+        <svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Файл
+      </button>
+      <button class="modal-tab" onclick="switchAddTab('yadisk',this)">
+        <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        Яндекс Диск
+      </button>
     </div>
 
     <!-- Вкладка: Файл -->
     <div id="add-tab-file">
-      <div style="display:flex;flex-direction:column;gap:12px;padding:4px 0 8px">
+      <div style="display:flex;flex-direction:column;gap:10px;padding:2px 0 6px">
 
-        <!-- Загрузить JSON (файл) -->
-        <button onclick="triggerFileAdd()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--lavender);border:1.5px solid var(--lavender-deep);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
-          <span style="font-size:32px;line-height:1;flex-shrink:0">📂</span>
+        <!-- Загрузить JSON -->
+        <button class="add-option-btn opt-purple" onclick="triggerFileAdd()">
+          <div class="add-option-icon ic-purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--lavender-text)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
           <div>
-            <div style="font-size:16px;font-weight:700;color:var(--lavender-text)" id="btn-upload-json-label">Загрузить JSON</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:3px" id="btn-upload-json-sub">Файл с пособием</div>
+            <div class="add-option-label lbl-purple" id="btn-upload-json-label">Загрузить JSON</div>
+            <div class="add-option-sub" id="btn-upload-json-sub">Файл с пособием</div>
           </div>
         </button>
 
         <!-- Вставить JSON (только для колод) -->
         <div id="paste-json-section" style="display:none">
-          <button onclick="togglePasteJson()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--sage,#E8F4EE);border:1.5px solid var(--sage-deep,#5c9e72);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
-            <span style="font-size:32px;line-height:1;flex-shrink:0">📋</span>
+          <button class="add-option-btn opt-green" onclick="togglePasteJson()">
+            <div class="add-option-icon ic-green">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--sage-text)" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+            </div>
             <div>
-              <div style="font-size:16px;font-weight:700;color:var(--sage-text,#2e6647)">Вставить JSON</div>
-              <div style="font-size:13px;color:var(--text2);margin-top:3px">Скопировать текст напрямую</div>
+              <div class="add-option-label lbl-green">Вставить JSON</div>
+              <div class="add-option-sub">Скопировать текст напрямую</div>
             </div>
           </button>
           <div id="paste-json-area" style="display:none;margin-top:10px">
@@ -931,19 +1042,24 @@
         </div>
 
         <!-- Создать конспект (только для пособий) -->
-        <button id="create-guide-btn" onclick="openCreateGuideModal()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--sage,#E8F4EE);border:1.5px solid var(--sage-deep,#5c9e72);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
-          <span style="font-size:32px;line-height:1;flex-shrink:0">✏️</span>
+        <button id="create-guide-btn" class="add-option-btn opt-green" onclick="closeAddModal();openGuideWriter(null)">
+          <div class="add-option-icon ic-green">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--sage-text)" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
           <div>
-            <div style="font-size:16px;font-weight:700;color:var(--sage-text,#2e6647)">Создать конспект</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:3px">Написать пособие прямо здесь</div>
+            <div class="add-option-label lbl-green">Создать конспект</div>
+            <div class="add-option-sub">Написать пособие прямо здесь</div>
           </div>
         </button>
 
-        <button onclick="openSampleModal()" style="display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;cursor:pointer;text-align:left;width:100%;transition:all 0.2s">
-          <span style="font-size:32px;line-height:1;flex-shrink:0">👀</span>
+        <!-- Формат файла -->
+        <button class="add-option-btn opt-neutral" onclick="openSampleModal()">
+          <div class="add-option-icon ic-neutral">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
           <div>
-            <div style="font-size:16px;font-weight:700;color:var(--text)">Формат файла</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:3px">Посмотреть пример JSON</div>
+            <div class="add-option-label lbl-neutral">Формат файла</div>
+            <div class="add-option-sub">Посмотреть пример JSON</div>
           </div>
         </button>
       </div>
@@ -1105,18 +1221,157 @@
 
 <script src="utils.js?v=4"></script>
 <script src="database.js?v=4"></script>
-<script src="library.js?v=12"></script>
+<script src="library.js?v=16"></script>
 <script src="flashcards.js?v=5"></script>
-<script src="atlas.js?v=4"></script>
-<script src="notes.js?v=4"></script>
+<script src="atlas.js?v=5"></script>
+<script src="notes.js?v=7"></script>
 <script src="calendar.js?v=5"></script>
 <script src="scores.js?v=7"></script>
 <script src="yadisk.js?v=7"></script>
 <script src="app.js?v=4"></script>
+<!-- РЕДАКТОР ПОСОБИЙ (полноэкранный) -->
+<div id="guide-writer-screen" class="screen">
+  <!-- Навигация -->
+  <div class="gw-nav">
+    <button class="nav-btn" onclick="closeGuideWriter()"><i data-lucide="arrow-left"></i></button>
+    <span class="gw-status" id="gw-status">Черновик</span>
+    <button class="gw-preview-pill" id="gw-preview-btn" onclick="gwTogglePreview()">
+      <i data-lucide="eye"></i> Превью
+    </button>
+    <button class="gw-save-pill" onclick="saveGuideWriter()">Сохранить</button>
+  </div>
+
+  <!-- Заголовок и мета -->
+  <div class="gw-header">
+    <div class="gw-header-meta">
+      <button class="gw-icon-btn" id="gw-icon-btn" onclick="openEmojiPicker()">📖</button>
+      <input id="gw-icon-input" style="display:none">
+      <select class="gw-cat-select" id="gw-cat">
+        <option value="bio">🧬 Биология</option>
+        <option value="chem">⚗️ Химия</option>
+        <option value="ru">📝 Русский</option>
+        <option value="phys">⚡ Физика</option>
+        <option value="math">📐 Математика</option>
+      </select>
+    </div>
+    <textarea class="gw-title-input" id="gw-title" placeholder="Название пособия..." rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+  </div>
+
+  <!-- Тулбар -->
+  <div class="gw-toolbar">
+    <button class="gw-btn" onclick="gwFmt('## ','',true)" title="Заголовок раздела"><b style="font-size:12px">H2</b></button>
+    <button class="gw-btn" onclick="gwFmt('### ','',true)" title="Подзаголовок"><b style="font-size:11px;opacity:.7">H3</b></button>
+    <div class="gw-sep"></div>
+    <button class="gw-btn" onclick="gwFmt('**','**')" title="Жирный (Ctrl+B)"><svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+    <button class="gw-btn" onclick="gwFmt('*','*')" title="Курсив (Ctrl+I)"><svg viewBox="0 0 24 24"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+    <button class="gw-btn" onclick="gwFmt('`','`')" title="Код" style="font-family:monospace;font-size:14px">`·`</button>
+    <button class="gw-btn" onclick="gwFmt('~~','~~')" title="Зачёркнутый"><svg viewBox="0 0 24 24"><path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 20H9a3 3 0 0 1-3-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+    <div class="gw-sep"></div>
+    <button class="gw-btn" onclick="gwFmt('- ','',true)" title="Маркированный список"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+    <button class="gw-btn" onclick="gwFmt('1. ','',true)" title="Нумерованный список"><svg viewBox="0 0 24 24"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
+    <button class="gw-btn" onclick="gwFmt('> ','',true)" title="Цитата / определение"><svg viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg></button>
+    <div class="gw-sep"></div>
+    <button class="gw-btn" onclick="gwInsertTable()" title="Таблица"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></button>
+    <button class="gw-btn" onclick="gwInsertDivider()" title="Разделитель"><svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+    <button class="gw-btn" onclick="gwUploadImage()" title="Добавить изображение (или Ctrl+V)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></button>
+    <button class="gw-btn" id="gw-images-toggle" onclick="gwToggleImagesBar()" title="Мои изображения"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+  </div>
+
+  <!-- Тело редактора -->
+  <div class="gw-body">
+    <div class="gw-editor-pane">
+      <textarea class="gw-textarea" id="gw-content"
+        placeholder="Начни писать конспект...&#10;&#10;Используй ## для заголовков&#10;**жирный**, *курсив*, `код`&#10;— маркированный список&#10;&#10;Ctrl+V — вставить изображение"
+        oninput="gwOnInput()"></textarea>
+    </div>
+    <div class="gw-preview-pane markdown-body" id="gw-preview"></div>
+  </div>
+
+  <!-- Статус-бар -->
+  <div class="gw-statusbar">
+    <span class="gw-wordcount" id="gw-wordcount">0 слов</span>
+    <span class="gw-autosave-status" id="gw-autosave-status"></span>
+  </div>
+
+  <!-- Панель изображений -->
+  <div class="gw-images-bar" id="gw-images-bar">
+    <div id="gw-images-list"></div>
+  </div>
+  <input type="file" id="gw-image-input" accept="image/*" style="display:none" onchange="gwHandleImageUpload(event)">
+</div>
+
+<!-- EMOJI PICKER -->
+<div class="emoji-picker-overlay" id="emoji-picker-overlay" onclick="closeEmojiPickerOutside(event)">
+  <div class="emoji-picker" id="emoji-picker-panel">
+    <div class="emoji-picker-handle"></div>
+    <div class="emoji-picker-title">Выбери иконку</div>
+    <div class="emoji-picker-cats" id="emoji-cats"></div>
+    <div class="emoji-picker-grid" id="emoji-grid"></div>
+    <button class="emoji-picker-cancel" onclick="closeEmojiPicker()">Отмена</button>
+  </div>
+</div>
+
 <script src="firebase-module.js"></script>
 <script>
-  // Инициализируем Lucide иконки
   if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  // ===== EMOJI PICKER =====
+  const EMOJI_CATS = [
+    { name: 'Учёба', emojis: ['📖','📚','📝','✏️','🖊️','📓','📒','📕','📗','📘','📙','📃','📄','📑','🗒️','📋','📌','📍','🗂️','📊','📈','📉','🗃️'] },
+    { name: 'Наука', emojis: ['🔬','🧬','⚗️','🧪','🔭','🧫','🧲','💊','🩺','🩻','🧠','🫀','🫁','🦷','🦴','👁️','🩸','🧪','⚡','🌡️'] },
+    { name: 'Природа', emojis: ['🌿','🍃','🌱','🌾','🌵','🌴','🌳','🌲','🍀','🌺','🌸','🌼','🌻','🌹','🍄','🐾','🦋','🐝','🐛','🦎','🐸','🐠','🐋','🦁'] },
+    { name: 'Химия', emojis: ['⚗️','🧪','💧','🔥','❄️','💨','⚡','☢️','⚛️','🧲','💡','🔋','🪫','🌊','🫧','💎','🪨','🧱'] },
+    { name: 'Математика', emojis: ['📐','📏','🔢','➕','➖','✖️','➗','🔣','∞','π','🎯','🧮','📊','📈','🔷','🔶','🔵','🟩'] },
+    { name: 'Разное', emojis: ['⭐','🌟','✨','💫','🎯','🏆','🥇','🎓','💡','🔑','🗝️','💎','🎪','🚀','🛸','🌍','🌙','☀️','🕐','⏰','📅','🗓️'] },
+  ];
+
+  let _emojiActiveCat = 0;
+
+  function openEmojiPicker() {
+    _emojiActiveCat = 0;
+    renderEmojiCats();
+    renderEmojiGrid();
+    document.getElementById('emoji-picker-overlay').classList.add('open');
+  }
+  window.openEmojiPicker = openEmojiPicker;
+
+  function closeEmojiPicker() {
+    document.getElementById('emoji-picker-overlay').classList.remove('open');
+  }
+  window.closeEmojiPicker = closeEmojiPicker;
+
+  function closeEmojiPickerOutside(e) {
+    if (e.target === document.getElementById('emoji-picker-overlay')) closeEmojiPicker();
+  }
+  window.closeEmojiPickerOutside = closeEmojiPickerOutside;
+
+  function renderEmojiCats() {
+    const el = document.getElementById('emoji-cats');
+    el.innerHTML = EMOJI_CATS.map((c, i) =>
+      `<button class="emoji-cat-pill${i === _emojiActiveCat ? ' active' : ''}" onclick="selectEmojiCat(${i})">${c.name}</button>`
+    ).join('');
+  }
+
+  function selectEmojiCat(i) {
+    _emojiActiveCat = i;
+    renderEmojiCats();
+    renderEmojiGrid();
+  }
+  window.selectEmojiCat = selectEmojiCat;
+
+  function renderEmojiGrid() {
+    const emojis = EMOJI_CATS[_emojiActiveCat].emojis;
+    document.getElementById('emoji-grid').innerHTML = emojis.map(e =>
+      `<button onclick="pickEmoji('${e}')">${e}</button>`
+    ).join('');
+  }
+
+  function pickEmoji(emoji) {
+    document.getElementById('gw-icon-btn').textContent = emoji;
+    document.getElementById('gw-icon-input').value = emoji;
+    closeEmojiPicker();
+  }
+  window.pickEmoji = pickEmoji;
 </script>
 </body>
 </html>
