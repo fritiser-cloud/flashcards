@@ -39,7 +39,7 @@ function showScreen(id) {
   
   const bottomNav = document.querySelector('.bottom-nav');
   if (!bottomNav) return;
-  const hideNavScreens = ['guide-detail-screen', 'study-screen', 'match-screen', 'results-screen', 'errors-screen', 'note-editor-screen', 'atlas-detail-screen', 'atlas-editor-screen'];
+  const hideNavScreens = ['guide-detail-screen', 'study-screen', 'match-screen', 'results-screen', 'errors-screen', 'note-editor-screen', 'atlas-detail-screen', 'atlas-editor-screen', 'pdf-viewer-screen'];
   if (hideNavScreens.includes(id)) bottomNav.classList.add('hidden');
   else bottomNav.classList.remove('hidden');
 }

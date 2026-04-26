@@ -122,6 +122,11 @@ function navTo(tab) {
   } else if (tab === 'settings') {
     window.showScreen('settings-screen');
     if (window.renderSettings) window.renderSettings();
+  } else if (tab === 'schedule') {
+    window.showScreen('schedule-screen');
+    if (window.renderScheduleScreen) window.renderScheduleScreen();
+  } else if (tab === 'pdf-viewer') {
+    window.showScreen('pdf-viewer-screen');
   }
 }
 window.navTo = navTo;
@@ -133,6 +138,7 @@ window.navTo = navTo;
     console.log('✓ База данных инициализирована');
 
     if (window.renderCategoryPills) window.renderCategoryPills();
+    if (window.renderDashboard) window.renderDashboard();
     if (window.renderLibrary) window.renderLibrary();
     if (window.renderDecks) await window.renderDecks();
     if (window.renderAtlas) window.renderAtlas();

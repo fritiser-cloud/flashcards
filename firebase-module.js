@@ -195,9 +195,11 @@ async function loadFromCloud() {
 
     const cloud = userDoc.data();
 
-    if (cloud.notes)     localStorage.setItem('notes',      JSON.stringify(cloud.notes));
-    if (cloud.atlas)     localStorage.setItem('atlas',      JSON.stringify(cloud.atlas));
-    if (cloud.guides)    localStorage.setItem('bio_guides', JSON.stringify(cloud.guides));
+    if (cloud.notes)          localStorage.setItem('notes',          JSON.stringify(cloud.notes));
+    if (cloud.atlas)          localStorage.setItem('atlas',          JSON.stringify(cloud.atlas));
+    if (cloud.guides)         localStorage.setItem('bio_guides',     JSON.stringify(cloud.guides));
+    if (cloud.pdf_library)    localStorage.setItem('pdf_library',    JSON.stringify(cloud.pdf_library));
+    if (cloud.pdf_downloaded) localStorage.setItem('pdf_downloaded', JSON.stringify(cloud.pdf_downloaded));
 
     for (const subj of ['ru', 'bio', 'chem']) {
       if (cloud['scores_current_' + subj])
@@ -219,6 +221,7 @@ async function loadFromCloud() {
     if (window.renderScores)         window.renderScores();
     if (window.renderCalendar)       window.renderCalendar();
     if (window.renderUpcomingReviews) window.renderUpcomingReviews();
+    if (window.syncPdfFiles)         window.syncPdfFiles();
 
     updateSyncStatus('success', 'Синхронизировано');
     const lastSyncEl = document.getElementById('last-sync');
@@ -244,9 +247,14 @@ async function saveToCloud() {
     const favorites = await window.dbGetAll('favorites');
     const reviews   = await window.dbGetAll('reviews');
 
+    const pdfLibrary    = window.getPdfLibrary    ? window.getPdfLibrary()    : [];
+    const pdfDownloaded = window.getPdfDownloaded ? window.getPdfDownloaded() : {};
+
     const data = {
       notes, atlas, guides,
       decks, stats, favorites, reviews,
+      pdf_library: pdfLibrary,
+      pdf_downloaded: pdfDownloaded,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 

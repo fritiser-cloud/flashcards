@@ -88,6 +88,8 @@ async function openDeck(deckId) {
     const isMatch = deck.type === 'match';
     const iconEl = document.getElementById('deck-detail-icon');
     if (iconEl) iconEl.textContent = deck.icon || '📚';
+    const iconValEl = document.getElementById('deck-detail-icon-value');
+    if (iconValEl) iconValEl.value = deck.icon || '📚';
     const nameEl = document.getElementById('deck-detail-name');
     if (nameEl) nameEl.textContent = deck.name;
     const navTitle = document.getElementById('deck-detail-nav-title');
@@ -121,9 +123,11 @@ async function openDeck(deckId) {
           <button class="btn-deck-primary" id="btn-study-all"><i data-lucide="play"></i> Учить все</button>
           <button class="btn-deck-fav" id="btn-study-fav"><i data-lucide="star"></i> Избранное${favCount ? ' <span style="opacity:0.7;font-size:13px">('+favCount+')</span>' : ''}</button>
           <button class="btn-deck-errors" id="btn-study-errors" ${errorCards.length ? '' : 'disabled'}><i data-lucide="zap"></i> Отработать ошибки</button>
+          <button class="btn-deck-secondary" id="btn-match" ${deck.cards.length < 2 ? 'disabled' : ''}><i data-lucide="shuffle"></i> Режим Матч</button>
         </div>
         <div class="deck-divider"></div>
         <div class="deck-action-group">
+          <button class="btn-deck-secondary" id="btn-add-card"><i data-lucide="plus"></i> Добавить карточку</button>
           <button class="btn-deck-secondary" id="btn-notes-deck"><i data-lucide="clipboard-list"></i> Конспект ошибок</button>
           <button class="btn-deck-secondary" id="btn-edit-cards"><i data-lucide="pencil"></i> Редактировать карточки</button>
           <button class="btn-deck-secondary" id="btn-reset"><i data-lucide="rotate-ccw"></i> Сбросить прогресс</button>
@@ -134,12 +138,16 @@ async function openDeck(deckId) {
       if (studyFav) studyFav.onclick = () => startStudy(deckId, false, true);
       const studyErrors = document.getElementById('btn-study-errors');
       if (studyErrors) studyErrors.onclick = () => startStudy(deckId, true, false);
+      const matchBtn = document.getElementById('btn-match');
+      if (matchBtn) matchBtn.onclick = () => startMatch(deckId);
       const resetBtn = document.getElementById('btn-reset');
       if (resetBtn) resetBtn.onclick = () => resetDeck(deckId);
       const notesBtn = document.getElementById('btn-notes-deck');
       if (notesBtn) notesBtn.onclick = () => window.openNotesDeck(deckId);
       const editCardsBtn = document.getElementById('btn-edit-cards');
       if (editCardsBtn) editCardsBtn.onclick = () => openCardsEditor(deckId);
+      const addCardBtn = document.getElementById('btn-add-card');
+      if (addCardBtn) addCardBtn.onclick = () => openCardsEditorAndAdd(deckId);
       if (window.lucide) window.lucide.createIcons();
       const hardList = document.getElementById('hard-list');
       const sorted = allStats.filter(s => (s.errors || 0) > 0).sort((a,b) => (b.errors||0) - (a.errors||0)).slice(0,5);
@@ -166,6 +174,57 @@ async function openDeck(deckId) {
   }
 }
 window.openDeck = openDeck;
+
+function createEmptyDeck() {
+  const modal = document.getElementById('new-deck-modal');
+  const input = document.getElementById('new-deck-name-input');
+  const iconBtn = document.getElementById('new-deck-icon-btn');
+  const iconVal = document.getElementById('new-deck-icon-value');
+  if (input) input.value = '';
+  if (iconBtn) iconBtn.textContent = '📚';
+  if (iconVal) iconVal.value = '📚';
+  if (modal) modal.classList.add('open');
+  setTimeout(() => input && input.focus(), 100);
+}
+window.createEmptyDeck = createEmptyDeck;
+
+function closeNewDeckModal() {
+  document.getElementById('new-deck-modal')?.classList.remove('open');
+}
+window.closeNewDeckModal = closeNewDeckModal;
+
+async function confirmNewDeck() {
+  const input = document.getElementById('new-deck-name-input');
+  const name = input?.value.trim();
+  if (!name) { window.showToast('Введите название'); return; }
+  closeNewDeckModal();
+  invalidateDecksCache();
+  const icon = document.getElementById('new-deck-icon-value')?.value || '📚';
+  const newDeck = { name, icon, type: 'flashcard', cards: [], createdAt: Date.now(), updatedAt: Date.now() };
+  await window.dbPut('decks', newDeck);
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
+  await renderDecks();
+  const all = await window.dbGetAll('decks');
+  const created = all.filter(d => !d.deleted).sort((a, b) => b.createdAt - a.createdAt)[0];
+  if (created) {
+    await openCardsEditor(created.id);
+    setTimeout(() => addNewCard(), 100);
+  }
+}
+window.confirmNewDeck = confirmNewDeck;
+
+async function saveDeckIcon(emoji) {
+  if (!currentDeckId) return;
+  const deck = await window.dbGet('decks', currentDeckId);
+  if (!deck) return;
+  deck.icon = emoji;
+  deck.updatedAt = Date.now();
+  invalidateDecksCache();
+  await window.dbPut('decks', deck);
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
+  window.showToast('Иконка обновлена');
+}
+window.saveDeckIcon = saveDeckIcon;
 
 async function deleteDeck(deckId) {
   if (!confirm('Удалить колоду?')) return;
@@ -300,7 +359,20 @@ window.toggleFavorite = toggleFavorite;
 async function startMatch(deckId) {
   currentDeckId = deckId;
   const deck = _getDeck(deckId) || await window.dbGet('decks', deckId);
-  matchSets = [...deck.cards].sort(() => Math.random() - 0.5);
+  const isMatchDeck = deck.type === 'match';
+  if (isMatchDeck) {
+    // Paronim decks: cards are already sets with {pairs}
+    matchSets = [...deck.cards].sort(() => Math.random() - 0.5);
+  } else {
+    // Regular decks: {q, a} cards → group into sets of 4 as match pairs
+    const shuffled = [...deck.cards].sort(() => Math.random() - 0.5);
+    matchSets = [];
+    for (let i = 0; i < shuffled.length; i += 4) {
+      const chunk = shuffled.slice(i, i + 4);
+      if (chunk.length < 2) break; // need at least 2 pairs
+      matchSets.push({ pairs: chunk.map(c => ({ word: c.q, example: c.a })) });
+    }
+  }
   matchSetIdx = 0; matchSessionCorrect = 0; matchSessionWrong = 0;
   const nameEl = document.getElementById('match-deck-name');
   if (nameEl) nameEl.textContent = deck.name;
@@ -662,6 +734,13 @@ async function openCardsEditor(deckId) {
 }
 window.openCardsEditor = openCardsEditor;
 
+async function openCardsEditorAndAdd(deckId) {
+  await openCardsEditor(deckId);
+  // Small delay so screen renders before opening modal
+  setTimeout(() => addNewCard(), 100);
+}
+window.openCardsEditorAndAdd = openCardsEditorAndAdd;
+
 function renderCardsEditorList() {
   const list = document.getElementById('cards-editor-list');
   if (!list) return;
@@ -678,8 +757,8 @@ function renderCardsEditorList() {
         <div class="card-editor-num">${idx + 1}</div>
         <div class="card-editor-q">${window.escapeHtml(card.q || '—')}</div>
         <div class="card-editor-btns">
-          <button class="card-editor-btn" onclick="openCardEditModal(${idx})" title="Редактировать">✏️</button>
-          <button class="card-editor-btn del" onclick="deleteCardFromEditor(${idx})" title="Удалить">🗑</button>
+          <button class="card-editor-btn" onclick="openCardEditModal(${idx})" title="Редактировать"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="card-editor-btn del" onclick="deleteCardFromEditor(${idx})" title="Удалить"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
         </div>
       </div>
       <div style="padding:0 16px 12px;font-size:13px;color:var(--text2);line-height:1.5">${window.escapeHtml(card.a || '—')}</div>`;

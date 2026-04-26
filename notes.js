@@ -111,6 +111,7 @@ function setNoteMode(editMode) {
   const toolbar = getElement('note-editor-toolbar');
   const modeBtn = getElement('note-mode-btn');
   const saveBtn = getElement('note-save-btn');
+  const printBtn = getElement('note-print-btn');
   const gallery = getElement('note-images-gallery');
 
   if (editMode) {
@@ -121,6 +122,7 @@ function setNoteMode(editMode) {
     if (content) content.style.display = '';
     if (preview) preview.style.display = 'none';
     if (saveBtn) saveBtn.style.display = '';
+    if (printBtn) printBtn.style.display = 'none';
     if (modeBtn) modeBtn.innerHTML = '<i data-lucide="eye"></i>';
     const notes = getNotes();
     const note = notes.find(n => n.id === currentNoteId);
@@ -134,6 +136,7 @@ function setNoteMode(editMode) {
     if (gallery) gallery.style.display = 'none';
     if (content) content.style.display = 'none';
     if (saveBtn) saveBtn.style.display = 'none';
+    if (printBtn) printBtn.style.display = '';
     if (modeBtn) modeBtn.innerHTML = '<i data-lucide="pencil"></i>';
     // Render markdown with image substitution
     const notes = getNotes();

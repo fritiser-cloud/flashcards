@@ -636,3 +636,377 @@
     }
     .note-folder.personal {
       background: linear-gradient(135deg, #FBE9E7, #FFCCBC);
+
+/* ==================== SCHEDULE / РАСПИСАНИЕ ==================== */
+
+/* --- Dashboard widget --- */
+.dash-today-plan {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 18px 18px 14px;
+  margin: 0 0 16px;
+  box-shadow: var(--shadow);
+}
+.dash-plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.dash-plan-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.dash-plan-edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-secondary, #888);
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  transition: background .15s;
+}
+.dash-plan-edit-btn:hover { background: var(--lavender); }
+.dash-plan-progress-bar {
+  height: 4px;
+  background: var(--lavender);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.dash-plan-progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 4px;
+  transition: width .3s;
+}
+.dash-plan-count {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  margin-bottom: 10px;
+}
+.dash-plan-items { display: flex; flex-direction: column; gap: 6px; }
+.dash-plan-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--lavender);
+  transition: opacity .2s;
+}
+.dash-plan-item.done { opacity: .55; }
+.dash-plan-check {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 2px solid var(--lavender-text);
+  background: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: var(--green);
+  transition: background .15s, border-color .15s;
+}
+.dash-plan-item.done .dash-plan-check {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.dash-plan-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.3;
+  flex: 1;
+}
+.dash-plan-item.done .dash-plan-text { text-decoration: line-through; color: var(--text-secondary, #888); }
+.dash-plan-empty {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text-secondary, #888);
+  font-size: 14px;
+  padding: 8px 4px;
+}
+.dash-plan-link { color: var(--green); font-weight: 600; text-decoration: none; }
+.dash-plan-link:hover { text-decoration: underline; }
+.sched-exam-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700;
+  color: #fff;
+  background: var(--red);
+  border-radius: 20px;
+  padding: 3px 10px;
+  margin-bottom: 10px;
+}
+
+/* --- Schedule screen --- */
+.sched-summary {
+  display: flex;
+  gap: 12px;
+  padding: 16px 16px 0;
+  margin-bottom: 4px;
+}
+.sched-summary-item {
+  flex: 1;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 14px 10px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.sched-summary-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  font-family: var(--font-display, serif);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.sched-summary-label { font-size: 11px; color: var(--text-secondary, #888); }
+
+.sched-weeks { padding: 16px; display: flex; flex-direction: column; gap: 20px; }
+.sched-week-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text-secondary, #888);
+  margin-bottom: 8px;
+}
+.sched-week-group.current-week .sched-week-label { color: var(--green); }
+
+.sched-day-row {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow);
+  transition: opacity .2s;
+}
+.sched-day-row.past { opacity: .55; }
+.sched-day-row.today {
+  border: 2px solid var(--green);
+  padding: 10px 12px;
+}
+.sched-day-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.sched-day-date { display: flex; align-items: baseline; gap: 5px; flex-shrink: 0; }
+.sched-day-num { font-size: 18px; font-weight: 800; color: var(--text); font-family: var(--font-display, serif); }
+.sched-day-name { font-size: 12px; color: var(--text-secondary, #888); text-transform: uppercase; }
+.sched-today-badge {
+  font-size: 10px; font-weight: 700;
+  color: #fff;
+  background: var(--green);
+  border-radius: 20px;
+  padding: 2px 8px;
+  margin-left: 2px;
+}
+.sched-exam-pill {
+  font-size: 11px; font-weight: 700;
+  color: #fff;
+  background: var(--red);
+  border-radius: 20px;
+  padding: 3px 10px;
+  flex-shrink: 0;
+}
+.sched-day-progress {
+  flex: 1;
+  height: 4px;
+  background: var(--lavender);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.sched-day-progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 4px;
+  transition: width .3s;
+}
+.sched-add-btn {
+  background: none; border: none; cursor: pointer;
+  padding: 4px; border-radius: 8px;
+  color: var(--green);
+  display: flex; align-items: center;
+  margin-left: auto;
+  transition: background .15s;
+}
+.sched-add-btn:hover { background: var(--sage, #E8F5E9); }
+
+.sched-task-list { display: flex; flex-direction: column; gap: 5px; }
+.sched-task-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--lavender);
+  transition: opacity .2s;
+}
+.sched-task-item.done { opacity: .55; }
+.sched-task-check {
+  width: 20px; height: 20px;
+  border-radius: 5px;
+  border: 2px solid var(--lavender-text);
+  background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--green);
+  transition: background .15s, border-color .15s;
+}
+.sched-task-item.done .sched-task-check { background: var(--green); border-color: var(--green); color: #fff; }
+.sched-task-text {
+  flex: 1; font-size: 13px; color: var(--text); line-height: 1.3;
+}
+.sched-task-item.done .sched-task-text { text-decoration: line-through; color: var(--text-secondary, #888); }
+.sched-task-del {
+  background: none; border: none; cursor: pointer;
+  padding: 2px; border-radius: 6px; color: var(--text-secondary, #aaa);
+  display: flex; align-items: center;
+  opacity: 0; transition: opacity .15s;
+}
+.sched-task-item:hover .sched-task-del { opacity: 1; }
+
+.sched-inline-add {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 6px;
+}
+.sched-inline-input {
+  flex: 1; border: 1.5px solid var(--lavender-text);
+  border-radius: 8px; padding: 6px 10px;
+  font-size: 13px; font-family: var(--font);
+  background: var(--lavender); color: var(--text);
+  outline: none;
+}
+.sched-inline-input:focus { border-color: var(--green); }
+.sched-inline-ok {
+  background: var(--green); border: none; cursor: pointer;
+  border-radius: 8px; padding: 7px;
+  color: #fff; display: flex; align-items: center;
+}
+.sched-inline-cancel {
+  background: none; border: 1.5px solid var(--lavender-text); cursor: pointer;
+  border-radius: 8px; padding: 6px;
+  color: var(--text-secondary, #888); display: flex; align-items: center;
+}
+
+/* ==================== PDF VIEWER ==================== */
+
+/* Секция PDF в библиотеке */
+.pdf-section-title {
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text3); padding: 16px 16px 8px;
+}
+.pdf-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card-bg, #fff); border-radius: 14px;
+  padding: 12px 14px; margin: 0 12px 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07); cursor: pointer;
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.pdf-card:active { transform: scale(0.98); }
+.pdf-card-icon { color: var(--lavender-deep, #6C41C4); flex-shrink: 0; }
+.pdf-card-info { flex: 1; min-width: 0; }
+.pdf-card-name { font-size: 15px; font-weight: 600; color: var(--text, #222); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdf-card-meta { font-size: 12px; color: var(--text3, #999); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+.pdf-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+.pdf-badge--local { background: #E8F5E9; color: #388E3C; }
+.pdf-badge--cloud { background: var(--lavender, #EDE7F6); color: var(--lavender-deep, #6C41C4); }
+.pdf-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.pdf-action-btn {
+  background: none; border: none; cursor: pointer; padding: 6px;
+  border-radius: 8px; color: var(--text3, #aaa);
+  display: flex; align-items: center; transition: background 0.15s, color 0.15s;
+}
+.pdf-action-btn:hover { background: var(--lavender, #EDE7F6); color: var(--lavender-deep, #6C41C4); }
+.pdf-action-btn--danger:hover { background: #FFEBEE; color: #C62828; }
+
+/* Кнопка + с меню */
+.lib-add-wrap { position: relative; }
+.lib-add-menu {
+  display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 200;
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.14); overflow: hidden; min-width: 140px;
+}
+.lib-add-menu.visible { display: block; }
+.lib-add-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 12px 16px; background: none; border: none; cursor: pointer;
+  font-family: var(--font); font-size: 14px; font-weight: 600; color: var(--text, #222);
+  text-align: left; transition: background 0.15s;
+}
+.lib-add-menu button:hover { background: var(--lavender, #EDE7F6); }
+.lib-add-menu button svg { color: var(--lavender-deep, #6C41C4); flex-shrink: 0; }
+
+/* Экран просмотрщика */
+#pdf-viewer-screen {
+  display: none; flex-direction: column; height: 100dvh;
+  background: var(--bg, #F8F7FF);
+}
+#pdf-viewer-screen.active { display: flex; }
+
+.pdf-viewer-nav {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 12px max(8px, env(safe-area-inset-top));
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.pdf-nav-btn {
+  background: none; border: none; cursor: pointer; padding: 6px;
+  border-radius: 10px; color: var(--lavender-deep, #6C41C4);
+  display: flex; align-items: center; transition: background 0.15s;
+}
+.pdf-nav-btn:hover { background: var(--lavender, #EDE7F6); }
+.pdf-viewer-title {
+  flex: 1; font-size: 15px; font-weight: 700; color: var(--text, #222);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pdf-nav-menu-wrap { position: relative; }
+.pdf-viewer-menu {
+  display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 300;
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.16); overflow: hidden; min-width: 190px;
+}
+.pdf-viewer-menu.visible { display: block; }
+.pdf-viewer-menu button {
+  display: block; width: 100%; padding: 12px 18px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font); font-size: 14px; font-weight: 600; color: var(--text, #222);
+  text-align: left; transition: background 0.15s;
+}
+.pdf-viewer-menu button:hover { background: var(--lavender, #EDE7F6); }
+
+.pdf-canvas-wrap {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 12px 8px; gap: 8px; background: #E8E8E4;
+}
+.pdf-canvas { max-width: 100%; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.18); }
+.pdf-two-page {
+  display: flex; gap: 8px; align-items: flex-start; justify-content: center; width: 100%;
+}
+.pdf-two-page .pdf-canvas { max-width: calc(50% - 4px); }
+.pdf-loading {
+  margin: auto; color: var(--text3, #aaa); font-size: 15px; font-weight: 500;
+}
+
+.pdf-controls {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 10px 16px max(12px, env(safe-area-inset-bottom));
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0,0,0,0.06); flex-shrink: 0;
+}
+.pdf-ctrl-btn {
+  background: var(--lavender, #EDE7F6); border: none; cursor: pointer;
+  width: 40px; height: 40px; border-radius: 12px; color: var(--lavender-deep, #6C41C4);
+  display: flex; align-items: center; justify-content: center; transition: background 0.15s, opacity 0.15s;
+}
+.pdf-ctrl-btn:hover { background: var(--lavender-deep, #6C41C4); color: #fff; }
+.pdf-ctrl-btn:disabled { opacity: 0.35; pointer-events: none; }
+.pdf-ctrl-mode { margin-left: 8px; }
+.pdf-page-counter {
+  font-size: 14px; font-weight: 700; color: var(--text, #222);
+  min-width: 60px; text-align: center;
+}

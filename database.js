@@ -1,5 +1,5 @@
 // ==================== INDEXEDDB ====================
-const DB_NAME = 'flashcards_db', DB_VER = 3; // версия увеличена
+const DB_NAME = 'flashcards_db', DB_VER = 4; // pdf_files store added
 let db, dbPromise;
 
 function openDB() {
@@ -16,6 +16,10 @@ function openDB() {
       if (!d.objectStoreNames.contains('reviews')) {
         const reviewStore = d.createObjectStore('reviews', { keyPath: 'id', autoIncrement: true });
         reviewStore.createIndex('next_review_date', 'next_review_date');
+      }
+      // PDF файлы (blob)
+      if (!d.objectStoreNames.contains('pdf_files')) {
+        d.createObjectStore('pdf_files', { keyPath: 'id' });
       }
     };
     req.onsuccess = e => { db = e.target.result; res(db); };
