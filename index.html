@@ -189,11 +189,14 @@
     .study-progress-bar { height: 4px; background: var(--border); }
     .study-progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
     .study-counter { text-align: center; font-size: 14px; color: var(--text3); font-weight: 600; padding: 16px 24px 0; }
-    .flashcard-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; perspective: 1000px; }
-    .flashcard-wrap { width: 100%; max-width: 420px; }
-    .flashcard-3d { width: 100%; min-height: 480px; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(.4,0,.2,1); cursor: pointer; position: relative; }
+    .flashcard-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; perspective: 1200px; }
+    .flashcard-wrap { width: 100%; max-width: 420px; user-select: none; }
+    .flashcard-3d { width: 100%; min-height: 480px; transform-style: preserve-3d; transition: transform 0.45s cubic-bezier(.34,.8,.4,1); cursor: pointer; position: relative; border-radius: var(--radius); }
+    .flashcard-3d:active { transform: scale(0.97); }
     .flashcard-3d.flipped { transform: rotateY(180deg); }
-    .fc-face { position: absolute; width: 100%; min-height: 480px; top: 0; left: 0; backface-visibility: hidden; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); border: 1.5px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 36px; text-align: center; }
+    .flashcard-3d.flipped:active { transform: rotateY(180deg) scale(0.97); }
+    .fc-face { position: absolute; width: 100%; min-height: 480px; top: 0; left: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; background: var(--surface); border-radius: var(--radius); box-shadow: 0 8px 32px rgba(80,60,160,0.13), 0 2px 8px rgba(80,60,160,0.07); border: 1.5px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 36px; text-align: center; transition: box-shadow 0.2s; pointer-events: none; }
+    .flashcard-3d:active .fc-face { box-shadow: 0 2px 10px rgba(80,60,160,0.1); }
     .fc-front { background: linear-gradient(160deg, var(--lavender) 0%, var(--surface) 45%); border-color: var(--lavender-mid); }
     .fc-back { background: linear-gradient(160deg, var(--sage) 0%, var(--surface) 45%); border-color: var(--sage-mid); }
     .fc-back { transform: rotateY(180deg); }
@@ -264,7 +267,8 @@
     .modal-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 20px 12px; border-bottom: 1px solid var(--border); }
     .modal-close { width: 32px; height: 32px; border: none; background: var(--surface2); border-radius: 50%; font-size: 14px; color: var(--text2); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .modal { background: var(--surface); width: 100%; max-width: 480px; border-radius: 36px 36px 0 0; padding: 32px 28px 48px; animation: slideUp 0.3s cubic-bezier(.34,1.56,.64,1); max-height: 85dvh; overflow-y: auto; }
-    .modal-handle { width: 44px; height: 5px; background: var(--border); border-radius: 3px; margin: 0 auto 28px; }
+    .modal-sheet { background: var(--surface); width: 100%; max-width: 480px; border-radius: 28px 28px 0 0; padding: 12px 22px 36px; animation: slideUp 0.3s cubic-bezier(.34,1.56,.64,1); max-height: 90dvh; overflow-y: auto; }
+    .modal-handle { width: 44px; height: 5px; background: var(--border); border-radius: 3px; margin: 0 auto 20px; }
     .modal-text-input { display: block; width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface2); font-family: var(--font); font-size: 15px; color: var(--text); outline: none; transition: border-color 0.2s; }
     .modal-text-input:focus { border-color: var(--lavender-deep); }
     .modal-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; margin-bottom: 8px; }
@@ -886,10 +890,10 @@
     #pdf-progress-wrap { height: 3px; background: rgba(0,0,0,0.08); flex-shrink: 0; transition: opacity 0.3s ease; }
     #pdf-progress-bar { height: 100%; background: var(--lavender-deep); transition: width 0.3s ease; border-radius: 0 2px 2px 0; }
     /* Canvas area */
-    .pdf-canvas-wrap { flex: 1; overflow: hidden; position: relative; background: #2a2a2a; touch-action: none; }
-    .pdf-strip-inner { width: 100%; height: 100%; overflow: visible; }
+    .pdf-canvas-wrap { flex: 1; overflow: hidden; position: relative; background: #2a2a2a; touch-action: none; width: 100%; }
+    .pdf-strip-inner { width: 100%; height: 100%; overflow: hidden; }
     .pdf-strip { height: 100%; align-items: flex-start; }
-    .pdf-page-slot { min-height: 200px; overflow-y: auto; overflow-x: hidden; }
+    .pdf-page-slot { min-height: 200px; overflow: hidden; width: 100%; }
     .pdf-canvas { display: block; max-width: 100%; border-radius: 4px; box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
     .pdf-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: rgba(255,255,255,0.6); font-size: 15px; font-weight: 500; }
     .pdf-inner { display: flex; flex-direction: column; align-items: center; width: 100%; }
@@ -950,16 +954,17 @@
     .gloss-empty svg { opacity: .3; }
     .gloss-empty-text { font-size: 16px; font-weight: 600; color: var(--text2); }
     .gloss-empty-sub { font-size: 13px; }
-    .gloss-form { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-    .gloss-label { font-size: 12px; font-weight: 700; color: var(--text3); margin-top: 6px; text-transform: uppercase; letter-spacing: .5px; }
-    .gloss-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg); font-size: 15px; color: var(--text); font-family: var(--font); outline: none; box-sizing: border-box; }
-    .gloss-input:focus { border-color: var(--lavender-deep); }
-    .gloss-textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg); font-size: 14px; color: var(--text); font-family: var(--font); outline: none; resize: vertical; box-sizing: border-box; line-height: 1.5; }
-    .gloss-textarea:focus { border-color: var(--lavender-deep); }
-    .gloss-subject-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-    .gloss-subject-pill { padding: 7px 16px; border-radius: 99px; border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.18s; }
-    .gloss-modal-actions { display: flex; gap: 10px; margin-top: 4px; }
-    .gloss-modal-actions .btn { flex: 1; }
+    .gloss-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .gloss-label { font-size: 11px; font-weight: 700; color: var(--text3); margin-top: 10px; text-transform: uppercase; letter-spacing: .6px; }
+    .gloss-input { width: 100%; padding: 13px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface2); font-size: 15px; color: var(--text); font-family: var(--font); outline: none; box-sizing: border-box; transition: border-color 0.18s, box-shadow 0.18s; }
+    .gloss-input:focus { border-color: var(--lavender-deep); box-shadow: 0 0 0 3px rgba(108,71,255,0.1); }
+    .gloss-textarea { width: 100%; padding: 13px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface2); font-size: 14px; color: var(--text); font-family: var(--font); outline: none; resize: none; box-sizing: border-box; line-height: 1.6; min-height: 96px; transition: border-color 0.18s, box-shadow 0.18s; }
+    .gloss-textarea:focus { border-color: var(--lavender-deep); box-shadow: 0 0 0 3px rgba(108,71,255,0.1); }
+    .gloss-subject-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .gloss-subject-pill { padding: 8px 18px; border-radius: 99px; border: 1.5px solid var(--border); background: var(--surface2); font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.18s; }
+    .gloss-subject-pill:active { transform: scale(0.96); }
+    .gloss-modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+    .gloss-modal-actions .btn { flex: 1; padding: 14px; font-size: 15px; }
     .gloss-view-subject { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
     .gloss-view-term { font-size: 22px; font-weight: 800; color: var(--text); font-family: var(--font-display); margin-bottom: 14px; line-height: 1.2; }
     .gloss-view-def { font-size: 15px; color: var(--text2); line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; }
@@ -1107,7 +1112,7 @@
   <div class="nav"><button class="nav-btn" onclick="exitStudy()"><i data-lucide="x"></i></button><div class="nav-title" id="study-deck-name"></div><button class="nav-btn" id="fav-btn" onclick="toggleFavorite()" title="В избранное"><i data-lucide="star"></i></button></div>
   <div class="study-progress-bar"><div class="study-progress-fill" id="study-prog"></div></div>
   <div class="study-counter" id="study-counter"></div>
-  <div class="flashcard-area"><div class="flashcard-wrap"><div class="flashcard-3d" id="flashcard" onclick="flipCard()"><div class="fc-face fc-front"><div class="fc-label">Вопрос</div><div class="fc-text" id="fc-question"></div><div class="fc-hint">нажмите, чтобы увидеть ответ</div></div><div class="fc-face fc-back"><div class="fc-label">Ответ</div><div class="fc-text" id="fc-answer"></div></div></div></div></div>
+  <div class="flashcard-area"><div class="flashcard-wrap"><div class="flashcard-3d" id="flashcard" onclick="flipCard()"><div class="fc-face fc-front"><div class="fc-label">Вопрос</div><div class="fc-text" id="fc-question"></div><div class="fc-hint">нажмите, чтобы увидеть ответ</div></div><div class="fc-face fc-back"><div class="fc-label">Ответ</div><div class="fc-text" id="fc-answer"></div><div class="fc-hint">нажмите, чтобы вернуться</div></div></div></div></div>
   <div class="study-actions" id="study-actions" style="visibility:hidden"><button class="btn btn-wrong" onclick="markCard(false)"><i data-lucide="x"></i> Не знал</button><button class="btn btn-right" onclick="markCard(true)"><i data-lucide="check"></i> Знал</button></div>
 </div>
 

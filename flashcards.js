@@ -296,14 +296,17 @@ function showCard() {
 window.showCard = showCard;
 
 function flipCard() {
-  if (isFlipped) return;
-  isFlipped = true;
+  isFlipped = !isFlipped;
   const flashcard = document.getElementById('flashcard');
-  if (flashcard) flashcard.classList.add('flipped');
-  setTimeout(() => {
-    const actionsEl = document.getElementById('study-actions');
-    if (actionsEl) actionsEl.style.visibility = 'visible';
-  }, 300);
+  if (flashcard) flashcard.classList.toggle('flipped', isFlipped);
+  const actionsEl = document.getElementById('study-actions');
+  if (actionsEl) {
+    if (isFlipped) {
+      setTimeout(() => { actionsEl.style.visibility = 'visible'; }, 300);
+    } else {
+      actionsEl.style.visibility = 'hidden';
+    }
+  }
 }
 window.flipCard = flipCard;
 

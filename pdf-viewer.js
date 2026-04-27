@@ -81,7 +81,8 @@ async function downloadPdfLocally(pdfId) {
   window.showToast('Скачивание...');
   try {
     const downloadUrl = await window.getYadiskDownloadUrl(entry.yadiskUrl);
-    const res = await fetch(downloadUrl);
+    const proxyUrl = 'https://ege-pdf-proxy.fritiser.workers.dev/?url=' + encodeURIComponent(downloadUrl);
+    const res = await fetch(proxyUrl);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const blob = await res.blob();
     await window.dbPut('pdf_files', { id: pdfId, blob, updatedAt: Date.now() });
@@ -448,9 +449,9 @@ async function _ensurePageRendered(num) {
 
   _renderQueue.add(num);
   try {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const wrap = document.getElementById('pdf-canvas-wrap');
-    const maxW = (wrap?.clientWidth || window.innerWidth) - 16;
+    const maxW = Math.max((wrap?.clientWidth || 0), window.innerWidth, 300) - 16;
     const page = await _pdfDoc.getPage(num);
     const vp0 = page.getViewport({ scale: 1 });
     const scale = maxW / vp0.width;

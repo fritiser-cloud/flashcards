@@ -108,7 +108,13 @@ function renderGlossary() {
     <div class="modal-overlay" id="gloss-modal" onclick="window.glossaryCloseModal(event)">
       <div class="modal-sheet">
         <div class="modal-handle"></div>
-        <div class="modal-title" id="gloss-modal-title">Добавить термин</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--lavender-deep),#9575cd);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+          <div class="modal-title" id="gloss-modal-title" style="margin-bottom:0;">Добавить термин</div>
+        </div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:18px;">Заполни поля и выбери предмет</div>
         <div class="gloss-form">
           <label class="gloss-label">Термин</label>
           <input class="gloss-input" id="gloss-term-input" type="text" placeholder="Например: Митоз" maxlength="100">
