@@ -55,6 +55,7 @@ window._firebaseAuth = auth; // доступен для receiveGoogleIdToken
 let currentUser = null;
 let _unsubscribeSnapshot = null;
 let _isSaving = false;
+let _isLoadingFromCloud = false;
 let _lastLocalChange = 0;
 
 // Переопределяем signInWithGoogle с полной реализацией
@@ -171,17 +172,50 @@ window.signOut = async function() {
   }
 };
 
-// ==================== ЗАГРУЗКА ИЗ FIREBASE ====================
-
-async function replaceStore(storeName, items) {
-  if (!Array.isArray(items) || items.length === 0) return;
-  const existing = await window.dbGetAll(storeName);
-  await Promise.all(existing.map(item => window.dbDelete(storeName, item.id)));
-  await Promise.all(items.map(item => window.dbPut(storeName, item)));
+// ==================== SMART MERGE ====================
+// Merges two item arrays by id, keeping the newer version of each item.
+// Items only in local (not yet synced) are always preserved.
+// Deleted items (deleted:true) win if they have a newer updatedAt.
+function _mergeArrays(local, cloud) {
+  const map = new Map();
+  for (const item of (cloud || [])) map.set(item.id, item);
+  for (const item of (local || [])) {
+    const cloudItem = map.get(item.id);
+    if (!cloudItem) {
+      // Only in local — keep (not yet synced to cloud)
+      map.set(item.id, item);
+    } else {
+      const lt = item.updatedAt || item.createdAt || 0;
+      const ct = cloudItem.updatedAt || cloudItem.createdAt || 0;
+      if (lt >= ct) map.set(item.id, item); // local is newer or same age
+    }
+  }
+  return [...map.values()];
 }
+
+// Same merge for IndexedDB stores
+async function mergeStore(storeName, cloudItems) {
+  if (!Array.isArray(cloudItems)) return;
+  const local = await window.dbGetAll(storeName);
+  const merged = _mergeArrays(local, cloudItems);
+  await Promise.all(local.map(item => window.dbDelete(storeName, item.id)));
+  await Promise.all(merged.map(item => window.dbPut(storeName, item)));
+}
+
+// ==================== ЗАГРУЗКА ИЗ FIREBASE ====================
 
 async function loadFromCloud() {
   if (!currentUser) return;
+  // Don't overwrite local data if there are unsaved local changes
+  if (_pendingSave) {
+    console.log('loadFromCloud skipped: pending local changes');
+    return;
+  }
+  if (_isLoadingFromCloud) {
+    console.log('loadFromCloud skipped: already loading');
+    return;
+  }
+  _isLoadingFromCloud = true;
   updateSyncStatus('syncing', 'Загрузка...');
   try {
     const userDocRef = db.collection('users').doc(currentUser.uid);
@@ -195,11 +229,35 @@ async function loadFromCloud() {
 
     const cloud = userDoc.data();
 
-    if (cloud.notes)          localStorage.setItem('notes',          JSON.stringify(cloud.notes));
-    if (cloud.atlas)          localStorage.setItem('atlas',          JSON.stringify(cloud.atlas));
-    if (cloud.guides)         localStorage.setItem('bio_guides',     JSON.stringify(cloud.guides));
-    if (cloud.pdf_library)    localStorage.setItem('pdf_library',    JSON.stringify(cloud.pdf_library));
-    if (cloud.pdf_downloaded) localStorage.setItem('pdf_downloaded', JSON.stringify(cloud.pdf_downloaded));
+    // Smart merge: combine local + cloud, keep newer item by updatedAt
+    const lsKeys = {
+      notes:    { localKey: 'notes',       cloudKey: 'notes' },
+      atlas:    { localKey: 'atlas',       cloudKey: 'atlas' },
+      guides:   { localKey: 'bio_guides',  cloudKey: 'guides' },
+      pdf_lib:  { localKey: 'pdf_library', cloudKey: 'pdf_library' },
+    };
+
+    for (const { localKey, cloudKey } of Object.values(lsKeys)) {
+      if (cloud[cloudKey]) {
+        const local = JSON.parse(localStorage.getItem(localKey) || '[]');
+        const merged = _mergeArrays(local, cloud[cloudKey]);
+        localStorage.setItem(localKey, JSON.stringify(merged));
+      }
+    }
+
+    // pdf_downloaded: simple object merge (union of keys, local wins on conflict)
+    if (cloud.pdf_downloaded) {
+      const localDl = JSON.parse(localStorage.getItem('pdf_downloaded') || '{}');
+      localStorage.setItem('pdf_downloaded', JSON.stringify({ ...cloud.pdf_downloaded, ...localDl }));
+    }
+
+    // schedule: merge by date key — local tasks for a date always win (most recent edit)
+    // Cloud adds any date keys missing locally (edited on another device)
+    if (cloud.schedule) {
+      const localSched = JSON.parse(localStorage.getItem('study_schedule') || '{}');
+      const merged = { ...cloud.schedule, ...localSched }; // local wins per date key
+      localStorage.setItem('study_schedule', JSON.stringify(merged));
+    }
 
     for (const subj of ['ru', 'bio', 'chem']) {
       if (cloud['scores_current_' + subj])
@@ -208,10 +266,10 @@ async function loadFromCloud() {
         localStorage.setItem('ege_history_' + subj, JSON.stringify(cloud['scores_history_' + subj]));
     }
 
-    if (cloud.decks)     await replaceStore('decks',     cloud.decks);
-    if (cloud.stats)     await replaceStore('stats',     cloud.stats);
-    if (cloud.favorites) await replaceStore('favorites', cloud.favorites);
-    if (cloud.reviews)   await replaceStore('reviews',   cloud.reviews);
+    if (cloud.decks)     await mergeStore('decks',     cloud.decks);
+    if (cloud.stats)     await mergeStore('stats',     cloud.stats);
+    if (cloud.favorites) await mergeStore('favorites', cloud.favorites);
+    if (cloud.reviews)   await mergeStore('reviews',   cloud.reviews);
 
     if (window.invalidateDecksCache) window.invalidateDecksCache();
     if (window.renderDecks)          window.renderDecks();
@@ -219,7 +277,9 @@ async function loadFromCloud() {
     if (window.renderAtlas)          window.renderAtlas();
     if (window.renderLibrary)        window.renderLibrary();
     if (window.renderScores)         window.renderScores();
-    if (window.renderCalendar)       window.renderCalendar();
+    if (window.renderCalendar)        window.renderCalendar();
+    if (window.renderScheduleScreen)  window.renderScheduleScreen();
+    if (window.renderTodayPlanWidget) window.renderTodayPlanWidget();
     if (window.renderUpcomingReviews) window.renderUpcomingReviews();
     if (window.syncPdfFiles)         window.syncPdfFiles();
 
@@ -229,14 +289,20 @@ async function loadFromCloud() {
   } catch (error) {
     console.error('Ошибка загрузки из облака:', error);
     updateSyncStatus('error', 'Ошибка загрузки');
+  } finally {
+    _isLoadingFromCloud = false;
   }
 }
 
 // ==================== СОХРАНЕНИЕ В FIREBASE ====================
 
+let _pendingSave = false;
+let _saveRetryTimer = null;
+
 async function saveToCloud() {
   if (!currentUser) return;
   _isSaving = true;
+  clearTimeout(_saveRetryTimer);
   updateSyncStatus('syncing', 'Сохранение...');
   try {
     const notes     = window.getNotes      ? window.getNotes()      : [];
@@ -249,12 +315,14 @@ async function saveToCloud() {
 
     const pdfLibrary    = window.getPdfLibrary    ? window.getPdfLibrary()    : [];
     const pdfDownloaded = window.getPdfDownloaded ? window.getPdfDownloaded() : {};
+    const schedule      = JSON.parse(localStorage.getItem('study_schedule') || '{}');
 
     const data = {
       notes, atlas, guides,
       decks, stats, favorites, reviews,
       pdf_library: pdfLibrary,
       pdf_downloaded: pdfDownloaded,
+      schedule,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -265,14 +333,20 @@ async function saveToCloud() {
 
     await db.collection('users').doc(currentUser.uid).set(data, { merge: true });
 
+    _pendingSave = false;
     updateSyncStatus('success', 'Сохранено');
     const lastSyncEl = document.getElementById('last-sync');
     if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString('ru-RU');
   } catch (error) {
     console.error('Ошибка сохранения:', error);
-    updateSyncStatus('error', 'Ошибка сохранения');
+    _pendingSave = true;
+    updateSyncStatus('error', 'Нет связи — данные сохранены локально');
+    // Retry in 30s
+    _saveRetryTimer = setTimeout(() => {
+      if (_pendingSave && currentUser) saveToCloud();
+    }, 30000);
   } finally {
-    setTimeout(() => { _isSaving = false; }, 5000);
+    _isSaving = false;
   }
 }
 
@@ -280,6 +354,7 @@ let _autoSaveTimer = null;
 window.autoSaveToCloud = function() {
   if (!currentUser) return;
   _lastLocalChange = Date.now();
+  _pendingSave = true; // mark as pending immediately so realtime sync won't overwrite
   clearTimeout(_autoSaveTimer);
   _autoSaveTimer = setTimeout(() => saveToCloud(), 2000);
 };
@@ -290,10 +365,20 @@ function startRealtimeSync() {
   if (_unsubscribeSnapshot) _unsubscribeSnapshot();
   _unsubscribeSnapshot = db.collection('users').doc(currentUser.uid).onSnapshot((docSnap) => {
     if (_isSaving) return;
-    if (Date.now() - _lastLocalChange < 6000) return;
+    if (_pendingSave) return; // unsaved local changes — don't overwrite
+    if (_isLoadingFromCloud) return; // already loading
+    if (Date.now() - _lastLocalChange < 30000) return; // 30s grace after any local edit
     if (docSnap.exists) loadFromCloud();
   });
 }
+
+// Retry pending saves when network comes back
+window.addEventListener('online', () => {
+  if (_pendingSave && currentUser) {
+    clearTimeout(_saveRetryTimer);
+    saveToCloud();
+  }
+});
 
 // ==================== ИНДИКАТОР СТАТУСА ====================
 

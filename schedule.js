@@ -33,6 +33,7 @@ function getSchedule() {
 
 function saveSchedule(data) {
   localStorage.setItem(SCHEDULE_KEY, JSON.stringify(data));
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
 }
 
 function getTodayTasks() {
@@ -249,7 +250,7 @@ function renderScheduleScreen() {
 
   const totalDays = days.length;
   const daysWithTasks = Object.keys(schedule).filter(k => {
-    const d = new Date(k);
+    const d = new Date(k + 'T00:00:00'); // local midnight, not UTC
     return d >= today && d <= end && schedule[k].length > 0;
   }).length;
 
@@ -328,7 +329,7 @@ window.schedCancelAdd = function(dateKey) {
 };
 
 function rerenderSchedDay(dateKey) {
-  const d = new Date(dateKey);
+  const d = new Date(dateKey + 'T00:00:00'); // local midnight, not UTC
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const isToday = dateKey === todayKey();
   const isPast = d < today;

@@ -59,7 +59,12 @@ function navTo(tab) {
 window.navTo = navTo;
 
 function safeMarkdown(text) {
-  const html = marked.parse(text || '');
+  if (!text) return '';
+  if (typeof marked === 'undefined' || !marked.parse) {
+    // marked library not loaded — return escaped plain text
+    return escapeHtml(text).replace(/\n/g, '<br>');
+  }
+  const html = marked.parse(text);
   const div = document.createElement('div');
   div.innerHTML = html;
   div.querySelectorAll('script').forEach(el => el.remove());
