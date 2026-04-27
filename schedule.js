@@ -250,9 +250,41 @@ function renderScheduleScreen() {
 
   const totalDays = days.length;
   const daysWithTasks = Object.keys(schedule).filter(k => {
-    const d = new Date(k + 'T00:00:00'); // local midnight, not UTC
+    const d = new Date(k + 'T00:00:00');
     return d >= today && d <= end && schedule[k].length > 0;
   }).length;
+
+  // Week progress: Mon–Sun of current week
+  function getCurrentWeekProgress() {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const dow = now.getDay(); // 0=Sun
+    const diffToMon = (dow === 0 ? -6 : 1 - dow);
+    const mon = new Date(now);
+    mon.setDate(now.getDate() + diffToMon);
+    let weekTotal = 0, weekDone = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      const k = dateToKey(d);
+      const tasks = schedule[k] || [];
+      weekTotal += tasks.length;
+      weekDone += tasks.filter(t => t.done).length;
+    }
+    return { weekTotal, weekDone };
+  }
+  const { weekTotal, weekDone } = getCurrentWeekProgress();
+  const weekPct = weekTotal > 0 ? Math.round(weekDone / weekTotal * 100) : 0;
+  const weekProgressHtml = weekTotal > 0 ? `
+    <div class="sched-week-progress-bar-wrap">
+      <div class="sched-week-progress-top">
+        <span class="sched-week-progress-label">Прогресс этой недели</span>
+        <span class="sched-week-progress-count">${weekDone} из ${weekTotal} задач</span>
+      </div>
+      <div class="sched-week-progress-track">
+        <div class="sched-week-progress-fill" style="width:${weekPct}%"></div>
+      </div>
+    </div>` : '';
 
   screen.innerHTML = `
     <div class="nav">
@@ -277,6 +309,7 @@ function renderScheduleScreen() {
           <div class="sched-summary-label">экзамена</div>
         </div>
       </div>
+      ${weekProgressHtml}
       <div class="sched-weeks">${weeksHtml}</div>
     </div>
   `;

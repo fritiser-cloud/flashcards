@@ -132,21 +132,22 @@
     .bottom-nav.hidden { display: none !important; }
     .bottom-nav-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-      padding: 6px 2px; cursor: pointer; border: none; background: none;
-      font-family: var(--font); transition: all 0.2s; border-radius: 20px;
+      padding: 6px 1px; cursor: pointer; border: none; background: none;
+      font-family: var(--font); transition: all 0.2s; border-radius: 20px; min-width: 0;
     }
     .bottom-nav-btn .icon {
       font-size: 20px; line-height: 1;
-      width: 38px; height: 30px;
+      width: 32px; height: 28px;
       display: flex; align-items: center; justify-content: center;
-      border-radius: 15px;
+      border-radius: 13px;
       transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .bottom-nav-btn .label {
-      font-size: 9.5px; font-weight: 600; color: var(--text3);
-      letter-spacing: 0.2px; transition: all 0.2s; line-height: 1;
+      font-size: 8px; font-weight: 600; color: var(--text3);
+      letter-spacing: 0px; transition: all 0.2s; line-height: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
     }
-    .bottom-nav-btn .icon svg { width: 22px; height: 22px; stroke: var(--text3); stroke-width: 1.8; fill: none; transition: stroke 0.2s; }
+    .bottom-nav-btn .icon svg { width: 17px; height: 17px; stroke: var(--text3); stroke-width: 1.8; fill: none; transition: stroke 0.2s; }
     .bottom-nav-btn.active .icon {
       background: var(--lavender);
       transform: scale(1.08) translateY(-1px);
@@ -628,6 +629,8 @@
     .review-item-btn { padding: 10px 20px; border-radius: var(--radius-sm); border: none; background: var(--accent-light); color: var(--accent); font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
     .review-item-btn:active { transform: scale(0.95); }
     .review-item.overdue .review-item-btn { background: var(--red-light); color: var(--red); }
+    .review-item-del { width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text3); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.18s; }
+    .review-item-del:active { background: var(--red-light); color: var(--red); border-color: var(--red); transform: scale(0.93); }
     .review-quality-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
     .quality-btn { padding: 14px 24px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-family: var(--font); font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 100px; }
     .quality-bad { background: var(--red-light); color: var(--red); border-color: var(--red-light); }
@@ -711,6 +714,11 @@
     .analytics-stat-card { flex:1; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:14px; text-align:center; }
     .analytics-stat-num { font-size:28px; font-weight:700; font-family:var(--font-display); color:var(--lavender-deep); }
     .analytics-stat-label { font-size:11px; color:var(--text3); margin-top:2px; }
+    .score-line-chart-wrap { margin: 0 20px 16px; background: var(--surface); border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 12px rgba(100,80,160,0.08); }
+    .score-line-chart-title { font-size: 12px; font-weight: 600; color: var(--text3); margin-bottom: 10px; }
+    .score-line-chart { width: 100%; height: 80px; display: block; overflow: visible; }
+    .score-line-chart-labels { display: flex; justify-content: space-between; margin-top: 4px; }
+    .score-line-chart-labels span { font-size: 10px; color: var(--text3); }
     .analytics-chart-label { padding:0 20px 10px; font-size:12px; color:var(--text3); font-weight:600; }
     .analytics-chart { display:flex; gap:3px; align-items:flex-end; padding:0 20px 20px; height:100px; overflow-x:auto; scrollbar-width:none; }
     .analytics-chart::-webkit-scrollbar { display:none; }
@@ -752,9 +760,8 @@
     .dash-greeting { font-size: 13px; opacity: 0.8; margin-bottom: 4px; }
     .dash-title { font-size: 26px; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
     .dash-sub { font-size: 13px; opacity: 0.75; margin-bottom: 16px; }
-    .dash-exams { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-    .dash-exams::-webkit-scrollbar { display: none; }
-    .dash-exam-card { flex-shrink: 0; background: rgba(255,255,255,0.18); border-radius: 14px; padding: 12px 16px; min-width: 110px; text-align: center; backdrop-filter: blur(6px); }
+    .dash-exams { display: flex; gap: 10px; padding-bottom: 4px; }
+    .dash-exam-card { flex: 1; background: rgba(255,255,255,0.18); border-radius: 14px; padding: 12px 16px; text-align: center; backdrop-filter: blur(6px); }
     .dash-exam-days { font-size: 30px; font-weight: 900; line-height: 1; }
     .dash-exam-label { font-size: 11px; opacity: 0.85; margin-top: 2px; }
     .dash-exam-name { font-size: 12px; font-weight: 700; margin-top: 4px; }
@@ -799,6 +806,12 @@
     .dash-plan-link { color: var(--green); font-weight: 600; text-decoration: none; }
     .sched-exam-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: #fff; background: #C0392B; border-radius: 20px; padding: 3px 10px; margin-bottom: 10px; }
 
+    .sched-week-progress-bar-wrap { margin: 14px 16px 0; background: var(--surface); border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 12px rgba(100,80,160,0.08); }
+    .sched-week-progress-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .sched-week-progress-label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .sched-week-progress-count { font-size: 13px; font-weight: 700; color: var(--lavender-deep); }
+    .sched-week-progress-track { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .sched-week-progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #52c97a); border-radius: 99px; transition: width .4s ease; }
     .sched-summary { display: flex; gap: 12px; padding: 16px 16px 0; margin-bottom: 4px; }
     .sched-summary-item { flex: 1; background: var(--surface); border-radius: 14px; padding: 14px 10px; text-align: center; box-shadow: 0 2px 12px rgba(100,80,160,0.08); }
     .sched-summary-num { font-size: 26px; font-weight: 800; color: var(--text); font-family: var(--font-display); line-height: 1; margin-bottom: 4px; }
@@ -915,6 +928,62 @@
     .pdf-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
     .pdf-badge--pos { background: rgba(130,100,200,0.12); color: var(--lavender-deep); }
     .pdf-page-container { flex-shrink: 0; }
+
+    /* ===== СЛОВАРЬ ===== */
+    .gloss-hero { background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #11998e 100%); }
+    .gloss-search-row { display: flex; gap: 10px; align-items: center; padding: 0 16px; margin-bottom: 12px; }
+    .gloss-filters { display: flex; gap: 8px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; margin-bottom: 4px; }
+    .gloss-filters::-webkit-scrollbar { display: none; }
+    .gloss-filter-pill { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; border: 1.5px solid var(--border); background: var(--surface); font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.18s; }
+    .gloss-filter-pill.active { border-color: var(--lavender-deep); color: var(--lavender-deep); background: var(--lavender); }
+    .gloss-count { padding: 6px 16px 2px; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; min-height: 20px; }
+    .gloss-list { padding: 4px 16px 100px; }
+    .gloss-letter-group { margin-bottom: 4px; }
+    .gloss-letter { font-size: 12px; font-weight: 800; color: var(--text3); padding: 10px 4px 4px; letter-spacing: .5px; }
+    .gloss-term-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 12px; padding: 12px 14px; margin-bottom: 6px; cursor: pointer; box-shadow: 0 1px 6px rgba(100,80,160,0.07); transition: transform 0.15s, box-shadow 0.15s; }
+    .gloss-term-card:active { transform: scale(0.98); box-shadow: none; }
+    .gloss-term-left { flex: 1; min-width: 0; }
+    .gloss-term-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .gloss-term-preview { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gloss-subject-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .gloss-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 60px 20px; color: var(--text3); text-align: center; }
+    .gloss-empty svg { opacity: .3; }
+    .gloss-empty-text { font-size: 16px; font-weight: 600; color: var(--text2); }
+    .gloss-empty-sub { font-size: 13px; }
+    .gloss-form { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .gloss-label { font-size: 12px; font-weight: 700; color: var(--text3); margin-top: 6px; text-transform: uppercase; letter-spacing: .5px; }
+    .gloss-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg); font-size: 15px; color: var(--text); font-family: var(--font); outline: none; box-sizing: border-box; }
+    .gloss-input:focus { border-color: var(--lavender-deep); }
+    .gloss-textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg); font-size: 14px; color: var(--text); font-family: var(--font); outline: none; resize: vertical; box-sizing: border-box; line-height: 1.5; }
+    .gloss-textarea:focus { border-color: var(--lavender-deep); }
+    .gloss-subject-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .gloss-subject-pill { padding: 7px 16px; border-radius: 99px; border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.18s; }
+    .gloss-modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+    .gloss-modal-actions .btn { flex: 1; }
+    .gloss-view-subject { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .gloss-view-term { font-size: 22px; font-weight: 800; color: var(--text); font-family: var(--font-display); margin-bottom: 14px; line-height: 1.2; }
+    .gloss-view-def { font-size: 15px; color: var(--text2); line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; }
+
+    /* ===== ПОМОДОРО ===== */
+    #pomodoro-widget { margin: 0 20px 16px; }
+    .pom-widget { background: var(--surface); border-radius: 16px; padding: 16px; box-shadow: 0 2px 12px rgba(100,80,160,0.08); }
+    .pom-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .pom-title-row { display: flex; align-items: center; gap: 7px; }
+    .pom-label { font-size: 13px; font-weight: 700; color: var(--text); }
+    .pom-sessions { font-size: 11px; color: var(--text3); background: var(--lavender); padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+    .pom-reset-btn { width: 28px; height: 28px; border-radius: 8px; border: 1.5px solid var(--border); background: none; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+    .pom-reset-btn:active { background: var(--lavender); }
+    .pom-body { display: flex; align-items: center; gap: 20px; }
+    .pom-circle-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+    .pom-circle-svg { width: 80px; height: 80px; transform: rotate(-90deg); }
+    .pom-time { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; color: var(--text); font-family: var(--font-display); letter-spacing: -0.5px; }
+    .pom-controls { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .pom-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 12px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: all .15s; }
+    .pom-btn-play { background: var(--lavender-deep); color: #fff; }
+    .pom-btn-play:active { opacity: .85; }
+    .pom-btn-pause { background: var(--lavender); color: var(--lavender-deep); }
+    .pom-btn-pause:active { opacity: .85; }
+    .pom-btn-skip { background: var(--bg); border: 1.5px solid var(--border); color: var(--text3); padding: 6px 14px; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -1171,6 +1240,9 @@
 <!-- РАСПИСАНИЕ -->
 <div id="schedule-screen" class="screen"></div>
 
+<!-- СЛОВАРЬ ТЕРМИНОВ -->
+<div id="glossary-screen" class="screen"></div>
+
 <!-- PDF ПРОСМОТРЩИК -->
 <div id="pdf-viewer-screen" class="screen">
   <!-- Верхняя панель -->
@@ -1252,8 +1324,10 @@
   <button class="bottom-nav-btn" id="nav-decks" onclick="navTo('decks')"><span class="icon"><i data-lucide="layers"></i></span><span class="label">Карточки</span></button>
   <button class="bottom-nav-btn" id="nav-atlas" onclick="navTo('atlas')"><span class="icon"><i data-lucide="map"></i></span><span class="label">Атлас</span></button>
   <button class="bottom-nav-btn" id="nav-notes" onclick="navTo('notes')"><span class="icon"><i data-lucide="notebook-pen"></i></span><span class="label">Заметки</span></button>
-  <button class="bottom-nav-btn" id="nav-calendar" onclick="navTo('calendar')"><span class="icon"><i data-lucide="calendar-days"></i></span><span class="label">Календарь</span></button>
+  <button class="bottom-nav-btn" id="nav-schedule" onclick="navTo('schedule')"><span class="icon"><i data-lucide="calendar-check"></i></span><span class="label">Расписание</span></button>
+  <button class="bottom-nav-btn" id="nav-calendar" onclick="navTo('calendar')"><span class="icon"><i data-lucide="calendar-days"></i></span><span class="label">Повторения</span></button>
   <button class="bottom-nav-btn" id="nav-scores" onclick="navTo('scores')"><span class="icon"><i data-lucide="chart-bar"></i></span><span class="label">Баллы</span></button>
+  <button class="bottom-nav-btn" id="nav-glossary" onclick="navTo('glossary')"><span class="icon"><i data-lucide="book-open-text"></i></span><span class="label">Словарь</span></button>
   <button class="bottom-nav-btn" id="nav-settings" onclick="navTo('settings')"><span class="icon"><i data-lucide="settings-2"></i></span><span class="label">Настройки</span></button>
 </div>
 
@@ -1514,16 +1588,19 @@
 <script src="utils.js?v=4"></script>
 <script src="database.js?v=4"></script>
 <script src="library.js?v=17"></script>
-<script src="flashcards.js?v=10"></script>
-<script src="atlas.js?v=5"></script>
+<script src="flashcards.js?v=11"></script>
+<script src="atlas.js?v=6"></script>
 <script src="notes.js?v=8"></script>
-<script src="calendar.js?v=5"></script>
-<script src="scores.js?v=7"></script>
+<script src="calendar.js?v=6"></script>
+<script src="scores.js?v=8"></script>
 <script src="yadisk.js?v=7"></script>
-<script src="home.js?v=4"></script>
-<script src="schedule.js?v=1"></script>
+<script src="home.js?v=5"></script>
+<script src="schedule.js?v=4"></script>
+<script src="schedule_seed.js?v=1"></script>
+<script src="glossary.js?v=2"></script>
+<script src="pomodoro.js?v=1"></script>
 <script src="pdf-viewer.js?v=1"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 <!-- РЕДАКТОР ПОСОБИЙ (полноэкранный) -->
 <div id="guide-writer-screen" class="screen">
   <!-- Навигация -->
