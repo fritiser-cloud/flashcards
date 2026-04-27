@@ -43,7 +43,7 @@ async function renderDecks() {
     }
     
     if (filteredDecks.length === 0) {
-      list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">${decks.length === 0 ? 'Нет колод' : 'Нет колод по запросу'}<br>Нажми + чтобы добавить</div></div>`;
+      list.innerHTML = `<div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div><div class="empty-text">${decks.length === 0 ? 'Нет колод' : 'Нет колод по запросу'}<br>Нажми + чтобы добавить</div></div>`;
       return;
     }
     

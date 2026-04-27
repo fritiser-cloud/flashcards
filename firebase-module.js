@@ -259,6 +259,17 @@ async function loadFromCloud() {
       localStorage.setItem('study_schedule', JSON.stringify(merged));
     }
 
+    if (cloud.glossary) {
+      // Merge: cloud terms not present locally get added; local always wins by id
+      const local = JSON.parse(localStorage.getItem('glossary_terms') || '[]');
+      const localMap = new Map(local.map(t => [t.id, t]));
+      for (const ct of cloud.glossary) {
+        const lt = localMap.get(ct.id);
+        if (!lt || ct.updatedAt > (lt.updatedAt || 0)) localMap.set(ct.id, ct);
+      }
+      localStorage.setItem('glossary_terms', JSON.stringify([...localMap.values()]));
+    }
+
     for (const subj of ['ru', 'bio', 'chem']) {
       if (cloud['scores_current_' + subj])
         localStorage.setItem('ege_current_' + subj, JSON.stringify(cloud['scores_current_' + subj]));
@@ -306,7 +317,15 @@ async function saveToCloud() {
   updateSyncStatus('syncing', 'Сохранение...');
   try {
     const notes     = window.getNotes      ? window.getNotes()      : [];
-    const atlas     = window.getAtlasItems ? window.getAtlasItems() : [];
+    // Strip base64 image data — keep Yandex Disk URLs, remove only raw base64 (1MB limit)
+    const atlas     = (window.getAtlasItems ? window.getAtlasItems() : [])
+                        .map(item => {
+                          if (item.image && item.image.startsWith('data:')) {
+                            const { image: _img, ...rest } = item;
+                            return rest;
+                          }
+                          return item;
+                        });
     const guides    = window.getGuides     ? window.getGuides()     : [];
     const decks     = await window.dbGetAll('decks');
     const stats     = await window.dbGetAll('stats');
@@ -316,6 +335,7 @@ async function saveToCloud() {
     const pdfLibrary    = window.getPdfLibrary    ? window.getPdfLibrary()    : [];
     const pdfDownloaded = window.getPdfDownloaded ? window.getPdfDownloaded() : {};
     const schedule      = JSON.parse(localStorage.getItem('study_schedule') || '{}');
+    const glossary      = JSON.parse(localStorage.getItem('glossary_terms') || '[]');
 
     const data = {
       notes, atlas, guides,
@@ -323,6 +343,7 @@ async function saveToCloud() {
       pdf_library: pdfLibrary,
       pdf_downloaded: pdfDownloaded,
       schedule,
+      glossary,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 

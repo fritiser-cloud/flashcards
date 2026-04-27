@@ -221,6 +221,48 @@ function buildTaskRowHTML(task, score, isSet) {
   </div>`;
 }
 
+function buildLineChartHTML(values) {
+  if (values.length < 2) return '';
+  const W = 600, H = 80, PAD_X = 12, PAD_Y = 10;
+  const minV = Math.min(...values, 0);
+  const maxV = Math.max(...values, 100);
+  const range = maxV - minV || 1;
+  const pts = values.map((v, i) => {
+    const x = PAD_X + (i / (values.length - 1)) * (W - PAD_X * 2);
+    const y = PAD_Y + (1 - (v - minV) / range) * (H - PAD_Y * 2);
+    return { x, y, v };
+  });
+  const polyline = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  // Filled area path
+  const areaPath = `M${pts[0].x.toFixed(1)},${H} ` +
+    pts.map(p => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') +
+    ` L${pts[pts.length-1].x.toFixed(1)},${H} Z`;
+  // Dots and labels
+  const dots = pts.map((p, i) => {
+    const isLast = i === pts.length - 1;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isLast ? 5 : 3.5}" fill="${isLast ? 'var(--lavender-deep)' : 'var(--lavender-mid)'}" stroke="white" stroke-width="1.5"/>
+    <text x="${p.x.toFixed(1)}" y="${(p.y - 9).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="var(--font-sans)">${p.v}</text>`;
+  }).join('');
+
+  return `<div class="score-line-chart-wrap">
+    <div class="score-line-chart-title">Динамика тестовых баллов</div>
+    <svg class="score-line-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lgc-${currentScoreSubject}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--lavender-mid)" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="var(--lavender-mid)" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#lgc-${currentScoreSubject})"/>
+      <polyline points="${polyline}" fill="none" stroke="var(--lavender-deep)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+    </svg>
+    <div class="score-line-chart-labels">
+      ${values.map((_, i) => `<span>Вар. ${i + 1}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
 function buildAnalyticsHTML() {
   const history = getScoreHistory(currentScoreSubject);
   if (history.length === 0) {
@@ -242,10 +284,15 @@ function buildAnalyticsHTML() {
   const bestPrimary = Math.max(...primaries);
   const cnt = history.length;
 
+  // Line chart: secondary scores over time
+  const secondaries = history.map(v => calcSecondary(currentScoreSubject, calcPrimary(currentScoreSubject, v.tasks)));
+  const lineChartHtml = buildLineChartHTML(secondaries);
+
   let html = `<div class="score-section-header">
     <span class="score-section-title">Аналитика</span>
     <span class="score-section-sub">${cnt} ${cnt===1?'вариант':cnt<5?'варианта':'вариантов'}</span>
   </div>
+  ${lineChartHtml}
   <div class="analytics-summary-row">
     <div class="analytics-stat-card">
       <div class="analytics-stat-num">${calcSecondary(currentScoreSubject, avgPrimary)}</div>

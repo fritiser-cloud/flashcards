@@ -98,16 +98,9 @@ async function renderDashboard() {
       <div class="dash-exams">${examCards}</div>
     </div>
     <div class="dash-stats">
-      <div class="dash-stat-card">
-        <div class="dash-stat-num">${todayCount}</div>
-        <div class="dash-stat-label">карточек сегодня</div>
-      </div>
-      <div class="dash-stat-card">
-        <div class="dash-stat-num">${notesCount}</div>
-        <div class="dash-stat-label">заметок</div>
-      </div>
       ${streakHtml}
     </div>
+    <div id="pomodoro-widget"></div>
     <div id="dash-today-plan-widget">${todayPlanHtml}</div>
     <div class="dash-quick-actions">
       <button class="dash-quick-btn" onclick="window.navTo('decks')">
@@ -126,6 +119,7 @@ async function renderDashboard() {
     <div class="dash-section-title">Пособия</div>
   `;
   if (window.lucide) window.lucide.createIcons();
+  if (window.renderPomodoroWidget) window.renderPomodoroWidget();
 }
 window.renderDashboard = renderDashboard;
 

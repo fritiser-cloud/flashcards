@@ -125,6 +125,9 @@ function navTo(tab) {
   } else if (tab === 'schedule') {
     window.showScreen('schedule-screen');
     if (window.renderScheduleScreen) window.renderScheduleScreen();
+  } else if (tab === 'glossary') {
+    window.showScreen('glossary-screen');
+    if (window.renderGlossary) window.renderGlossary();
   } else if (tab === 'pdf-viewer') {
     window.showScreen('pdf-viewer-screen');
   }

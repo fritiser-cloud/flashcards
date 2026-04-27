@@ -66,9 +66,9 @@ async function renderCalendar() {
   const todayKey = formatDate(today);
 
   let html = `<div class="calendar-header">
-                <button class="calendar-nav" onclick="changeMonth(-1)">←</button>
+                <button class="calendar-nav" onclick="changeMonth(-1)" aria-label="Предыдущий месяц"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
                 <h2>${(() => { const d = new Date(currentDisplayYear, currentDisplayMonth); const m = d.toLocaleString('ru', {month:'long'}); return m.charAt(0).toUpperCase() + m.slice(1) + ' ' + currentDisplayYear; })()}</h2>
-                <button class="calendar-nav" onclick="changeMonth(1)">→</button>
+                <button class="calendar-nav" onclick="changeMonth(1)" aria-label="Следующий месяц"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
               </div>
               <div class="calendar-weekdays">
                 <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
@@ -179,6 +179,9 @@ async function renderUpcomingReviews() {
       </div>
       <div class="review-item-date">${date.toLocaleDateString('ru')}</div>
       <button class="review-item-btn" onclick="window.startReview(${review.id})">Повторить</button>
+      <button class="review-item-del" onclick="window.deleteReviewItem(${review.id})" aria-label="Удалить">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>
     `;
     container.appendChild(item);
   });
@@ -285,5 +288,16 @@ async function clearAllReviews() {
     window.showToast('❌ Ошибка при удалении');
   }
 }
+async function deleteReviewItem(id) {
+  const allReviews = await window.dbGetAll('reviews');
+  const review = allReviews.find(r => r.id === id);
+  if (!review) return;
+  await window.dbPut('reviews', { ...review, deleted: true, updatedAt: Date.now() });
+  if (window.autoSaveToCloud) window.autoSaveToCloud();
+  renderCalendar();
+  renderUpcomingReviews();
+}
+window.deleteReviewItem = deleteReviewItem;
+
 window.clearAllReviews = clearAllReviews;
 window.exitReview = exitReview;
