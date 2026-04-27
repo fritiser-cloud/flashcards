@@ -160,19 +160,13 @@ function renderLibrary() {
     );
   }
   
-  // Удаляем только guide-card элементы, оставляем pdf-section и empty-state
   list.querySelectorAll('.guide-card').forEach(c => c.remove());
 
-  if (window.renderPdfSection) window.renderPdfSection();
-
-  // Empty state: показываем если нет ни пособий ни PDF
-  const pdfLib = window.getPdfLibrary ? window.getPdfLibrary().filter(p => !p.deleted) : [];
   const emptyState = document.getElementById('library-empty-state');
   if (emptyState) {
-    const noPdfs = pdfLib.length === 0 || (currentCat !== 'all' && !pdfLib.some(p => (p.subject || 'bio') === currentCat));
-    emptyState.style.display = (filtered.length === 0 && noPdfs) ? '' : 'none';
-    if (filtered.length === 0 && noPdfs) {
-      emptyState.innerHTML = `<div class="empty-icon"><i data-lucide="library-big" style="width:40px;height:40px;stroke:var(--lavender-deep);stroke-width:1.5;fill:none"></i></div><div class="empty-text">${guides.length === 0 && pdfLib.length === 0 ? 'Библиотека пуста.<br>Нажми + чтобы добавить' : 'Нет материалов в этой категории'}</div>`;
+    emptyState.style.display = filtered.length === 0 ? '' : 'none';
+    if (filtered.length === 0) {
+      emptyState.innerHTML = `<div class="empty-icon"><i data-lucide="library-big" style="width:40px;height:40px;stroke:var(--lavender-deep);stroke-width:1.5;fill:none"></i></div><div class="empty-text">${guides.length === 0 ? 'Библиотека пуста.<br>Нажми + чтобы добавить' : 'Нет материалов в этой категории'}</div>`;
       if (window.lucide) window.lucide.createIcons();
     }
   }
@@ -381,16 +375,7 @@ function openMetaEditModal(type, pdfId) {
   _metaEditTarget = { type };
   let name, icon, category, tags, desc;
 
-  if (type === 'pdf') {
-    const lib = window.getPdfLibrary ? window.getPdfLibrary() : [];
-    const p = lib.find(p => p.id === pdfId);
-    if (!p) return;
-    _metaEditTarget.id = pdfId;
-    name = p.name; icon = p.icon || '📄'; category = p.subject || 'other';
-    tags = (p.tags || []).join(', '); desc = p.desc || '';
-    document.getElementById('meta-edit-title').textContent = 'Редактировать PDF';
-    document.getElementById('meta-desc-row').style.display = '';
-  } else if (type === 'guide') {
+  if (type === 'guide') {
     const guides = window.getGuides ? window.getGuides() : [];
     const g = guides.find(g => g.id === currentGuideId);
     if (!g) return;
@@ -463,18 +448,7 @@ async function saveMetaEdit() {
   const tags = document.getElementById('meta-tags-input').value.split(',').map(t => t.trim()).filter(Boolean);
   const desc = document.getElementById('meta-desc-input').value.trim();
 
-  if (_metaEditTarget.type === 'pdf') {
-    const lib = window.getPdfLibrary();
-    const idx = lib.findIndex(p => p.id === _metaEditTarget.id);
-    if (idx >= 0) {
-      lib[idx] = { ...lib[idx], name, icon, subject: _metaSelectedCat || lib[idx].subject || 'other', tags, desc };
-      window.savePdfLibrary(lib);
-      if (window.renderPdfSection) window.renderPdfSection();
-      // Обновить заголовок если открыт просмотрщик
-      const titleEl = document.getElementById('pdf-viewer-title');
-      if (titleEl && titleEl.textContent) titleEl.textContent = name;
-    }
-  } else if (_metaEditTarget.type === 'guide') {
+  if (_metaEditTarget.type === 'guide') {
     const guides = window.getGuides();
     const idx = guides.findIndex(g => g.id === _metaEditTarget.id);
     if (idx >= 0) {
@@ -606,11 +580,9 @@ function saveGuideWriter(silent) {
     const g = guides.find(g => g.id === _gwEditId);
     if (g) { g.name = name; g.content = content; g.icon = icon; g.category = category; g._writerImages = _gwImages; g.updatedAt = Date.now(); }
   } else {
-    guides.push({ id: Date.now(), name, icon, type: 'guide', category, content, _writerImages: _gwImages, sourceFile: 'local', createdAt: Date.now() });
-  }
-  // При автосохранении нового пособия — запомнить id чтобы следующие автосейвы обновляли его
-  if (!_gwEditId && !silent) {
-    // Будет добавлен с новым id при первом явном сохранении
+    const newId = Date.now();
+    _gwEditId = newId;
+    guides.push({ id: newId, name, icon, type: 'guide', category, content, _writerImages: _gwImages, sourceFile: 'local', createdAt: Date.now() });
   }
   window.saveGuides(guides);
   if (window.autoSaveToCloud && !silent) window.autoSaveToCloud();

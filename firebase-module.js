@@ -251,11 +251,29 @@ async function loadFromCloud() {
       localStorage.setItem('pdf_downloaded', JSON.stringify({ ...cloud.pdf_downloaded, ...localDl }));
     }
 
-    // schedule: merge by date key — local tasks for a date always win (most recent edit)
-    // Cloud adds any date keys missing locally (edited on another device)
+    // schedule: merge per task — union of cloud + local, done=true wins over done=false
     if (cloud.schedule) {
       const localSched = JSON.parse(localStorage.getItem('study_schedule') || '{}');
-      const merged = { ...cloud.schedule, ...localSched }; // local wins per date key
+      const allKeys = new Set([...Object.keys(cloud.schedule), ...Object.keys(localSched)]);
+      const merged = {};
+      for (const dateKey of allKeys) {
+        const cloudTasks = cloud.schedule[dateKey] || [];
+        const localTasks = localSched[dateKey] || [];
+        if (localTasks.length === 0) { merged[dateKey] = cloudTasks; continue; }
+        if (cloudTasks.length === 0) { merged[dateKey] = localTasks; continue; }
+        // Merge by task id: done=true wins
+        const cloudMap = new Map(cloudTasks.map(t => [t.id, t]));
+        merged[dateKey] = localTasks.map(t => {
+          const ct = cloudMap.get(t.id);
+          if (!ct) return t;
+          return { ...t, done: t.done || ct.done };
+        });
+        // Add cloud tasks missing locally
+        const localIds = new Set(localTasks.map(t => t.id));
+        for (const ct of cloudTasks) {
+          if (!localIds.has(ct.id)) merged[dateKey].push(ct);
+        }
+      }
       localStorage.setItem('study_schedule', JSON.stringify(merged));
     }
 
@@ -292,7 +310,6 @@ async function loadFromCloud() {
     if (window.renderScheduleScreen)  window.renderScheduleScreen();
     if (window.renderTodayPlanWidget) window.renderTodayPlanWidget();
     if (window.renderUpcomingReviews) window.renderUpcomingReviews();
-    if (window.syncPdfFiles)         window.syncPdfFiles();
 
     updateSyncStatus('success', 'Синхронизировано');
     const lastSyncEl = document.getElementById('last-sync');
@@ -332,16 +349,12 @@ async function saveToCloud() {
     const favorites = await window.dbGetAll('favorites');
     const reviews   = await window.dbGetAll('reviews');
 
-    const pdfLibrary    = window.getPdfLibrary    ? window.getPdfLibrary()    : [];
-    const pdfDownloaded = window.getPdfDownloaded ? window.getPdfDownloaded() : {};
-    const schedule      = JSON.parse(localStorage.getItem('study_schedule') || '{}');
-    const glossary      = JSON.parse(localStorage.getItem('glossary_terms') || '[]');
+    const schedule = JSON.parse(localStorage.getItem('study_schedule') || '{}');
+    const glossary = JSON.parse(localStorage.getItem('glossary_terms') || '[]');
 
     const data = {
       notes, atlas, guides,
       decks, stats, favorites, reviews,
-      pdf_library: pdfLibrary,
-      pdf_downloaded: pdfDownloaded,
       schedule,
       glossary,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
