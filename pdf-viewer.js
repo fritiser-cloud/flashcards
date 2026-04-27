@@ -299,7 +299,8 @@ async function openPdfViewer(pdfId) {
     if (!pdfData) {
       window.showToast('Скачивание...');
       const downloadUrl = await window.getYadiskDownloadUrl(entry.yadiskUrl);
-      const res = await fetch(downloadUrl);
+      const proxyUrl = 'https://ege-pdf-proxy.fritiser.workers.dev/?url=' + encodeURIComponent(downloadUrl);
+      const res = await fetch(proxyUrl);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const blob = await res.blob();
       pdfData = await blob.arrayBuffer();
