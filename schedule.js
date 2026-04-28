@@ -2,6 +2,9 @@
 
 const SCHEDULE_KEY = 'study_schedule';
 const SCHEDULE_END = new Date(2026, 5, 15); // 15 июня 2026
+const SCHEDULE_HISTORY_START = new Date(2025, 8, 1); // 1 сентября 2025
+
+let _schedShowPast = true;
 
 const EXAM_DATES = {
   '2026-06-01': 'Химия',
@@ -151,8 +154,22 @@ function renderScheduleScreen() {
 
   const schedule = getSchedule();
 
-  // Build list of all days from today to end
+  // Build list of days
   const days = [];
+
+  if (_schedShowPast) {
+    // Find earliest key in schedule that's before today
+    const histStart = new Date(SCHEDULE_HISTORY_START);
+    histStart.setHours(0, 0, 0, 0);
+    let pastCur = new Date(histStart);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    while (pastCur <= yesterday) {
+      days.push(new Date(pastCur));
+      pastCur.setDate(pastCur.getDate() + 1);
+    }
+  }
+
   let cur = new Date(today);
   while (cur <= end) {
     days.push(new Date(cur));
@@ -288,25 +305,40 @@ function renderScheduleScreen() {
 
   screen.innerHTML = `
     <div class="nav">
-      <button class="icon-btn" onclick="window.navTo('library')" aria-label="Назад">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <button class="nav-btn" onclick="window.navTo('library')" aria-label="Назад">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div class="nav-title">Расписание</div>
-      <div style="width:38px"></div>
+      <div style="width:44px"></div>
     </div>
     <div class="scroll" id="schedule-scroll">
       <div class="sched-summary">
         <div class="sched-summary-item">
-          <div class="sched-summary-num">${totalDays}</div>
-          <div class="sched-summary-label">дней до ЕГЭ</div>
+          <div class="sched-summary-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="sched-summary-text">
+            <div class="sched-summary-num">${totalDays}</div>
+            <div class="sched-summary-label">дней до ЕГЭ</div>
+          </div>
         </div>
         <div class="sched-summary-item">
-          <div class="sched-summary-num">${daysWithTasks}</div>
-          <div class="sched-summary-label">дней с планом</div>
+          <div class="sched-summary-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="sched-summary-text">
+            <div class="sched-summary-num">${daysWithTasks}</div>
+            <div class="sched-summary-label">дней с планом</div>
+          </div>
         </div>
         <div class="sched-summary-item">
-          <div class="sched-summary-num">3</div>
-          <div class="sched-summary-label">экзамена</div>
+          <div class="sched-summary-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="sched-summary-text">
+            <div class="sched-summary-num">3</div>
+            <div class="sched-summary-label">экзамена</div>
+          </div>
         </div>
       </div>
       ${weekProgressHtml}
@@ -317,7 +349,7 @@ function renderScheduleScreen() {
   // Scroll to today
   requestAnimationFrame(() => {
     const todayEl = document.getElementById(`sched-day-${todayKey()}`);
-    if (todayEl) todayEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (todayEl) todayEl.scrollIntoView({ behavior: _schedShowPast ? 'instant' : 'smooth', block: 'start' });
   });
 }
 
@@ -417,4 +449,9 @@ function rerenderSchedDay(dateKey) {
 }
 
 window.renderScheduleScreen = renderScheduleScreen;
+
+window.schedTogglePast = function() {
+  _schedShowPast = !_schedShowPast;
+  renderScheduleScreen();
+};
 window.renderTodayPlanWidget = renderTodayPlanWidget;

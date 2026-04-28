@@ -195,7 +195,9 @@ window.saveNote = saveNote;
 function deleteNote() {
   if (!currentNoteId) return;
   if (!confirm('Удалить эту заметку?')) return;
-  const notes = getNotes().filter(n => n.id !== currentNoteId);
+  const notes = getNotes();
+  const idx = notes.findIndex(n => n.id === currentNoteId);
+  if (idx !== -1) { notes[idx].deleted = true; notes[idx].updatedAt = Date.now(); }
   saveNotes(notes);
   if (window.autoSaveToCloud) window.autoSaveToCloud();
   showToast('✓ Заметка удалена');

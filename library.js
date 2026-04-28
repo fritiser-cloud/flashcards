@@ -1,4 +1,25 @@
 // ==================== БИБЛИОТЕКА ПОСОБИЙ ====================
+
+// ---- Emoji picker init ----
+(function initEmojiPicker() {
+  const EMOJIS = [
+    '📚','📖','📝','✏️','📓','📒','📔','📕','📗','📘','📙','🗒️','📄','📃','📑','🗺️',
+    '🧬','🔬','🧪','⚗️','🧫','🔭','🌡️','💊','🫀','🫁','🧠','🦠','🧲','⚡','☢️','☣️',
+    '🌱','🌿','🍀','🌲','🌳','🌴','🌾','🍃','🌸','🌺','🌻','🍄','🌰','🌊','🔥','❄️','🌪️',
+    '🐝','🦋','🐛','🐞','🐜','🦗','🦎','🐍','🦕','🐠','🐟','🐬','🦈','🐋','🦁','🐘','🦒','🦓',
+    '🏆','🎯','💡','✨','🌟','💫','⭐','🎓','📊','📈','🔑','💎','🔮','🪄','🎨','🎵',
+    '💧','🧊','🌋','⛰️','🏔️','🌍','🌐','🗃️','🔎','📡','🛰️','🚀','⚙️','🔧','🔩',
+    '📐','📏','🔢','🧮','♾️','➕','➖','✖️','➗','🔷','🔶','🔴','🟢','🟡','🟣','⚫','⚪',
+  ];
+  document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('emoji-picker-grid');
+    if (!grid) return;
+    grid.innerHTML = EMOJIS.map(e =>
+      `<button type="button" style="font-size:22px;background:none;border:none;cursor:pointer;padding:3px 4px;border-radius:8px;line-height:1.2" onmousedown="event.preventDefault();document.getElementById('meta-icon-input').value='${e}';document.getElementById('meta-icon-btn').textContent='${e}'">${e}</button>`
+    ).join('');
+  });
+})();
+
 let currentCat = 'all';
 let currentGuideId = null;
 let currentAddType = 'guide';
@@ -359,8 +380,9 @@ window.openGuideUrl = openGuideUrl;
 function deleteGuide(id) {
   if (!confirm('Удалить пособие?')) return;
   const guides = window.getGuides ? window.getGuides() : [];
-  const updated = guides.filter(g => g.id !== id);
-  window.saveGuides(updated);
+  const idx = guides.findIndex(g => g.id === id);
+  if (idx !== -1) { guides[idx].deleted = true; guides[idx].updatedAt = Date.now(); }
+  window.saveGuides(guides);
   if (window.autoSaveToCloud) window.autoSaveToCloud();
   window.showScreen('library-screen');
   renderLibrary();
@@ -375,7 +397,16 @@ function openMetaEditModal(type, pdfId) {
   _metaEditTarget = { type };
   let name, icon, category, tags, desc;
 
-  if (type === 'guide') {
+  if (type === 'pdf') {
+    const lib = window.getPdfLibrary ? window.getPdfLibrary() : [];
+    const p = lib.find(p => p.id === pdfId);
+    if (!p) return;
+    _metaEditTarget.id = pdfId;
+    name = p.name; icon = p.icon || '📄'; category = p.category || 'bio';
+    tags = (p.tags || []).join(', '); desc = p.desc || '';
+    document.getElementById('meta-edit-title').textContent = 'Редактировать PDF';
+    document.getElementById('meta-desc-row').style.display = '';
+  } else if (type === 'guide') {
     const guides = window.getGuides ? window.getGuides() : [];
     const g = guides.find(g => g.id === currentGuideId);
     if (!g) return;
@@ -448,14 +479,25 @@ async function saveMetaEdit() {
   const tags = document.getElementById('meta-tags-input').value.split(',').map(t => t.trim()).filter(Boolean);
   const desc = document.getElementById('meta-desc-input').value.trim();
 
-  if (_metaEditTarget.type === 'guide') {
+  if (_metaEditTarget.type === 'pdf') {
+    const lib = window.getPdfLibrary ? window.getPdfLibrary() : [];
+    const idx = lib.findIndex(p => p.id === _metaEditTarget.id);
+    if (idx >= 0) {
+      lib[idx] = { ...lib[idx], name, icon, category: _metaSelectedCat || lib[idx].category, tags, desc, updatedAt: Date.now() };
+      if (window.savePdfLibrary) window.savePdfLibrary(lib);
+      if (window.renderPdfSection) window.renderPdfSection();
+      // update viewer title if open
+      const titleEl = document.getElementById('pdf-viewer-title');
+      if (titleEl && titleEl.dataset.pdfId === _metaEditTarget.id) titleEl.textContent = name;
+    }
+  } else if (_metaEditTarget.type === 'guide') {
     const guides = window.getGuides();
     const idx = guides.findIndex(g => g.id === _metaEditTarget.id);
     if (idx >= 0) {
       guides[idx] = { ...guides[idx], name, icon, category: _metaSelectedCat || guides[idx].category, tags, desc };
       window.saveGuides(guides);
       renderLibrary();
-      openGuide(_metaEditTarget.id); // refresh guide detail
+      openGuide(_metaEditTarget.id);
     }
   } else {
     // deck
